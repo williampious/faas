@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { PlusCircle, Archive, Edit2, Trash2, Loader2, AlertTriangle } from 'lucide-react';
-import { db } from '@/lib/firebase';
+import { db, isFirebaseClientConfigured } from '@/lib/firebase'; // Import isFirebaseClientConfigured
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 
@@ -45,13 +45,21 @@ export default function ResourceInventoryPage() {
 
   useEffect(() => {
     const fetchInventory = async () => {
-      if (!db) {
-        setError("Firestore database is not available. Please check your Firebase configuration and ensure you are connected to the internet.");
+      setIsLoading(true);
+      setError(null);
+
+      if (!isFirebaseClientConfigured) {
+        setError("Firebase client configuration is missing, incomplete, or uses placeholder values in your .env/.env.local file. Please ensure all NEXT_PUBLIC_FIREBASE_... variables are correctly set and you have restarted your development server.");
         setIsLoading(false);
         return;
       }
-      setIsLoading(true);
-      setError(null);
+
+      if (!db) {
+        setError("Firestore database is not available. This might be due to an intermittent connection issue, an internal Firebase initialization error, or Firestore not being enabled in your Firebase project. Please check your internet connection and the browser's developer console for more detailed Firebase error messages.");
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const resourcesQuery = query(collection(db, resourcesCollectionName), orderBy("name"));
         const querySnapshot = await getDocs(resourcesQuery);
@@ -78,16 +86,23 @@ export default function ResourceInventoryPage() {
     setQuantity('');
     setUnit('');
     setEditingResource(null);
-    setError(null); // Clear error on form reset
+    setError(null); 
   };
 
   const handleSubmit = async () => {
+    if (!isFirebaseClientConfigured) {
+      setError("Firebase client configuration is missing or incomplete. Please check your .env file and restart the server, then refresh this page.");
+      setIsSubmitting(false);
+      return;
+    }
     if (!db) {
-      setError("Firestore database is not available. Cannot save resource.");
+      setError("Firestore database is not available. Cannot save resource. Please refresh the page or check console for errors.");
+      setIsSubmitting(false);
       return;
     }
     if (!name || !category || quantity === '' || !unit) {
       setError("Please fill in all required fields: Name, Category, Quantity, and Unit.");
+      setIsSubmitting(false); // Ensure isSubmitting is reset if validation fails
       return;
     }
 
@@ -99,7 +114,6 @@ export default function ResourceInventoryPage() {
       category,
       quantity: Number(quantity),
       unit,
-      // updatedAt: serverTimestamp(), // Let Firestore handle timestamps via rules or cloud functions if preferred
     };
 
     try {
@@ -112,15 +126,17 @@ export default function ResourceInventoryPage() {
         const resourceDocRef = doc(db, resourcesCollectionName, editingResource.id);
         await updateDoc(resourceDocRef, {
             ...resourceData,
-            // updatedAt: serverTimestamp() // Add if you want to explicitly set on update
+            updatedAt: serverTimestamp() 
         });
-        setInventory(inventory.map(item => item.id === editingResource.id ? { ...item, ...resourceData } : item));
+        setInventory(inventory.map(item => item.id === editingResource.id ? { ...item, ...resourceData, id: item.id } : item));
       } else {
         const docRef = await addDoc(collection(db, resourcesCollectionName), {
             ...resourceData,
-            // createdAt: serverTimestamp(), // Add if you want to explicitly set on create
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
         });
-        setInventory([...inventory, { ...resourceData, id: docRef.id }]);
+        // Optimistically add to local state, or re-fetch. For now, add locally.
+        setInventory(prevInventory => [...prevInventory, { ...resourceData, id: docRef.id }].sort((a,b) => a.name.localeCompare(b.name)));
       }
       resetForm();
       setIsModalOpen(false);
@@ -143,13 +159,18 @@ export default function ResourceInventoryPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!db) {
-      setError("Firestore database is not available. Cannot delete resource.");
+    if (!isFirebaseClientConfigured) {
+      setError("Firebase client configuration is missing or incomplete. Please check your .env file and restart the server, then refresh this page.");
       return;
     }
-    // Consider adding a confirmation dialog here
+    if (!db) {
+      setError("Firestore database is not available. Cannot delete resource. Please refresh the page or check console for errors.");
+      return;
+    }
+    
     setError(null);
     try {
+      // Optional: Add confirmation dialog here
       const resourceDocRef = doc(db, resourcesCollectionName, id);
       await deleteDoc(resourceDocRef);
       setInventory(inventory.filter(item => item.id !== id));
@@ -166,16 +187,16 @@ export default function ResourceInventoryPage() {
         icon={Archive}
         description="Manage your farm's seeds, fertilizers, equipment, and other resources."
         action={
-          <Button onClick={() => { resetForm(); setIsModalOpen(true); }}>
+          <Button onClick={() => { resetForm(); setIsModalOpen(true); }} disabled={!isFirebaseClientConfigured || !db}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add Resource
           </Button>
         }
       />
 
       <Dialog open={isModalOpen} onOpenChange={(isOpen) => {
-        if (isSubmitting && !isOpen) return; // Prevent closing modal while submitting
+        if (isSubmitting && !isOpen) return; 
         setIsModalOpen(isOpen);
-        if (!isOpen) resetForm(); // Reset form if dialog is closed
+        if (!isOpen) resetForm(); 
       }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -185,7 +206,7 @@ export default function ResourceInventoryPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            {error && !isSubmitting && ( // Show form-specific errors only if not submitting (to avoid overwriting submission errors)
+            {error && !isSubmitting && ( 
                  <Alert variant="destructive" className="mb-4">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Error</AlertTitle>
@@ -237,26 +258,27 @@ export default function ResourceInventoryPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Global error display for fetch issues */}
+      {!isLoading && error && inventory.length === 0 && ( 
+         <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Operation Failed</AlertTitle>
+            <ShadcnAlertDescription>{error}</ShadcnAlertDescription>
+        </Alert>
+      )}
+
       {isLoading && (
         <div className="flex justify-center items-center py-10">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="ml-2 text-muted-foreground">Loading resources...</p>
         </div>
       )}
-
-      {!isLoading && error && (
-         <Alert variant="destructive" className="mb-6">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <ShadcnAlertDescription>{error}</ShadcnAlertDescription>
-        </Alert>
-      )}
       
       {!isLoading && !error && (
         <Card className="shadow-lg">
           <CardContent className="pt-6">
             <Table>
-              {inventory.length === 0 && <TableCaption>No resources in inventory yet. Add some!</TableCaption>}
+              {inventory.length === 0 && <TableCaption>No resources in inventory yet. Add some (if configuration is correct)!</TableCaption>}
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>

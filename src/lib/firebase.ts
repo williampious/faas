@@ -1,3 +1,4 @@
+
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
@@ -12,13 +13,18 @@ const firebaseConfigValues = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const allConfigPresent = Object.values(firebaseConfigValues).every(value => !!value && value !== "YOUR_API_KEY" && value !== "YOUR_PROJECT_ID"); // Basic check
+// Check if all necessary config values are present and are not common placeholders
+const allConfigPresent = Object.values(firebaseConfigValues).every(
+  value => !!value && value !== "YOUR_API_KEY" && value !== "YOUR_PROJECT_ID"
+);
+
+export const isFirebaseClientConfigured = allConfigPresent;
 
 let appInstance: ReturnType<typeof initializeApp> | null = null;
 let firestoreInstance: ReturnType<typeof getFirestore> | null = null;
 let authInstance: ReturnType<typeof getAuth> | null = null;
 
-if (!allConfigPresent) {
+if (!isFirebaseClientConfigured) {
   console.warn(
     "Warning: Firebase client configuration is missing, incomplete, or uses placeholder values. " +
     "Please ensure all NEXT_PUBLIC_FIREBASE_... variables are correctly set in your .env file. " +
