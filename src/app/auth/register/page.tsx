@@ -2,6 +2,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,8 @@ import { z } from 'zod';
 import { useState } from 'react';
 import { Loader2, UserPlus } from 'lucide-react';
 import Image from 'next/image';
+import { auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -24,6 +27,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -37,19 +41,38 @@ export default function RegisterPage() {
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
     setIsLoading(true);
     setError(null);
-    console.log('Register data:', data);
-    // TODO: Implement Firebase Registration & Create User Profile in Firestore
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
-    // setError("An error occurred during registration."); // Example error
-    // router.push('/dashboard'); // Redirect on success
-    setIsLoading(false);
+
+    if (!auth) {
+      setError("Firebase authentication is not configured. Please check your setup.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      // User created and signed in.
+      // TODO: Create user profile document in Firestore with data.fullName and userCredential.user.uid
+      console.log('User registered:', userCredential.user);
+      router.push('/dashboard'); // Redirect on success
+    } catch (firebaseError: any) {
+      console.error('Firebase Registration Error:', firebaseError);
+      let errorMessage = "An error occurred during registration. Please try again.";
+      if (firebaseError.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email address is already in use. Please try a different email or sign in.';
+      } else if (firebaseError.code === 'auth/weak-password') {
+        errorMessage = 'The password is too weak. Please use a stronger password.';
+      }
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <Card className="w-full max-w-md shadow-2xl">
       <CardHeader className="space-y-1 text-center p-8 bg-primary/10">
          <Link href="/" className="flex justify-center mb-4">
-            <Image src="/agrifaas-logo.png" alt="AgriFAAS Connect Logo" width={200} height={60} objectFit="contain" />
+            <Image src="/agrifaas-logo.png" alt="AgriFAAS Connect Logo" width={200} height={60} data-ai-hint="logo agriculture" objectFit="contain" />
         </Link>
         <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create Account</CardTitle>
         <CardDescription className="text-muted-foreground">
