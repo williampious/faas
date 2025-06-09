@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -9,6 +10,7 @@ import {
   CloudSun,
   ListChecks,
   BrainCircuit,
+  UserCircle, // Added UserCircle
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -31,6 +33,7 @@ const navItems: NavItem[] = [
   { href: '/weather-monitoring', label: 'Weather Monitoring', icon: CloudSun },
   { href: '/task-management', label: 'Task Management', icon: ListChecks },
   { href: '/planting-advice', label: 'Planting Advice', icon: BrainCircuit },
+  { href: '/profile', label: 'User Profile', icon: UserCircle }, // Added Profile Link
 ];
 
 export function MainNav() {

@@ -1,5 +1,7 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
+import Link from 'next/link'; // Import Link
 import {
   SidebarProvider,
   Sidebar,
@@ -13,8 +15,8 @@ import {
 import { AppLogo } from '@/components/layout/app-logo';
 import { MainNav } from '@/components/layout/main-nav';
 import { Toaster } from "@/components/ui/toaster";
-import { Button } from '@/components/ui/button'; // For potential future use
-import { UserCircle } from 'lucide-react'; // Example for user icon
+import { Button } from '@/components/ui/button';
+import { UserCircle } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'AgriFAAS Connect',
@@ -44,11 +46,16 @@ export default function RootLayout({
               <MainNav />
             </SidebarContent>
             <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border">
-              {/* Example User Profile Link/Button - Placeholder */}
-               <Button variant="ghost" className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square">
-                 <UserCircle className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
-                 <span className="truncate group-data-[collapsible=icon]:hidden">User Profile</span>
-               </Button>
+              <Link href="/profile" passHref legacyBehavior>
+                 <Button
+                    asChild={false} // Important: Button itself is not a Slot here. Link handles the 'asChild' behavior
+                    variant="ghost"
+                    className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
+                  >
+                  <UserCircle className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
+                  <span className="truncate group-data-[collapsible=icon]:hidden">User Profile</span>
+                 </Button>
+              </Link>
             </SidebarFooter>
           </Sidebar>
           <SidebarInset>
