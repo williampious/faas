@@ -10,7 +10,8 @@ import {
   CloudSun,
   ListChecks,
   BrainCircuit,
-  UserCircle, // Added UserCircle
+  UserCircle,
+  Home, // Added Home icon
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -27,13 +28,14 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { href: '/', label: 'Home', icon: Home }, // Added Home link
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/farm-calendar', label: 'Farm Calendar', icon: CalendarDays },
   { href: '/resource-inventory', label: 'Resource Inventory', icon: Archive },
   { href: '/weather-monitoring', label: 'Weather Monitoring', icon: CloudSun },
   { href: '/task-management', label: 'Task Management', icon: ListChecks },
   { href: '/planting-advice', label: 'Planting Advice', icon: BrainCircuit },
-  { href: '/profile', label: 'User Profile', icon: UserCircle }, // Added Profile Link
+  { href: '/profile', label: 'User Profile', icon: UserCircle },
 ];
 
 export function MainNav() {
