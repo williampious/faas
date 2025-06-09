@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,18 +10,24 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { PlusCircle, Archive, Edit2, Trash2 } from 'lucide-react';
+import { PlusCircle, Archive, Edit2, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 
 interface ResourceItem {
-  id: string;
+  id: string; // Firestore document ID
   name: string;
   category: string;
   quantity: number;
   unit: string;
+  // Optional: createdAt?: any; // For Firestore serverTimestamp
+  // Optional: updatedAt?: any;
 }
 
 const resourceCategories = ["Seeds", "Fertilizers", "Pesticides", "Equipment Parts", "Tools", "Fuel", "Other"];
 const resourceUnits = ["kg", "liters", "units", "bags", "gallons", "pieces"];
+const resourcesCollectionName = 'resources';
 
 export default function ResourceInventoryPage() {
   const [inventory, setInventory] = useState<ResourceItem[]>([]);
@@ -31,22 +38,39 @@ export default function ResourceInventoryPage() {
   const [category, setCategory] = useState('');
   const [quantity, setQuantity] = useState<number | ''>('');
   const [unit, setUnit] = useState('');
-  
-  const [isMounted, setIsMounted] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(true); // For initial data fetch
+  const [isSubmitting, setIsSubmitting] = useState(false); // For form submissions
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsMounted(true);
-    const storedInventory = localStorage.getItem('resourceInventory');
-    if (storedInventory) {
-      setInventory(JSON.parse(storedInventory));
-    }
+    const fetchInventory = async () => {
+      if (!db) {
+        setError("Firestore database is not available. Please check your Firebase configuration and ensure you are connected to the internet.");
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      setError(null);
+      try {
+        const resourcesQuery = query(collection(db, resourcesCollectionName), orderBy("name"));
+        const querySnapshot = await getDocs(resourcesQuery);
+        const fetchedInventory = querySnapshot.docs.map(docSnapshot => ({
+          ...docSnapshot.data(),
+          id: docSnapshot.id,
+        })) as ResourceItem[];
+        setInventory(fetchedInventory);
+      } catch (err) {
+        console.error("Error fetching inventory: ", err);
+        setError(err instanceof Error ? `Failed to fetch inventory: ${err.message}` : "An unknown error occurred while fetching inventory.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInventory();
   }, []);
 
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem('resourceInventory', JSON.stringify(inventory));
-    }
-  }, [inventory, isMounted]);
 
   const resetForm = () => {
     setName('');
@@ -54,25 +78,58 @@ export default function ResourceInventoryPage() {
     setQuantity('');
     setUnit('');
     setEditingResource(null);
+    setError(null); // Clear error on form reset
   };
 
-  const handleSubmit = () => {
-    if (!name || !category || quantity === '' || !unit) return;
-
-    if (editingResource) {
-      setInventory(inventory.map(item => item.id === editingResource.id ? { ...editingResource, name, category, quantity: Number(quantity), unit } : item));
-    } else {
-      const newResource: ResourceItem = {
-        id: crypto.randomUUID(),
-        name,
-        category,
-        quantity: Number(quantity),
-        unit,
-      };
-      setInventory([...inventory, newResource]);
+  const handleSubmit = async () => {
+    if (!db) {
+      setError("Firestore database is not available. Cannot save resource.");
+      return;
     }
-    resetForm();
-    setIsModalOpen(false);
+    if (!name || !category || quantity === '' || !unit) {
+      setError("Please fill in all required fields: Name, Category, Quantity, and Unit.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    const resourceData = {
+      name,
+      category,
+      quantity: Number(quantity),
+      unit,
+      // updatedAt: serverTimestamp(), // Let Firestore handle timestamps via rules or cloud functions if preferred
+    };
+
+    try {
+      if (editingResource) {
+        if (!editingResource.id) {
+            setError("Cannot update resource without an ID.");
+            setIsSubmitting(false);
+            return;
+        }
+        const resourceDocRef = doc(db, resourcesCollectionName, editingResource.id);
+        await updateDoc(resourceDocRef, {
+            ...resourceData,
+            // updatedAt: serverTimestamp() // Add if you want to explicitly set on update
+        });
+        setInventory(inventory.map(item => item.id === editingResource.id ? { ...item, ...resourceData } : item));
+      } else {
+        const docRef = await addDoc(collection(db, resourcesCollectionName), {
+            ...resourceData,
+            // createdAt: serverTimestamp(), // Add if you want to explicitly set on create
+        });
+        setInventory([...inventory, { ...resourceData, id: docRef.id }]);
+      }
+      resetForm();
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Error saving resource: ", err);
+      setError(err instanceof Error ? `Failed to save resource: ${err.message}` : "An unknown error occurred while saving the resource.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEdit = (resource: ResourceItem) => {
@@ -82,15 +139,25 @@ export default function ResourceInventoryPage() {
     setQuantity(resource.quantity);
     setUnit(resource.unit);
     setIsModalOpen(true);
+    setError(null);
   };
 
-  const handleDelete = (id: string) => {
-    setInventory(inventory.filter(item => item.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!db) {
+      setError("Firestore database is not available. Cannot delete resource.");
+      return;
+    }
+    // Consider adding a confirmation dialog here
+    setError(null);
+    try {
+      const resourceDocRef = doc(db, resourcesCollectionName, id);
+      await deleteDoc(resourceDocRef);
+      setInventory(inventory.filter(item => item.id !== id));
+    } catch (err) {
+      console.error("Error deleting resource: ", err);
+      setError(err instanceof Error ? `Failed to delete resource: ${err.message}` : "An unknown error occurred while deleting the resource.");
+    }
   };
-  
-  if (!isMounted) {
-    return null; // Or a loading component
-  }
 
   return (
     <div>
@@ -105,7 +172,11 @@ export default function ResourceInventoryPage() {
         }
       />
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(isOpen) => {
+        if (isSubmitting && !isOpen) return; // Prevent closing modal while submitting
+        setIsModalOpen(isOpen);
+        if (!isOpen) resetForm(); // Reset form if dialog is closed
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{editingResource ? 'Edit Resource' : 'Add New Resource'}</DialogTitle>
@@ -114,13 +185,20 @@ export default function ResourceInventoryPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {error && !isSubmitting && ( // Show form-specific errors only if not submitting (to avoid overwriting submission errors)
+                 <Alert variant="destructive" className="mb-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <ShadcnAlertDescription>{error}</ShadcnAlertDescription>
+                </Alert>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="name">Resource Name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Tomato Seeds" />
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Tomato Seeds" disabled={isSubmitting} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="category">Category</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category} onValueChange={setCategory} disabled={isSubmitting}>
                 <SelectTrigger id="category">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
@@ -132,11 +210,11 @@ export default function ResourceInventoryPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="quantity">Quantity</Label>
-                <Input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))} placeholder="e.g., 100" />
+                <Input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))} placeholder="e.g., 100" disabled={isSubmitting} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="unit">Unit</Label>
-                 <Select value={unit} onValueChange={setUnit}>
+                 <Select value={unit} onValueChange={setUnit} disabled={isSubmitting}>
                     <SelectTrigger id="unit">
                       <SelectValue placeholder="Select unit" />
                     </SelectTrigger>
@@ -148,46 +226,69 @@ export default function ResourceInventoryPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { resetForm(); setIsModalOpen(false); }}>Cancel</Button>
-            <Button onClick={handleSubmit}>Save Resource</Button>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={isSubmitting}>Cancel</Button>
+            </DialogClose>
+            <Button onClick={handleSubmit} disabled={isSubmitting || !name || !category || quantity === '' || !unit}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? 'Saving...' : 'Save Resource'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Card className="shadow-lg">
-        <CardContent className="pt-6">
-          <Table>
-            {inventory.length === 0 && <TableCaption>No resources in inventory yet. Add some!</TableCaption>}
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {inventory.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>{item.category}</TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
-                  <TableCell>{item.unit}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} className="mr-2 hover:text-blue-500">
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+      {isLoading && (
+        <div className="flex justify-center items-center py-10">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-2 text-muted-foreground">Loading resources...</p>
+        </div>
+      )}
+
+      {!isLoading && error && (
+         <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <ShadcnAlertDescription>{error}</ShadcnAlertDescription>
+        </Alert>
+      )}
+      
+      {!isLoading && !error && (
+        <Card className="shadow-lg">
+          <CardContent className="pt-6">
+            <Table>
+              {inventory.length === 0 && <TableCaption>No resources in inventory yet. Add some!</TableCaption>}
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead>Unit</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {inventory.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell>{item.category}</TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell>{item.unit}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} className="mr-2 hover:text-blue-500" aria-label={`Edit ${item.name}`}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="hover:text-destructive" aria-label={`Delete ${item.name}`}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
+    
