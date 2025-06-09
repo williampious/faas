@@ -18,9 +18,10 @@ import { AppLogo } from '@/components/layout/app-logo';
 import { MainNav } from '@/components/layout/main-nav';
 import { Toaster } from "@/components/ui/toaster";
 import { Button } from '@/components/ui/button';
-import { UserCircle, LogOut } from 'lucide-react'; // Added LogOut icon
-import { auth } from '@/lib/firebase'; // Firebase auth instance
-import { signOut } from 'firebase/auth'; // Firebase signOut method
+import { UserCircle, LogOut } from 'lucide-react'; 
+import { auth } from '@/lib/firebase'; 
+import { signOut } from 'firebase/auth'; 
+import { useToast } from "@/hooks/use-toast"; // Import useToast
 
 // Metadata cannot be exported from a Client Component.
 // It has been removed from this file.
@@ -32,21 +33,32 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
+  const { toast } = useToast(); // Initialize useToast
 
   const handleSignOut = async () => {
     if (!auth) {
       console.error('Firebase auth instance is not available. Cannot sign out.');
-      // Optionally, show a toast message to the user here
-      // For example, using the useToast hook if available in this scope
+      toast({
+        title: "Sign Out Error",
+        description: "Firebase authentication service is not available. Please try again later or contact support.",
+        variant: "destructive",
+      });
       return;
     }
     try {
       await signOut(auth);
-      router.push('/'); // Redirect to the landing page
-      // Optionally, show a success toast message
-    } catch (error) {
+      toast({
+        title: "Signed Out",
+        description: "You have been successfully signed out.",
+      });
+      router.push('/'); 
+    } catch (error: any) {
       console.error('Error signing out:', error);
-      // Optionally, show an error toast message
+      toast({
+        title: "Sign Out Failed",
+        description: error.message || "An unexpected error occurred during sign out.",
+        variant: "destructive",
+      });
     }
   };
 
