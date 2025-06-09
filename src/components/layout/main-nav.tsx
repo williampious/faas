@@ -25,7 +25,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/farm-calendar', label: 'Farm Calendar', icon: CalendarDays },
   { href: '/resource-inventory', label: 'Resource Inventory', icon: Archive },
   { href: '/weather-monitoring', label: 'Weather Monitoring', icon: CloudSun },

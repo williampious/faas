@@ -1,91 +1,77 @@
 'use client';
 
-import { PageHeader } from '@/components/layout/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, LayoutDashboard, CalendarDays, Archive, CloudSun, ListChecks, BrainCircuit } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowRight } from 'lucide-react';
 
-interface SummaryCardProps {
-  title: string;
-  value: string;
-  icon: React.ElementType;
-  href: string;
-  color?: string; // Tailwind color class e.g. text-green-500
-}
-
-function SummaryCard({ title, value, icon: Icon, href, color }: SummaryCardProps) {
+export default function LandingPage() {
   return (
-    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className={`h-5 w-5 ${color || 'text-primary'}`} />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <Link href={href} className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center mt-1">
-          View Details <ArrowRight className="h-3 w-3 ml-1" />
-        </Link>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] py-12 bg-gradient-to-br from-background to-green-50">
+      <Card className="w-full max-w-md shadow-2xl overflow-hidden transform transition-all hover:scale-105 duration-300">
+        <CardHeader className="p-8 bg-primary/10 text-center">
+          <div className="mx-auto mb-6 w-48 h-16 relative">
+            <Image
+              src="/agrifaas-logo.png" // Assumes agrifaas-logo.png is in /public
+              alt="AgriFAAS Connect Logo"
+              layout="fill"
+              objectFit="contain"
+            />
+          </div>
+          <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">
+            Welcome to AgriFAAS Connect
+          </CardTitle>
+          <CardDescription className="text-muted-foreground mt-2 text-lg">
+            Empowering Agriculture, Connecting Futures.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-8 space-y-6">
+          <p className="text-center text-foreground/80">
+            Streamline your farm management, connect with resources, and unlock new opportunities with our all-in-one platform.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link href="/auth/signin" passHref>
+              <Button size="lg" className="w-full text-lg py-6">
+                Sign In
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/auth/register" passHref>
+              <Button variant="secondary" size="lg" className="w-full text-lg py-6">
+                Register
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+        <CardFooter className="p-6 bg-muted/30 justify-center">
+           <p className="text-xs text-muted-foreground">
+            Transforming agriculture through technology.
+          </p>
+        </CardFooter>
+      </Card>
+
+      <div className="mt-12 text-center">
+        <h2 className="text-2xl font-semibold text-foreground/90 mb-4">Why AgriFAAS Connect?</h2>
+        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <FeatureCard title="Smart Farming" description="Leverage AI for planting advice, weather monitoring, and resource management." />
+          <FeatureCard title="Resource Hub" description="Access a comprehensive inventory and connect with suppliers." />
+          <FeatureCard title="Seamless Operations" description="Manage tasks, track progress, and organize your farm calendar efficiently." />
+        </div>
+      </div>
+    </div>
   );
 }
 
-
-export default function DashboardPage() {
-  // Mock data for summary cards
-  const summaryData = [
-    { title: "Upcoming Tasks", value: "5", icon: ListChecks, href: "/task-management", color: "text-blue-500" },
-    { title: "Calendar Events Today", value: "2", icon: CalendarDays, href: "/farm-calendar", color: "text-purple-500" },
-    { title: "Low Stock Resources", value: "3", icon: Archive, href: "/resource-inventory", color: "text-orange-500" },
-    { title: "Weather Forecast", value: "Sunny", icon: CloudSun, href: "/weather-monitoring", color: "text-yellow-500" },
-  ];
-
+function FeatureCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="container mx-auto">
-      <PageHeader
-        title="Dashboard"
-        icon={LayoutDashboard}
-        description="Welcome to AgriFAAS Connect! Here's an overview of your farm."
-      />
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        {summaryData.map(card => (
-          <SummaryCard key={card.title} {...card} />
-        ))}
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="font-headline flex items-center">
-              <BrainCircuit className="h-6 w-6 mr-2 text-primary" />
-              AI Planting Advice
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">
-              Get AI-powered recommendations for optimal planting schedules based on your farm's data.
-            </p>
-            <Link href="/planting-advice" passHref>
-              <Button>
-                Get Planting Advice <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="font-headline">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Link href="/task-management#add" passHref><Button variant="outline" className="w-full justify-start">Add New Task</Button></Link>
-            <Link href="/resource-inventory#add" passHref><Button variant="outline" className="w-full justify-start">Log New Resource</Button></Link>
-            <Link href="/farm-calendar#add" passHref><Button variant="outline" className="w-full justify-start">Schedule Event</Button></Link>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <Card className="bg-card/80 shadow-lg hover:shadow-xl transition-shadow">
+      <CardHeader>
+        <CardTitle className="text-xl text-primary">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground text-sm">{description}</p>
+      </CardContent>
+    </Card>
   );
 }

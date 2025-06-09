@@ -1,15 +1,18 @@
-import { Leaf } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 export function AppLogo() {
   return (
     <Link href="/" className="flex items-center gap-2 px-2 group">
-      <div className="p-2 bg-primary group-hover:bg-primary/90 transition-colors rounded-lg">
-        <Leaf className="h-6 w-6 text-primary-foreground" />
+      <div className="relative h-10 w-40 md:h-12 md:w-48">
+        <Image
+          src="/agrifaas-logo.png" // Assumes agrifaas-logo.png is in /public
+          alt="AgriFAAS Connect Logo"
+          layout="fill"
+          objectFit="contain"
+          priority
+        />
       </div>
-      <span className="font-headline text-xl font-bold text-sidebar-foreground group-hover:text-sidebar-foreground/80 transition-colors">
-        AgriFAAS Connect
-      </span>
     </Link>
   );
 }
