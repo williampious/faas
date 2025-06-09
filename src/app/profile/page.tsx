@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import type { AgriFAASUserProfile } from '@/types/user'; // Adjusted path
 import { UserCircle, Mail, Phone, MapPin, Briefcase, Building, ShieldCheck, Settings, Bell } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils'; // Added import for cn
 
 // Mock User Data - Replace with actual data fetching later
 const mockUser: AgriFAASUserProfile = {
@@ -34,7 +35,7 @@ const mockUser: AgriFAASUserProfile = {
     linkedFarmHubId: 'hub-ash-001',
     allocatedLandSizeAcres: 50,
     cropTypesBeingGrown: ['Maize', 'Cassava', 'Plantain'],
-    expectedYieldData: { expected: 100, actual: 0, unit: 'bags', season: '2024 Main', cropType: 'Maize' }, // Example field, might need adjustment based on final type
+    yieldData: [{ expected: 100, actual: 0, unit: 'bags', season: '2024 Main', cropType: 'Maize' }], // Adjusted to be an array
     irrigationAccess: true,
     productivityScore: 78,
     previousSeasonPerformance: 'Good harvest, met 90% of expected yield.',
@@ -173,3 +174,4 @@ function InfoItem({ icon: Icon, label, value, className }: InfoItemProps) {
     </div>
   );
 }
+
