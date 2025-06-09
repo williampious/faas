@@ -1,3 +1,4 @@
+
 // src/components/ui/sidebar.tsx
 "use client"
 
@@ -535,77 +536,70 @@ const sidebarMenuButtonVariants = cva(
 )
 
 const SidebarMenuButton = React.forwardRef<
-  HTMLElement, // Can be <button> or <a>
-  React.ComponentPropsWithoutRef<"button"> & React.ComponentPropsWithoutRef<"a"> & { // Allow props for both
-    asChild?: boolean
+  HTMLElement,
+  React.ComponentPropsWithoutRef<"button"> & React.ComponentPropsWithoutRef<"a"> & {
+    asChild?: boolean // This is SidebarMenuButton's own asChild prop
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
-    // href prop is implicitly part of ComponentPropsWithoutRef<"a">
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
     {
-      asChild: propAsChild = false, // asChild prop specifically for SidebarMenuButton's behavior
+      asChild: sbmAsChild = false, // SidebarMenuButton's own asChild prop
       isActive = false,
       variant = "default",
       size = "default",
       tooltip,
       className,
       children,
-      // All other props, including href, onClick from Link, and potentially 'asChild' from Link
-      ...restProps
+      ...restProps // Contains props from Link, potentially including href and asChild={true} from Link
     },
     ref
   ) => {
     const { isMobile, state } = useSidebar()
 
-    // Destructure 'asChild' from restProps to prevent it from being spread
-    // onto the underlying DOM element if Comp is a DOM type (button or a).
+    // Destructure 'asChild' from restProps to ensure it's not passed to the DOM element
+    // if Link passes it down.
     const { asChild: incomingAsChildFromLink, ...elementSpecificProps } = restProps
 
-    // Determine the component type:
-    // 1. If propAsChild is true, SidebarMenuButton itself is delegating rendering via Slot.
-    // 2. Else, if elementSpecificProps.href exists (likely from Link asChild), it should be an anchor.
-    // 3. Else, it's a standard button.
-    const Comp: React.ElementType = propAsChild ? Slot : (elementSpecificProps.href ? "a" : "button");
-    
+    // Determine the component to render.
+    // If SidebarMenuButton's own asChild is true, use Slot.
+    // Else, if href is present (passed from Link), render an 'a' tag.
+    // Otherwise, render a 'button' tag.
+    const Comp: React.ElementType = sbmAsChild
+      ? Slot
+      : (elementSpecificProps.href ? "a" : "button")
+
     const finalProps: React.HTMLAttributes<HTMLElement> & Record<string, any> = {
-      // ref type is HTMLElement, so it's compatible with both <a> and <button>
-      ref: ref as React.ForwardedRef<any>, 
+      ref: ref as React.ForwardedRef<any>,
       "data-sidebar": "menu-button",
       "data-size": size,
       "data-active": isActive,
       className: cn(sidebarMenuButtonVariants({ variant, size }), className),
-      ...elementSpecificProps, // Spread the rest of the props (href, onClick, etc.)
-    };
+      ...elementSpecificProps, // Spread the remaining props (like href, onClick)
+    }
 
-    // Remove button-specific 'type' prop if rendering an anchor
+    // Ensure 'type' prop is handled correctly for 'a' vs 'button'
     if (Comp === 'a' && typeof finalProps.type === 'string') {
-       if (finalProps.type === 'submit' || finalProps.type === 'reset' || finalProps.type === 'button') {
-        delete finalProps.type;
-       }
+      if (finalProps.type === 'submit' || finalProps.type === 'reset' || finalProps.type === 'button') {
+       delete finalProps.type
+      }
     }
-    // Ensure default type for button if not specified and not a link
     if (Comp === 'button' && !finalProps.type && !finalProps.href) {
-      finalProps.type = 'button';
+      finalProps.type = 'button'
     }
 
-
-    const buttonElement = (
-      <Comp {...finalProps}>
-        {children}
-      </Comp>
-    );
+    const buttonElement = <Comp {...finalProps}>{children}</Comp>
 
     if (!tooltip) {
-      return buttonElement;
+      return buttonElement
     }
 
-    let tooltipProps: React.ComponentProps<typeof TooltipContent>;
+    let tooltipProps: React.ComponentProps<typeof TooltipContent>
     if (typeof tooltip === "string") {
-      tooltipProps = { children: tooltip };
+      tooltipProps = { children: tooltip }
     } else {
-      tooltipProps = tooltip;
+      tooltipProps = tooltip
     }
 
     return (
@@ -618,7 +612,7 @@ const SidebarMenuButton = React.forwardRef<
           {...tooltipProps}
         />
       </Tooltip>
-    );
+    )
   }
 )
 SidebarMenuButton.displayName = "SidebarMenuButton"

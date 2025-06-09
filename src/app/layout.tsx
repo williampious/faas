@@ -1,4 +1,5 @@
 
+
 import type { Metadata } from 'next';
 import './globals.css';
 import Link from 'next/link'; // Import Link
@@ -46,9 +47,8 @@ export default function RootLayout({
               <MainNav />
             </SidebarContent>
             <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border">
-              <Link href="/profile" passHref legacyBehavior>
+              <Link href="/profile" asChild>
                  <Button
-                    asChild={false} // Important: Button itself is not a Slot here. Link handles the 'asChild' behavior
                     variant="ghost"
                     className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
                   >
