@@ -538,34 +538,28 @@ const sidebarMenuButtonVariants = cva(
 const SidebarMenuButton = React.forwardRef<
   HTMLElement,
   React.ComponentPropsWithoutRef<"button"> & React.ComponentPropsWithoutRef<"a"> & {
-    asChild?: boolean // This is SidebarMenuButton's own asChild prop
+    asChild?: boolean
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
     {
-      asChild: sbmAsChild = false, // SidebarMenuButton's own asChild prop
+      asChild: sbmAsChild = false,
       isActive = false,
       variant = "default",
       size = "default",
       tooltip,
       className,
       children,
-      ...restProps // Contains props from Link, potentially including href and asChild={true} from Link
+      ...restProps
     },
     ref
   ) => {
     const { isMobile, state } = useSidebar()
 
-    // Destructure 'asChild' from restProps to ensure it's not passed to the DOM element
-    // if Link passes it down.
     const { asChild: incomingAsChildFromLink, ...elementSpecificProps } = restProps
 
-    // Determine the component to render.
-    // If SidebarMenuButton's own asChild is true, use Slot.
-    // Else, if href is present (passed from Link), render an 'a' tag.
-    // Otherwise, render a 'button' tag.
     const Comp: React.ElementType = sbmAsChild
       ? Slot
       : (elementSpecificProps.href ? "a" : "button")
@@ -576,17 +570,16 @@ const SidebarMenuButton = React.forwardRef<
       "data-size": size,
       "data-active": isActive,
       className: cn(sidebarMenuButtonVariants({ variant, size }), className),
-      ...elementSpecificProps, // Spread the remaining props (like href, onClick)
+      ...elementSpecificProps,
     }
 
-    // Ensure 'type' prop is handled correctly for 'a' vs 'button'
     if (Comp === 'a' && typeof finalProps.type === 'string') {
       if (finalProps.type === 'submit' || finalProps.type === 'reset' || finalProps.type === 'button') {
-       delete finalProps.type
+       delete finalProps.type;
       }
     }
     if (Comp === 'button' && !finalProps.type && !finalProps.href) {
-      finalProps.type = 'button'
+      finalProps.type = 'button';
     }
 
     const buttonElement = <Comp {...finalProps}>{children}</Comp>
