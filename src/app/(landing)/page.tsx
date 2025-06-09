@@ -10,7 +10,7 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-12 bg-gradient-to-br from-background to-green-50 px-4">
       <Card className="w-full max-w-md shadow-2xl overflow-hidden transform transition-all hover:scale-105 duration-300">
-        <CardHeader className="p-8 bg-primary/10 text-center">
+        <CardHeader className="p-8 text-center">
           <div className="mx-auto mb-6 w-48 h-16 relative">
             <Image
               src="/agrifaas-logo.png" 
@@ -44,7 +44,7 @@ export default function LandingPage() {
             </Link>
           </div>
         </CardContent>
-        <CardFooter className="p-6 bg-muted/30 justify-center">
+        <CardFooter className="p-6 justify-center">
            <p className="text-xs text-muted-foreground">
             Transforming agriculture through technology.
           </p>
