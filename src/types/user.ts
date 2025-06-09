@@ -155,7 +155,7 @@ export interface AgriFAASUserProfile {
   primaryLanguage?: string; // e.g., 'en', 'twi', 'ewe'
 
   // 2. Contact & Login Info
-  phoneNumber: string; // Required
+  phoneNumber?: string; // Optional for initial registration
   emailAddress?: string;
   address?: {
     street?: string;

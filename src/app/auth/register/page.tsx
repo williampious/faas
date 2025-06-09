@@ -13,8 +13,10 @@ import { z } from 'zod';
 import { useState } from 'react';
 import { Loader2, UserPlus } from 'lucide-react';
 import Image from 'next/image';
-import { auth } from '@/lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase'; // Import db
+import { createUserWithEmailAndPassword, type User } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore'; // Import Firestore functions
+import type { AgriFAASUserProfile } from '@/types/user'; // Import user profile type
 
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -42,25 +44,46 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError(null);
 
-    if (!auth) {
-      setError("Firebase authentication is not configured. Please check your setup.");
+    if (!auth || !db) {
+      setError("Firebase authentication or database is not configured. Please check your setup.");
       setIsLoading(false);
       return;
     }
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      // User created and signed in.
-      // TODO: Create user profile document in Firestore with data.fullName and userCredential.user.uid
-      console.log('User registered:', userCredential.user);
+      const firebaseUser: User = userCredential.user;
+      console.log('User registered with Firebase Auth:', firebaseUser.uid);
+
+      // Create user profile document in Firestore
+      const newUserProfile: AgriFAASUserProfile = {
+        userId: firebaseUser.uid,
+        firebaseUid: firebaseUser.uid,
+        fullName: data.fullName,
+        emailAddress: firebaseUser.email || data.email, // Prefer email from Firebase Auth if available
+        role: ['Farmer'], // Default role
+        accountStatus: 'Active',
+        registrationDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        // Initialize other optional fields as needed or leave them undefined
+        phoneNumber: '', // Explicitly set as empty or handle differently if required
+        avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`, // Basic placeholder avatar
+      };
+
+      await setDoc(doc(db, 'users', firebaseUser.uid), newUserProfile);
+      console.log('User profile created in Firestore for user:', firebaseUser.uid);
+
       router.push('/dashboard'); // Redirect on success
     } catch (firebaseError: any) {
-      console.error('Firebase Registration Error:', firebaseError);
+      console.error('Firebase Registration or Profile Creation Error:', firebaseError);
       let errorMessage = "An error occurred during registration. Please try again.";
       if (firebaseError.code === 'auth/email-already-in-use') {
         errorMessage = 'This email address is already in use. Please try a different email or sign in.';
       } else if (firebaseError.code === 'auth/weak-password') {
         errorMessage = 'The password is too weak. Please use a stronger password.';
+      } else if (firebaseError.code) { // Check if it's a Firebase error object
+        errorMessage = `Registration failed: ${firebaseError.message}`;
       }
       setError(errorMessage);
     } finally {
