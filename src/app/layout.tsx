@@ -1,8 +1,9 @@
 
+'use client'; // Explicitly mark as a client component
 
-import type { Metadata } from 'next';
 import './globals.css';
-import Link from 'next/link'; // Import Link
+import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // For redirection
 import {
   SidebarProvider,
   Sidebar,
@@ -17,18 +18,38 @@ import { AppLogo } from '@/components/layout/app-logo';
 import { MainNav } from '@/components/layout/main-nav';
 import { Toaster } from "@/components/ui/toaster";
 import { Button } from '@/components/ui/button';
-import { UserCircle } from 'lucide-react';
+import { UserCircle, LogOut } from 'lucide-react'; // Added LogOut icon
+import { auth } from '@/lib/firebase'; // Firebase auth instance
+import { signOut } from 'firebase/auth'; // Firebase signOut method
 
-export const metadata: Metadata = {
-  title: 'AgriFAAS Connect',
-  description: 'Farm Management Simplified',
-};
+// Metadata cannot be exported from a Client Component.
+// It has been removed from this file.
+// Individual pages or server-side layouts should define their own metadata.
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    if (!auth) {
+      console.error('Firebase auth instance is not available. Cannot sign out.');
+      // Optionally, show a toast message to the user here
+      // For example, using the useToast hook if available in this scope
+      return;
+    }
+    try {
+      await signOut(auth);
+      router.push('/'); // Redirect to the landing page
+      // Optionally, show a success toast message
+    } catch (error) {
+      console.error('Error signing out:', error);
+      // Optionally, show an error toast message
+    }
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -46,8 +67,8 @@ export default function RootLayout({
             <SidebarContent className="p-2">
               <MainNav />
             </SidebarContent>
-            <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border">
-              <Link href="/profile" asChild>
+            <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border space-y-2"> {/* Added space-y-2 for button spacing */}
+              <Link href="/profile" passHref>
                  <Button
                     variant="ghost"
                     className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
@@ -56,6 +77,14 @@ export default function RootLayout({
                   <span className="truncate group-data-[collapsible=icon]:hidden">User Profile</span>
                  </Button>
               </Link>
+              <Button
+                variant="ghost"
+                className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
+                <span className="truncate group-data-[collapsible=icon]:hidden">Sign Out</span>
+              </Button>
             </SidebarFooter>
           </Sidebar>
           <SidebarInset>
@@ -64,7 +93,6 @@ export default function RootLayout({
                 <div className="md:hidden">
                   <SidebarTrigger />
                 </div>
-                {/* Placeholder for potential global actions like search or theme toggle */}
                 <div className="hidden md:flex items-center gap-4">
                   {/* <ThemeToggle /> /> */}
                 </div>
