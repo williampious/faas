@@ -40,7 +40,7 @@ export function MainNav() {
     <SidebarMenu>
       {navItems.map((item) => (
         <SidebarMenuItem key={item.href}>
-          <Link href={item.href} legacyBehavior passHref>
+          <Link href={item.href} asChild>
             <SidebarMenuButton
               className={cn(
                 'w-full justify-start text-base',
