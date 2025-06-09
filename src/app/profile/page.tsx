@@ -42,9 +42,9 @@ const mockUser: AgriFAASUserProfile = {
   },
   firebaseUid: 'firebase-uid-abcdef',
   accountStatus: 'Active',
-  registrationDate: new Date().toISOString(), // Use current date for mock
-  createdAt: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(), // 30 days ago
-  updatedAt: new Date().toISOString(),
+  registrationDate: '2024-05-10T10:00:00.000Z', // Static ISO string
+  createdAt: '2024-04-10T10:00:00.000Z', // Static ISO string (30 days ago from a fixed point)
+  updatedAt: '2024-05-09T12:30:00.000Z', // Static ISO string
   notificationPreferences: { email: true, sms: false, push: true, whatsApp: true},
   languagePreference: 'en',
   alertsToggle: { dailySummary: true, pestAlerts: true},
@@ -97,8 +97,8 @@ export default function UserProfilePage() {
             </CardHeader>
             <CardContent className="text-sm space-y-2">
               <InfoItem label="Status" value={<Badge variant={user.accountStatus === 'Active' ? 'default' : 'destructive'}>{user.accountStatus}</Badge>} />
-              <InfoItem label="Member Since" value={format(new Date(user.createdAt), 'MMMM d, yyyy')} />
-              <InfoItem label="Last Updated" value={format(new Date(user.updatedAt), 'PPpp')} />
+              <InfoItem label="Member Since" value={user.createdAt ? format(new Date(user.createdAt), 'MMMM d, yyyy') : 'N/A'} />
+              <InfoItem label="Last Updated" value={user.updatedAt ? format(new Date(user.updatedAt), 'PPpp') : 'N/A'} />
             </CardContent>
           </Card>
         </div>
@@ -114,7 +114,7 @@ export default function UserProfilePage() {
               </CardHeader>
               <CardContent className="text-sm space-y-2">
                 <InfoItem label="Farm Hub ID" value={user.farmDetails.linkedFarmHubId} />
-                <InfoItem label="Allocated Land" value={`${user.farmDetails.allocatedLandSizeAcres} acres`} />
+                <InfoItem label="Allocated Land" value={user.farmDetails.allocatedLandSizeAcres ? `${user.farmDetails.allocatedLandSizeAcres} acres` : 'N/A'} />
                 <InfoItem label="Crops Grown" value={user.farmDetails.cropTypesBeingGrown?.join(', ')} />
                 <InfoItem label="Irrigation Access" value={user.farmDetails.irrigationAccess ? 'Yes' : 'No'} />
                 <InfoItem label="Productivity Score" value={user.farmDetails.productivityScore?.toString()} />
