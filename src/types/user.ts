@@ -1,0 +1,209 @@
+
+/**
+ * @fileOverview TypeScript type definitions for the AgriFAAS Connect User Profile.
+ */
+
+export type UserRole =
+  | 'Farmer'
+  | 'Investor'
+  | 'Admin'
+  | 'Field Agent'
+  | 'Farm Manager';
+
+export type Gender = 'Male' | 'Female' | 'Other' | 'PreferNotToSay';
+
+export type CommunicationChannel = 'SMS' | 'AppNotification' | 'WhatsApp';
+
+export type MobileMoneyProvider = 'MTN MoMo' | 'AirtelTigo' | 'Vodafone Cash';
+
+export type EmploymentStatus = 'Active' | 'Seasonal' | 'Former';
+
+export type WorkforceCategory = 'Laborer' | 'Technician' | 'Supervisor';
+
+export type AppAccessType = 'Web' | 'Mobile';
+
+export interface GPSCoordinates {
+  latitude: number;
+  longitude: number;
+}
+
+export interface YieldData {
+  expected: number;
+  actual: number;
+  unit: string;
+  season: string; // e.g., "2023 Dry Season"
+  cropType: string;
+}
+
+export interface FarmHubDetails {
+  linkedFarmHubId?: string;
+  allocatedLandSizeAcres?: number;
+  cropTypesBeingGrown?: string[];
+  yieldData?: YieldData[];
+  irrigationAccess?: boolean;
+  productivityScore?: number; // e.g., 0-100
+  previousSeasonPerformance?: string; // Could be a summary or link to detailed report
+}
+
+export interface MobileMoneyWallet {
+  provider: MobileMoneyProvider;
+  walletNumber: string;
+}
+
+export interface BankAccountDetails {
+  bankName: string;
+  accountNumber: string;
+  branch?: string;
+  accountName?: string;
+}
+
+export interface Investment {
+  investmentId: string;
+  type: string; // e.g., "Equity", "Debt"
+  amount: number;
+  currency: string; // e.g., "GHS", "USD"
+  date: string; // ISO 8601 date string
+  description?: string;
+}
+
+export interface Loan {
+  loanId: string;
+  amount: number;
+  currency: string;
+  lender: string;
+  date: string; // ISO 8601 date string
+  status: 'Active' | 'Paid Off' | 'Defaulted';
+  repaymentSchedule?: string;
+}
+
+export interface Transaction {
+  transactionId: string;
+  type: 'Credit' | 'Debit' | 'Fee' | 'Payment' | 'Disbursement';
+  amount: number;
+  currency: string;
+  date: string; // ISO 8601 date string
+  description: string;
+  status: 'Pending' | 'Completed' | 'Failed' | 'Reversed';
+  relatedEntity?: string; // e.g., Order ID, Loan ID
+}
+
+export interface AttendanceLog {
+  date: string; // ISO 8601 date string
+  checkInTime?: string; // ISO 8601 datetime string
+  checkOutTime?: string; // ISO 8601 datetime string
+  gpsLocation?: GPSCoordinates;
+  notes?: string;
+}
+
+export interface ContractDetails {
+  contractId: string;
+  startDate: string; // ISO 8601 date string
+  endDate?: string; // ISO 8601 date string, optional for ongoing
+  terms: string; // Could be a summary or link to a document
+  documentUrl?: string;
+}
+
+export interface PayrollRecord {
+  payrollId: string;
+  payPeriod: string; // e.g., "2023-October"
+  amount: number;
+  currency: string;
+  paymentDate: string; // ISO 8601 date string
+  paymentMethod?: string; // e.g., "Mobile Money", "Bank Transfer"
+}
+
+export interface EmploymentDetails {
+  employmentStatus?: EmploymentStatus;
+  attendanceLogs?: AttendanceLog[];
+  contractDetails?: ContractDetails;
+  payrollRecords?: PayrollRecord[];
+  workforceCategory?: WorkforceCategory;
+  startDate?: string; // ISO 8601 date string
+  endDate?: string; // ISO 8601 date string
+}
+
+export interface LoginHistoryEntry {
+  timestamp: string; // ISO 8601 datetime string
+  ipAddress?: string;
+  device?: string; // e.g., "iPhone 13, iOS 17.1", "Chrome on Windows 10"
+  userAgent?: string;
+}
+
+export interface NotificationPreferences {
+  email?: boolean;
+  sms?: boolean;
+  push?: boolean; // In-app push notifications
+  whatsApp?: boolean;
+}
+
+export interface AlertToggles {
+  dailySummary?: boolean;
+  weeklySummary?: boolean;
+  priceAlerts?: boolean;
+  pestAlerts?: boolean;
+}
+
+export interface AgriFAASUserProfile {
+  // 1. Basic Information
+  userId: string; // Auto-generated UUID, primary key
+  fullName: string;
+  role: UserRole[]; // Can have multiple roles, e.g. Farmer and Admin
+  gender?: Gender;
+  dateOfBirth?: string; // ISO 8601 date string
+  nationalId?: string; // Ghana Card Number
+  avatarUrl?: string;
+  primaryLanguage?: string; // e.g., 'en', 'twi', 'ewe'
+
+  // 2. Contact & Login Info
+  phoneNumber: string; // Required
+  emailAddress?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    region?: string;
+    country?: string;
+    postalCode?: string;
+  };
+  gpsCoordinates?: GPSCoordinates; // For farm location or primary address
+  preferredCommunicationChannel?: CommunicationChannel;
+
+  // 3. Farm & Hub Details (Primarily for Farmer, Farm Manager roles)
+  farmDetails?: FarmHubDetails;
+
+  // 4. Financial & Mobile Money
+  mobileMoneyWallets?: MobileMoneyWallet[]; // User might have multiple
+  bankAccounts?: BankAccountDetails[];
+  investmentPortfolio?: Investment[]; // Relevant for Investor role
+  loansOrFundingReceived?: Loan[];
+  digitalWalletBalance?: {
+    amount: number;
+    currency: string;
+  };
+  transactionHistory?: Transaction[];
+
+  // 5. HR & Employment (Relevant for Farmers/Workers, Field Agents if employed by a hub)
+  employmentDetails?: EmploymentDetails;
+
+  // 6. System & Permissions
+  firebaseUid: string; // Firebase Authentication User ID
+  rbacTags?: string[]; // More granular permissions beyond general role
+  appAccess?: AppAccessType[];
+  loginHistory?: LoginHistoryEntry[];
+  lastActiveTimestamp?: string; // ISO 8601 datetime string
+  lastLoginTimestamp?: string; // ISO 8601 datetime string
+  deviceId?: string; // For push notifications, session management
+  deviceType?: string; // e.g., 'iOS', 'Android', 'Web'
+  accountStatus: 'Active' | 'PendingVerification' | 'Suspended' | 'Deactivated';
+  registrationDate: string; // ISO 8601 datetime string
+
+  // 7. Notifications & Preferences
+  notificationPreferences?: NotificationPreferences;
+  languagePreference?: string; // Overrides primaryLanguage if set
+  alertsToggle?: AlertToggles;
+  receiveAgriculturalTips?: boolean;
+  receiveWeatherUpdates?: boolean;
+  
+  // Timestamps
+  createdAt: string; // ISO 8601 datetime string
+  updatedAt: string; // ISO 8601 datetime string
+}
