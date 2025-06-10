@@ -6,9 +6,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight, Zap, Leaf, BarChart } from 'lucide-react';
+// No longer need redirect logic here, root layout handles it.
 
 export default function LandingPage() {
   return (
+    // This div now acts as the main container for the landing page content
+    // and can have specific styles like background gradients.
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12">
       <div className="container mx-auto px-4">
         <header className="mb-12 text-center">
@@ -31,7 +34,6 @@ export default function LandingPage() {
         </header>
 
         <div className="grid lg:grid-cols-1 gap-8 lg:gap-12 items-center justify-center mb-16">
-          {/* Placeholder image removed from here */}
           <Card className="w-full max-w-lg mx-auto shadow-2xl overflow-hidden transform transition-all hover:shadow-3xl duration-300 lg:order-first">
             <CardHeader className="p-6 sm:p-8 text-center">
               <CardTitle className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary">

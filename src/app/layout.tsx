@@ -1,9 +1,10 @@
 
-'use client'; 
+'use client';
 
 import './globals.css';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; 
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   SidebarProvider,
   Sidebar,
@@ -18,20 +19,16 @@ import { AppLogo } from '@/components/layout/app-logo';
 import { MainNav } from '@/components/layout/main-nav';
 import { Toaster } from "@/components/ui/toaster";
 import { Button } from '@/components/ui/button';
-import { UserCircle, LogOut } from 'lucide-react'; 
-import { auth } from '@/lib/firebase'; 
-import { signOut } from 'firebase/auth'; 
+import { UserCircle, LogOut, Loader2 } from 'lucide-react';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
-import { UserProfileProvider } from '@/contexts/user-profile-context';
+import { UserProfileProvider, useUserProfile } from '@/contexts/user-profile-context';
 
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { toast } = useToast(); 
+  const { toast } = useToast();
+  const { userProfile } = useUserProfile(); // Get userProfile to display name or avatar later if needed
 
   const handleSignOut = async () => {
     if (!auth) {
@@ -51,7 +48,7 @@ export default function RootLayout({
         title: "Signed Out",
         description: "You have been successfully signed out.",
       });
-      router.push('/'); 
+      router.push('/auth/signin'); // Redirect to sign-in after sign out
     } catch (error: any) {
       console.error('Error signing out:', error);
       toast({
@@ -63,6 +60,136 @@ export default function RootLayout({
   };
 
   return (
+    <SidebarProvider defaultOpen>
+      <Sidebar collapsible="icon" className="border-r border-sidebar-border shadow-md">
+        <SidebarRail />
+        <SidebarHeader className="p-4 border-b border-sidebar-border">
+          <AppLogo />
+        </SidebarHeader>
+        <SidebarContent className="p-2">
+          <MainNav />
+        </SidebarContent>
+        <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border space-y-2">
+          <Link href="/profile" passHref>
+             <Button
+                variant="ghost"
+                className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
+              >
+              <UserCircle className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
+              <span className="truncate group-data-[collapsible=icon]:hidden">User Profile</span>
+             </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
+            <span className="truncate group-data-[collapsible=icon]:hidden">Sign Out</span>
+          </Button>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
+        <div className="flex flex-col h-full">
+          <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm md:px-6 md:justify-end">
+            <div className="md:hidden">
+              <SidebarTrigger />
+            </div>
+            <div className="hidden md:flex items-center gap-4">
+              {/* <ThemeToggle /> /> */}
+            </div>
+          </header>
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">
+            {children}
+          </main>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
+
+function RootLayoutContent({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, isLoading, error: profileError } = useUserProfile();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient || isLoading) return; // Wait for client-side hydration and auth state
+
+    const isAuthPage = pathname.startsWith('/auth/');
+    const isLandingPage = pathname === '/';
+
+    if (user) { // User is authenticated
+      if (isLandingPage || isAuthPage) {
+        router.replace('/dashboard');
+      }
+    } else { // User is not authenticated
+      if (!isLandingPage && !isAuthPage) {
+        router.replace('/auth/signin');
+      }
+    }
+  }, [user, isLoading, pathname, router, isClient]);
+
+  if (!isClient || isLoading) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-lg text-muted-foreground">Loading application...</p>
+      </div>
+    );
+  }
+  
+  if (profileError && !pathname.startsWith('/auth/') && pathname !== '/') {
+    // If there's a profile error, and we are not on auth pages or landing page,
+    // it's problematic for app shell. For now, let's allow auth/landing.
+    // This could be a redirect to an error page or auth.
+     console.error("UserProfileContext error in RootLayout:", profileError);
+     // Potentially redirect to signin or an error page if critical
+     // router.replace('/auth/signin?error=profile_load_failed');
+  }
+
+
+  const isAppRoute = !pathname.startsWith('/auth/') && pathname !== '/';
+
+  if (user && isAppRoute) {
+    return <AppShell>{children}</AppShell>;
+  } else if (!user && (pathname.startsWith('/auth/') || pathname === '/')) {
+    // Unauthenticated user on public/auth pages
+    return <>{children}</>;
+  } else if (!user && isAppRoute) {
+    // Unauthenticated user trying to access app route, redirect handled by useEffect
+    // Show loading while redirect happens
+    return (
+        <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-background">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="mt-4 text-lg text-muted-foreground">Redirecting...</p>
+        </div>
+    );
+  } else if (user && (pathname.startsWith('/auth/') || pathname === '/')) {
+    // Authenticated user on public/auth pages, redirect handled by useEffect
+    // Show loading while redirect happens
+     return (
+        <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-background">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="mt-4 text-lg text-muted-foreground">Redirecting to dashboard...</p>
+        </div>
+    );
+  }
+
+
+  // Fallback for any unhandled cases, though useEffect should cover redirections.
+  // This might render briefly before redirection.
+  return <>{children}</>;
+}
+
+
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -71,51 +198,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
         <UserProfileProvider>
-          <SidebarProvider defaultOpen>
-            <Sidebar collapsible="icon" className="border-r border-sidebar-border shadow-md">
-              <SidebarRail />
-              <SidebarHeader className="p-4 border-b border-sidebar-border">
-                <AppLogo />
-              </SidebarHeader>
-              <SidebarContent className="p-2">
-                <MainNav />
-              </SidebarContent>
-              <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border space-y-2">
-                <Link href="/profile" passHref>
-                   <Button
-                      variant="ghost"
-                      className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
-                    >
-                    <UserCircle className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
-                    <span className="truncate group-data-[collapsible=icon]:hidden">User Profile</span>
-                   </Button>
-                </Link>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
-                  <span className="truncate group-data-[collapsible=icon]:hidden">Sign Out</span>
-                </Button>
-              </SidebarFooter>
-            </Sidebar>
-            <SidebarInset>
-              <div className="flex flex-col h-full">
-                <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm md:px-6 md:justify-end">
-                  <div className="md:hidden">
-                    <SidebarTrigger />
-                  </div>
-                  <div className="hidden md:flex items-center gap-4">
-                    {/* <ThemeToggle /> /> */}
-                  </div>
-                </header>
-                <main className="flex-1 overflow-y-auto p-4 md:p-6">
-                  {children}
-                </main>
-              </div>
-            </SidebarInset>
-          </SidebarProvider>
+          <RootLayoutContent>{children}</RootLayoutContent>
           <Toaster />
         </UserProfileProvider>
       </body>
