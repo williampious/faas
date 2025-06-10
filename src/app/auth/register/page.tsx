@@ -16,7 +16,7 @@ import Image from 'next/image';
 import { auth, db } from '@/lib/firebase'; // Import db
 import { createUserWithEmailAndPassword, type User } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore'; // Import Firestore functions
-import type { AgriFAASUserProfile } from '@/types/user'; // Import user profile type
+import type { AgriFAASUserProfile, UserRole } from '@/types/user'; // Import user profile type
 
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -25,6 +25,9 @@ const registerSchema = z.object({
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
+
+// Define the email address for the first admin user
+const FIRST_ADMIN_EMAIL = 'admin@agrifaas.com';
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -55,24 +58,31 @@ export default function RegisterPage() {
       const firebaseUser: User = userCredential.user;
       console.log('User registered with Firebase Auth:', firebaseUser.uid);
 
+      // Determine roles for the new user
+      const roles: UserRole[] = ['Farmer']; // Default role
+      if (firebaseUser.email && firebaseUser.email.toLowerCase() === FIRST_ADMIN_EMAIL.toLowerCase()) {
+        if (!roles.includes('Admin')) { // Ensure 'Admin' is not duplicated if 'Farmer' was also a default for admin
+            roles.push('Admin');
+        }
+      }
+
       // Create user profile document in Firestore
       const newUserProfile: AgriFAASUserProfile = {
         userId: firebaseUser.uid,
         firebaseUid: firebaseUser.uid,
         fullName: data.fullName,
         emailAddress: firebaseUser.email || data.email, // Prefer email from Firebase Auth if available
-        role: ['Farmer'], // Default role
+        role: roles, // Assign determined roles
         accountStatus: 'Active',
         registrationDate: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        // Initialize other optional fields as needed or leave them undefined
-        phoneNumber: '', // Explicitly set as empty or handle differently if required
+        phoneNumber: '', // Explicitly set as empty as it's not collected
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`, // Basic placeholder avatar
       };
 
       await setDoc(doc(db, 'users', firebaseUser.uid), newUserProfile);
-      console.log('User profile created in Firestore for user:', firebaseUser.uid);
+      console.log('User profile created in Firestore for user:', firebaseUser.uid, 'with roles:', roles);
 
       router.push('/dashboard'); // Redirect on success
     } catch (firebaseError: any) {
@@ -93,7 +103,7 @@ export default function RegisterPage() {
 
   return (
     <Card className="w-full max-w-md shadow-2xl">
-      <CardHeader className="space-y-1 text-center p-8 bg-primary/10">
+      <CardHeader className="space-y-1 text-center p-8">
          <Link href="/" className="flex justify-center mb-4">
             <Image src="/agrifaas-logo.png" alt="AgriFAAS Connect Logo" width={200} height={60} data-ai-hint="logo agriculture" objectFit="contain" />
         </Link>
