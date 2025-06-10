@@ -54,7 +54,7 @@ export function MainNav() {
 
   const renderNavItem = (item: NavItem) => (
     <SidebarMenuItem key={item.href}>
-      <Link href={item.href} passHref legacyBehavior>
+      <Link href={item.href}>
         <SidebarMenuButton
           className={cn(
             'w-full justify-start text-base',
