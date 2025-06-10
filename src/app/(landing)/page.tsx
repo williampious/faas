@@ -30,19 +30,8 @@ export default function LandingPage() {
           </p>
         </header>
 
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center mb-16">
-          <div className="flex justify-center lg:order-last">
-            <Image
-              src="https://placehold.co/400x700.png"
-              alt="AgriFAAS Connect App on a phone"
-              width={400}
-              height={700}
-              className="rounded-xl shadow-2xl object-cover transform transition-all hover:scale-105 duration-300"
-              data-ai-hint="app phone"
-              priority
-            />
-          </div>
-
+        <div className="grid lg:grid-cols-1 gap-8 lg:gap-12 items-center justify-center mb-16">
+          {/* Placeholder image removed from here */}
           <Card className="w-full max-w-lg mx-auto shadow-2xl overflow-hidden transform transition-all hover:shadow-3xl duration-300 lg:order-first">
             <CardHeader className="p-6 sm:p-8 text-center">
               <CardTitle className="text-2xl sm:text-3xl font-semibold tracking-tight text-primary">
