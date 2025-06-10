@@ -35,10 +35,12 @@ export default function RootLayout({
 
   const handleSignOut = async () => {
     if (!auth) {
-      console.error('Firebase auth instance is not available. Cannot sign out.');
+      console.error(
+        'Firebase auth instance is not available in layout.tsx. Cannot sign out. Check browser console for errors from src/lib/firebase.ts regarding Firebase initialization.'
+      );
       toast({
         title: "Sign Out Error",
-        description: "Firebase authentication service is not available. Please try again later or contact support.",
+        description: "Firebase authentication service is not available. Please ensure Firebase is correctly configured and try again. If the issue persists, contact support.",
         variant: "destructive",
       });
       return;
