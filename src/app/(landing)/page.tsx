@@ -16,8 +16,8 @@ export default function LandingPage() {
             <Image
               src="/agrifaas-logo.png"
               alt="AgriFAAS Connect Logo"
-              width={240}
-              height={80}
+              width={280}
+              height={93}
               objectFit="contain"
               priority
             />
