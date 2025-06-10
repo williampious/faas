@@ -1,9 +1,9 @@
 
-'use client'; // Explicitly mark as a client component
+'use client'; 
 
 import './globals.css';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // For redirection
+import { useRouter } from 'next/navigation'; 
 import {
   SidebarProvider,
   Sidebar,
@@ -21,11 +21,9 @@ import { Button } from '@/components/ui/button';
 import { UserCircle, LogOut } from 'lucide-react'; 
 import { auth } from '@/lib/firebase'; 
 import { signOut } from 'firebase/auth'; 
-import { useToast } from "@/hooks/use-toast"; // Import useToast
+import { useToast } from "@/hooks/use-toast";
+import { UserProfileProvider } from '@/contexts/user-profile-context';
 
-// Metadata cannot be exported from a Client Component.
-// It has been removed from this file.
-// Individual pages or server-side layouts should define their own metadata.
 
 export default function RootLayout({
   children,
@@ -33,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
-  const { toast } = useToast(); // Initialize useToast
+  const { toast } = useToast(); 
 
   const handleSignOut = async () => {
     if (!auth) {
@@ -70,52 +68,54 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <SidebarProvider defaultOpen>
-          <Sidebar collapsible="icon" className="border-r border-sidebar-border shadow-md">
-            <SidebarRail />
-            <SidebarHeader className="p-4 border-b border-sidebar-border">
-              <AppLogo />
-            </SidebarHeader>
-            <SidebarContent className="p-2">
-              <MainNav />
-            </SidebarContent>
-            <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border space-y-2"> {/* Added space-y-2 for button spacing */}
-              <Link href="/profile" passHref>
-                 <Button
-                    variant="ghost"
-                    className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
-                  >
-                  <UserCircle className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
-                  <span className="truncate group-data-[collapsible=icon]:hidden">User Profile</span>
-                 </Button>
-              </Link>
-              <Button
-                variant="ghost"
-                className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
-                onClick={handleSignOut}
-              >
-                <LogOut className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
-                <span className="truncate group-data-[collapsible=icon]:hidden">Sign Out</span>
-              </Button>
-            </SidebarFooter>
-          </Sidebar>
-          <SidebarInset>
-            <div className="flex flex-col h-full">
-              <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm md:px-6 md:justify-end">
-                <div className="md:hidden">
-                  <SidebarTrigger />
-                </div>
-                <div className="hidden md:flex items-center gap-4">
-                  {/* <ThemeToggle /> /> */}
-                </div>
-              </header>
-              <main className="flex-1 overflow-y-auto p-4 md:p-6">
-                {children}
-              </main>
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
-        <Toaster />
+        <UserProfileProvider>
+          <SidebarProvider defaultOpen>
+            <Sidebar collapsible="icon" className="border-r border-sidebar-border shadow-md">
+              <SidebarRail />
+              <SidebarHeader className="p-4 border-b border-sidebar-border">
+                <AppLogo />
+              </SidebarHeader>
+              <SidebarContent className="p-2">
+                <MainNav />
+              </SidebarContent>
+              <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border space-y-2">
+                <Link href="/profile" passHref>
+                   <Button
+                      variant="ghost"
+                      className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
+                    >
+                    <UserCircle className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
+                    <span className="truncate group-data-[collapsible=icon]:hidden">User Profile</span>
+                   </Button>
+                </Link>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
+                  <span className="truncate group-data-[collapsible=icon]:hidden">Sign Out</span>
+                </Button>
+              </SidebarFooter>
+            </Sidebar>
+            <SidebarInset>
+              <div className="flex flex-col h-full">
+                <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm md:px-6 md:justify-end">
+                  <div className="md:hidden">
+                    <SidebarTrigger />
+                  </div>
+                  <div className="hidden md:flex items-center gap-4">
+                    {/* <ThemeToggle /> /> */}
+                  </div>
+                </header>
+                <main className="flex-1 overflow-y-auto p-4 md:p-6">
+                  {children}
+                </main>
+              </div>
+            </SidebarInset>
+          </SidebarProvider>
+          <Toaster />
+        </UserProfileProvider>
       </body>
     </html>
   );

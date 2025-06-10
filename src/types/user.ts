@@ -6,7 +6,7 @@
 export type UserRole =
   | 'Farmer'
   | 'Investor'
-  | 'Admin'
+  | 'Admin' // Added Admin role
   | 'Field Agent'
   | 'Farm Manager';
 

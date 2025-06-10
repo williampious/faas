@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "170233921787",
+    "project_id": "farming-as-a-service",
+    "storage_bucket": "farming-as-a-service.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:170233921787:android:ed4c16d556f0d8d141b05e",
+        "android_client_info": {
+          "package_name": "AgriFAAS.Connect"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "170233921787-1k7uskoaaahberbd4l51f1hdq02a3bud.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGS1MUP4PjYtp1EqmqZW6Kxj2S1yU0Hos"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "170233921787-1k7uskoaaahberbd4l51f1hdq02a3bud.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
