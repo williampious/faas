@@ -76,7 +76,7 @@ export default function SignInPage() {
       <Card className="w-full max-w-md shadow-2xl mx-auto my-auto"> {/* Added mx-auto my-auto for centering */}
         <CardHeader className="space-y-1 text-center p-8 bg-primary/10">
           <Link href="/" className="flex justify-center mb-4">
-              <Image src="/agrifaas-logo.png" alt="AgriFAAS Connect Logo" width={240} height={72} data-ai-hint="logo agriculture" objectFit="contain" />
+              <Image src="/agrifaas-logo.png" alt="AgriFAAS Connect Logo" width={280} height={84} data-ai-hint="logo agriculture" objectFit="contain" />
           </Link>
           <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Sign In</CardTitle>
           <CardDescription className="text-muted-foreground">
