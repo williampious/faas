@@ -17,9 +17,9 @@ const firebaseConfigValuesFromEnv = {
 const missingOrPlaceholderKeys = Object.entries(firebaseConfigValuesFromEnv)
   .filter(([key, value]) => {
     const commonPlaceholders = ["YOUR_API_KEY", "YOUR_PROJECT_ID", "YOUR_AUTH_DOMAIN", "YOUR_APP_ID", "YOUR_STORAGE_BUCKET", "YOUR_MESSAGING_SENDER_ID"];
-    return !value || 
-           typeof value !== 'string' || 
-           value.trim() === '' || 
+    return !value ||
+           typeof value !== 'string' ||
+           value.trim() === '' ||
            commonPlaceholders.some(placeholder => value.includes(placeholder)) ||
            (key === 'projectId' && value.includes("demo-")); // Firebase demo projects often have "demo-"
   })
@@ -33,11 +33,13 @@ let authInstance: ReturnType<typeof getAuth> | null = null;
 
 if (!isFirebaseClientConfigured) {
   console.warn(
-    "Firebase Client Warning: Configuration is missing, incomplete, or uses placeholder values. " +
-    "Firebase client features will NOT be initialized. " +
-    "Please ensure all NEXT_PUBLIC_FIREBASE_... variables are correctly set in your .env.local file and that you have restarted your development server. ",
-    "Potentially problematic keys based on checks:", missingOrPlaceholderKeys.join(', ') || 'None (check for empty strings, typos, or other placeholder patterns).',
-    "Current config values (review these carefully): ", JSON.stringify(firebaseConfigValuesFromEnv, null, 2)
+    "🛑 Firebase Client Initialization Error: Your Firebase client-side configuration appears to be missing, incomplete, or uses placeholder values. " +
+    "Firebase client features (like Authentication and Firestore) will NOT be initialized. \n\n" +
+    "👉 PLEASE CHECK THE FOLLOWING: 👈\n" +
+    "1. Your `.env.local` file (in the project root) has ALL `NEXT_PUBLIC_FIREBASE_...` variables correctly set with actual values from your Firebase project's web app settings (NOT placeholders).\n" +
+    "2. You have RESTARTED your Next.js development server (e.g., `npm run dev`) after creating or modifying the `.env.local` file.\n\n" +
+    "Potentially problematic configuration keys based on our checks: " + (missingOrPlaceholderKeys.join(', ') || 'None (check for empty strings, typos, or other placeholder patterns).') + "\n\n" +
+    "🔍 Values currently being read by the application for Firebase config keys (VERIFY THESE AGAINST YOUR FIREBASE CONSOLE): \n" + JSON.stringify(firebaseConfigValuesFromEnv, null, 2)
   );
 } else {
   if (!getApps().length) {
@@ -72,7 +74,7 @@ if (!isFirebaseClientConfigured) {
             "Stack:", e.stack
         );
     }
-  } else if (isFirebaseClientConfigured) { 
+  } else if (isFirebaseClientConfigured) {
      // This case means isFirebaseClientConfigured was true, but appInstance is still null.
      // This implies initializeApp likely failed and the error was caught above.
      console.error(
