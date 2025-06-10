@@ -13,9 +13,9 @@ import { z } from 'zod';
 import { useState } from 'react';
 import { Loader2, UserPlus } from 'lucide-react';
 import Image from 'next/image';
-import { auth, db } from '@/lib/firebase'; // Import db
+import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase'; // Import db and isFirebaseClientConfigured
 import { createUserWithEmailAndPassword, type User } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore'; // Import Firestore functions
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'; // Import Firestore functions
 import type { AgriFAASUserProfile, UserRole } from '@/types/user'; // Import user profile type
 
 const registerSchema = z.object({
@@ -47,8 +47,14 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError(null);
 
+    if (!isFirebaseClientConfigured) {
+      setError("Firebase client configuration is missing or incomplete. Please ensure all NEXT_PUBLIC_FIREBASE_... variables are correctly set in your .env.local file and that you have restarted your development server.");
+      setIsLoading(false);
+      return;
+    }
+
     if (!auth || !db) {
-      setError("Firebase authentication or database is not configured. Please check your setup.");
+      setError("Firebase authentication or database service is not available. This could be due to a network issue or Firebase services not being fully enabled in your project console. Please check your setup and internet connection.");
       setIsLoading(false);
       return;
     }
@@ -75,11 +81,17 @@ export default function RegisterPage() {
         role: roles, // Assign determined roles
         accountStatus: 'Active',
         registrationDate: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(), // Using client-side date for simplicity, serverTimestamp can be used too
         updatedAt: new Date().toISOString(),
         phoneNumber: '', // Explicitly set as empty as it's not collected
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`, // Basic placeholder avatar
       };
+      
+      // For createdAt and updatedAt, it's better to use serverTimestamp if possible, 
+      // but for consistency with previous setup, new Date().toISOString() is used.
+      // If serverTimestamp is preferred:
+      // const profileWithServerTime = { ...newUserProfile, createdAt: serverTimestamp(), updatedAt: serverTimestamp()};
+      // await setDoc(doc(db, 'users', firebaseUser.uid), profileWithServerTime);
 
       await setDoc(doc(db, 'users', firebaseUser.uid), newUserProfile);
       console.log('User profile created in Firestore for user:', firebaseUser.uid, 'with roles:', roles);
@@ -105,7 +117,7 @@ export default function RegisterPage() {
     <Card className="w-full max-w-md shadow-2xl">
       <CardHeader className="space-y-1 text-center p-8">
          <Link href="/" className="flex justify-center mb-4">
-            <Image src="/agrifaas-logo.png" alt="AgriFAAS Connect Logo" width={240} height={72} data-ai-hint="logo agriculture" objectFit="contain" />
+            <Image src="/agrifaas-logo.png" alt="AgriFAAS Connect Logo" width={280} height={84} data-ai-hint="logo agriculture" objectFit="contain" />
         </Link>
         <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create Account</CardTitle>
         <CardDescription className="text-muted-foreground">
