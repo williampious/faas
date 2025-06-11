@@ -1,23 +1,152 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import type { AgriFAASUserProfile } from '@/types/user';
-import { UserCircle, Mail, Phone, MapPin, Briefcase, Building, ShieldCheck, Settings, Bell, Loader2, AlertTriangle } from 'lucide-react';
-import { format } from 'date-fns';
+import type { AgriFAASUserProfile, UserRole, Gender, CommunicationChannel } from '@/types/user';
+import { UserCircle, Mail, Phone, MapPin, Briefcase, Building, ShieldCheck, Settings, Bell, Loader2, AlertTriangle, Edit3, Save, XCircle, CalendarIcon } from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/contexts/user-profile-context';
-import { Button } from '@/components/ui/button'; // For potential future edit button
+import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea'; // Although not used for many fields, good to have
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { db } from '@/lib/firebase';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useToast } from "@/hooks/use-toast";
+
+const genderOptions: Gender[] = ['Male', 'Female', 'Other', 'PreferNotToSay'];
+const communicationChannelOptions: CommunicationChannel[] = ['SMS', 'AppNotification', 'WhatsApp'];
+
+const profileFormSchema = z.object({
+  fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
+  phoneNumber: z.string().optional().or(z.literal('')),
+  dateOfBirth: z.date().optional(),
+  gender: z.enum([...genderOptions, ""] as [string, ...string[]]).optional(), // Allow empty string for "not set"
+  address: z.object({
+    street: z.string().optional(),
+    city: z.string().optional(),
+    region: z.string().optional(),
+    country: z.string().optional(),
+    postalCode: z.string().optional(),
+  }).optional(),
+  primaryLanguage: z.string().optional(),
+  preferredCommunicationChannel: z.enum([...communicationChannelOptions, ""] as [string, ...string[]]).optional(),
+  notificationPreferences: z.object({
+    email: z.boolean().optional(),
+    sms: z.boolean().optional(),
+    push: z.boolean().optional(),
+    whatsApp: z.boolean().optional(),
+  }).optional(),
+  alertsToggle: z.object({
+    dailySummary: z.boolean().optional(),
+    weeklySummary: z.boolean().optional(),
+    priceAlerts: z.boolean().optional(),
+    pestAlerts: z.boolean().optional(),
+  }).optional(),
+  receiveAgriculturalTips: z.boolean().optional(),
+  receiveWeatherUpdates: z.boolean().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
 
 export default function UserProfilePage() {
-  const { userProfile, isLoading, error } = useUserProfile();
+  const { userProfile, isLoading: isProfileLoading, error: profileError, user } = useUserProfile();
+  const { toast } = useToast();
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (isLoading) {
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {},
+  });
+
+  useEffect(() => {
+    if (userProfile) {
+      const dob = userProfile.dateOfBirth && isValid(parseISO(userProfile.dateOfBirth)) ? parseISO(userProfile.dateOfBirth) : undefined;
+      form.reset({
+        fullName: userProfile.fullName || '',
+        phoneNumber: userProfile.phoneNumber || '',
+        dateOfBirth: dob,
+        gender: userProfile.gender || "",
+        address: {
+          street: userProfile.address?.street || '',
+          city: userProfile.address?.city || '',
+          region: userProfile.address?.region || '',
+          country: userProfile.address?.country || '',
+          postalCode: userProfile.address?.postalCode || '',
+        },
+        primaryLanguage: userProfile.primaryLanguage || '',
+        preferredCommunicationChannel: userProfile.preferredCommunicationChannel || "",
+        notificationPreferences: {
+          email: userProfile.notificationPreferences?.email || false,
+          sms: userProfile.notificationPreferences?.sms || false,
+          push: userProfile.notificationPreferences?.push || false,
+          whatsApp: userProfile.notificationPreferences?.whatsApp || false,
+        },
+        alertsToggle: {
+          dailySummary: userProfile.alertsToggle?.dailySummary || false,
+          weeklySummary: userProfile.alertsToggle?.weeklySummary || false,
+          priceAlerts: userProfile.alertsToggle?.priceAlerts || false,
+          pestAlerts: userProfile.alertsToggle?.pestAlerts || false,
+        },
+        receiveAgriculturalTips: userProfile.receiveAgriculturalTips || false,
+        receiveWeatherUpdates: userProfile.receiveWeatherUpdates || false,
+      });
+    }
+  }, [userProfile, form, isEditMode]); // Reset form when userProfile changes or edit mode is toggled
+
+  const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
+    if (!user || !userProfile) {
+      toast({ title: "Error", description: "User not found. Cannot save profile.", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const profileDataToUpdate: Partial<AgriFAASUserProfile> = {
+        ...data,
+        dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, 'yyyy-MM-dd') : undefined, // Store as ISO string
+        updatedAt: serverTimestamp() as any, // Firestore will convert this
+      };
+      
+      // Ensure empty strings for optional fields are treated as 'undefined' or removed if not desired
+      if (profileDataToUpdate.phoneNumber === '') delete profileDataToUpdate.phoneNumber;
+      if (profileDataToUpdate.gender === '') delete profileDataToUpdate.gender;
+      // ... similar checks for other optional string fields if backend expects absence rather than empty string
+
+
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, profileDataToUpdate);
+
+      toast({ title: "Profile Updated", description: "Your profile has been successfully updated." });
+      setIsEditMode(false);
+    } catch (err: any) {
+      console.error("Error updating profile:", err);
+      toast({ title: "Update Failed", description: err.message || "Could not update profile. Please try again.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
+  if (isProfileLoading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-[calc(100vh-10rem)] p-4 text-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -26,7 +155,7 @@ export default function UserProfilePage() {
     );
   }
 
-  if (error) {
+  if (profileError) {
     return (
       <div className="container mx-auto py-10 flex justify-center">
         <Card className="w-full max-w-lg text-center shadow-lg">
@@ -38,7 +167,7 @@ export default function UserProfilePage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-2">Could not load your user profile due to an error:</p>
-            <p className="text-sm text-destructive bg-destructive/10 p-2 rounded-md">{error}</p>
+            <p className="text-sm text-destructive bg-destructive/10 p-2 rounded-md">{profileError}</p>
             <p className="mt-4 text-sm text-muted-foreground">Please try refreshing the page. If the issue persists, contact support.</p>
           </CardContent>
         </Card>
@@ -65,118 +194,302 @@ export default function UserProfilePage() {
     );
   }
 
-  const user = userProfile; // Use the loaded userProfile
+  const currentProfile = userProfile; // Use the loaded userProfile
 
   return (
     <div>
       <PageHeader
         title="User Profile"
         icon={UserCircle}
-        description="View and manage your account details."
-        // Action button for editing can be added here later
-        // action={<Button variant="outline"><Edit2 className="mr-2 h-4 w-4" /> Edit Profile</Button>}
+        description={isEditMode ? "Update your account details." : "View and manage your account details."}
+        action={!isEditMode && (
+          <Button variant="outline" onClick={() => setIsEditMode(true)}>
+            <Edit3 className="mr-2 h-4 w-4" /> Edit Profile
+          </Button>
+        )}
       />
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Left Column: Avatar & Basic Info */}
-        <div className="md:col-span-1 space-y-6">
-          <Card className="shadow-lg">
-            <CardHeader className="items-center text-center">
-              <Avatar className="w-24 h-24 mb-4 border-2 border-primary">
-                <AvatarImage src={user.avatarUrl} alt={user.fullName} data-ai-hint="profile person" />
-                <AvatarFallback>{user.fullName?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
-              </Avatar>
-              <CardTitle className="font-headline">{user.fullName}</CardTitle>
-              <div className="flex flex-wrap justify-center gap-2 mt-1">
-                {user.role?.map(r => <Badge key={r} variant={r === 'Admin' ? 'default' : 'secondary'}>{r}</Badge>) ?? <Badge variant="outline">No Role</Badge>}
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm">
-              <InfoItem icon={Mail} label="Email" value={user.emailAddress || 'Not provided'} />
-              <InfoItem icon={Phone} label="Phone" value={user.phoneNumber || 'Not set'} />
-              {user.dateOfBirth && <InfoItem label="Date of Birth" value={format(new Date(user.dateOfBirth), 'MMMM d, yyyy')} />}
-              {user.nationalId && <InfoItem label="National ID" value={user.nationalId} />}
-              {user.address && (
-                <InfoItem icon={MapPin} label="Location" value={`${user.address.city || 'N/A City'}, ${user.address.region || 'N/A Region'}`} />
-              )}
-            </CardContent>
-          </Card>
+      {isEditMode ? (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="font-headline">Edit Your Profile</CardTitle>
+            <CardDescription>Make changes to your personal information and preferences.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                {/* Basic Information Section */}
+                <section className="space-y-4 p-4 border rounded-lg">
+                  <h3 className="text-lg font-semibold text-primary">Basic Information</h3>
+                  <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl><Input placeholder="Your full name" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl><Input type="tel" placeholder="Your phone number" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="dateOfBirth"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Date of Birth</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-[240px] pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date > new Date() || date < new Date("1900-01-01")
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Gender</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select your gender" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="">Prefer not to say</SelectItem>
+                            {genderOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </section>
 
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline text-lg flex items-center">
-                <ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Account Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm space-y-2">
-              <InfoItem label="Status" value={<Badge variant={user.accountStatus === 'Active' ? 'default' : 'destructive'}>{user.accountStatus}</Badge>} />
-              <InfoItem label="Member Since" value={user.registrationDate ? format(new Date(user.registrationDate), 'MMMM d, yyyy') : 'N/A'} />
-              <InfoItem label="Last Updated" value={user.updatedAt ? format(new Date(user.updatedAt), 'PPpp') : 'N/A'} />
-            </CardContent>
-          </Card>
-        </div>
+                {/* Address Section */}
+                <section className="space-y-4 p-4 border rounded-lg">
+                  <h3 className="text-lg font-semibold text-primary">Address</h3>
+                  <FormField control={form.control} name="address.street" render={({ field }) => (<FormItem><FormLabel>Street</FormLabel><FormControl><Input placeholder="Street address" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="address.city" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input placeholder="City" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="address.region" render={({ field }) => (<FormItem><FormLabel>Region/State</FormLabel><FormControl><Input placeholder="Region or State" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="address.country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input placeholder="Country" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="address.postalCode" render={({ field }) => (<FormItem><FormLabel>Postal Code</FormLabel><FormControl><Input placeholder="Postal Code" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                </section>
 
-        {/* Right Column: Detailed Info Tabs/Sections */}
-        <div className="md:col-span-2 space-y-6">
-          {user.farmDetails && Object.keys(user.farmDetails).length > 0 && (
+                {/* Preferences Section */}
+                <section className="space-y-4 p-4 border rounded-lg">
+                  <h3 className="text-lg font-semibold text-primary">Preferences</h3>
+                  <FormField control={form.control} name="primaryLanguage" render={({ field }) => (<FormItem><FormLabel>Primary Language</FormLabel><FormControl><Input placeholder="e.g., English, Twi" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField
+                    control={form.control}
+                    name="preferredCommunicationChannel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Preferred Communication Channel</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select channel" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                             <SelectItem value="">Not specified</SelectItem>
+                            {communicationChannelOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="space-y-2">
+                    <FormLabel>Notification Preferences</FormLabel>
+                    <FormField control={form.control} name="notificationPreferences.email" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Email Notifications</FormLabel></FormItem>)} />
+                    <FormField control={form.control} name="notificationPreferences.sms" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">SMS Notifications</FormLabel></FormItem>)} />
+                    <FormField control={form.control} name="notificationPreferences.push" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Push Notifications (In-App)</FormLabel></FormItem>)} />
+                    <FormField control={form.control} name="notificationPreferences.whatsApp" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">WhatsApp Notifications</FormLabel></FormItem>)} />
+                  </div>
+                   <div className="space-y-2">
+                    <FormLabel>Alert Subscriptions</FormLabel>
+                    <FormField control={form.control} name="alertsToggle.dailySummary" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Daily Summary Alerts</FormLabel></FormItem>)} />
+                    <FormField control={form.control} name="alertsToggle.weeklySummary" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Weekly Summary Alerts</FormLabel></FormItem>)} />
+                    <FormField control={form.control} name="alertsToggle.priceAlerts" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Price Alerts</FormLabel></FormItem>)} />
+                    <FormField control={form.control} name="alertsToggle.pestAlerts" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Pest Alerts</FormLabel></FormItem>)} />
+                  </div>
+                   <FormField
+                    control={form.control}
+                    name="receiveAgriculturalTips"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>Agricultural Tips</FormLabel>
+                          <FormDescription>Receive useful agricultural tips and news.</FormDescription>
+                        </div>
+                        <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="receiveWeatherUpdates"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>Weather Updates</FormLabel>
+                          <FormDescription>Receive weather updates relevant to your location.</FormDescription>
+                        </div>
+                        <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </section>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsEditMode(false)} disabled={isSubmitting}>
+                    <XCircle className="mr-2 h-4 w-4" /> Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="md:col-span-1 space-y-6">
+            <Card className="shadow-lg">
+              <CardHeader className="items-center text-center">
+                <Avatar className="w-24 h-24 mb-4 border-2 border-primary">
+                  <AvatarImage src={currentProfile.avatarUrl} alt={currentProfile.fullName} data-ai-hint="profile person" />
+                  <AvatarFallback>{currentProfile.fullName?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
+                </Avatar>
+                <CardTitle className="font-headline">{currentProfile.fullName}</CardTitle>
+                <div className="flex flex-wrap justify-center gap-2 mt-1">
+                  {currentProfile.role?.map(r => <Badge key={r} variant={r === 'Admin' ? 'default' : 'secondary'}>{r}</Badge>) ?? <Badge variant="outline">No Role</Badge>}
+                </div>
+              </CardHeader>
+              <CardContent className="text-sm">
+                <InfoItem icon={Mail} label="Email" value={currentProfile.emailAddress || 'Not provided'} />
+                <InfoItem icon={Phone} label="Phone" value={currentProfile.phoneNumber || 'Not set'} />
+                {currentProfile.dateOfBirth && isValid(parseISO(currentProfile.dateOfBirth)) && <InfoItem label="Date of Birth" value={format(parseISO(currentProfile.dateOfBirth), 'MMMM d, yyyy')} />}
+                <InfoItem icon={Briefcase} label="Gender" value={currentProfile.gender || 'Not specified'}/>
+                {currentProfile.nationalId && <InfoItem label="National ID" value={currentProfile.nationalId} />}
+                {currentProfile.address && (
+                  <InfoItem icon={MapPin} label="Location" value={
+                    [currentProfile.address.street, currentProfile.address.city, currentProfile.address.region, currentProfile.address.country, currentProfile.address.postalCode].filter(Boolean).join(', ') || 'Not set'
+                  } />
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="font-headline text-lg flex items-center">
-                  <Building className="mr-2 h-5 w-5 text-primary" /> Farm & Hub Details
+                  <ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Account Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-2">
-                <InfoItem label="Farm Hub ID" value={user.farmDetails.linkedFarmHubId} />
-                <InfoItem label="Allocated Land" value={user.farmDetails.allocatedLandSizeAcres ? `${user.farmDetails.allocatedLandSizeAcres} acres` : 'N/A'} />
-                <InfoItem label="Crops Grown" value={user.farmDetails.cropTypesBeingGrown?.join(', ')} />
-                <InfoItem label="Irrigation Access" value={user.farmDetails.irrigationAccess !== undefined ? (user.farmDetails.irrigationAccess ? 'Yes' : 'No') : 'N/A'} />
-                <InfoItem label="Productivity Score" value={user.farmDetails.productivityScore?.toString()} />
-                {user.farmDetails.previousSeasonPerformance && <InfoItem label="Previous Season" value={user.farmDetails.previousSeasonPerformance} className="whitespace-pre-line"/>}
+                <InfoItem label="Status" value={<Badge variant={currentProfile.accountStatus === 'Active' ? 'default' : 'destructive'}>{currentProfile.accountStatus}</Badge>} />
+                <InfoItem label="Member Since" value={currentProfile.registrationDate && isValid(parseISO(currentProfile.registrationDate)) ? format(parseISO(currentProfile.registrationDate), 'MMMM d, yyyy') : 'N/A'} />
+                <InfoItem label="Last Updated" value={currentProfile.updatedAt && isValid(parseISO(currentProfile.updatedAt)) ? format(parseISO(currentProfile.updatedAt), 'PPpp') : 'N/A'} />
+                 <InfoItem label="User ID" value={currentProfile.userId} className="text-xs break-all" />
+                <InfoItem label="Firebase UID" value={currentProfile.firebaseUid} className="text-xs break-all" />
               </CardContent>
             </Card>
-          )}
+          </div>
 
-          {(user.notificationPreferences || user.languagePreference || user.alertsToggle || user.receiveAgriculturalTips !== undefined || user.receiveWeatherUpdates !== undefined) && (
+          <div className="md:col-span-2 space-y-6">
+            {currentProfile.farmDetails && Object.keys(currentProfile.farmDetails).length > 0 && (
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle className="font-headline text-lg flex items-center">
+                    <Building className="mr-2 h-5 w-5 text-primary" /> Farm & Hub Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <InfoItem label="Farm Hub ID" value={currentProfile.farmDetails.linkedFarmHubId} />
+                  <InfoItem label="Allocated Land" value={currentProfile.farmDetails.allocatedLandSizeAcres ? `${currentProfile.farmDetails.allocatedLandSizeAcres} acres` : 'N/A'} />
+                  <InfoItem label="Crops Grown" value={currentProfile.farmDetails.cropTypesBeingGrown?.join(', ')} />
+                  <InfoItem label="Irrigation Access" value={currentProfile.farmDetails.irrigationAccess !== undefined ? (currentProfile.farmDetails.irrigationAccess ? 'Yes' : 'No') : 'N/A'} />
+                  <InfoItem label="Productivity Score" value={currentProfile.farmDetails.productivityScore?.toString()} />
+                  {currentProfile.farmDetails.previousSeasonPerformance && <InfoItem label="Previous Season" value={currentProfile.farmDetails.previousSeasonPerformance} className="whitespace-pre-line"/>}
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-headline text-lg flex items-center">
-                  <Settings className="mr-2 h-5 w-5 text-primary" /> Preferences
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <InfoItem label="Primary Language" value={user.primaryLanguage || user.languagePreference} />
-                <InfoItem label="Preferred Communication" value={user.preferredCommunicationChannel} />
-                
-                {user.notificationPreferences && Object.values(user.notificationPreferences).some(v => v) && (
-                  <>
-                    <h4 className="font-medium pt-2 text-muted-foreground">Notification Channels:</h4>
-                    <ul className="list-disc list-inside pl-2">
-                      {user.notificationPreferences?.email && <li>Email</li>}
-                      {user.notificationPreferences?.sms && <li>SMS</li>}
-                      {user.notificationPreferences?.push && <li>Push Notifications</li>}
-                      {user.notificationPreferences?.whatsApp && <li>WhatsApp</li>}
-                    </ul>
-                  </>
-                )}
-                
-                {user.alertsToggle && Object.values(user.alertsToggle).some(v => v) && (
-                   <>
-                    <h4 className="font-medium pt-2 text-muted-foreground">Alerts:</h4>
-                    <ul className="list-disc list-inside pl-2">
-                        {user.alertsToggle?.dailySummary && <li>Daily Summary</li>}
-                        {user.alertsToggle?.weeklySummary && <li>Weekly Summary</li>}
-                        {user.alertsToggle?.pestAlerts && <li>Pest Alerts</li>}
-                        {user.alertsToggle?.priceAlerts && <li>Price Alerts</li>}
-                    </ul>
-                   </>
-                )}
-                <InfoItem label="Agricultural Tips" value={user.receiveAgriculturalTips !== undefined ? (user.receiveAgriculturalTips ? 'Subscribed' : 'Not Subscribed') : 'N/A'} />
-                <InfoItem label="Weather Updates" value={user.receiveWeatherUpdates !== undefined ? (user.receiveWeatherUpdates ? 'Subscribed' : 'Not Subscribed') : 'N/A'} />
-              </CardContent>
-            </Card>
-          )}
+                <CardHeader>
+                  <CardTitle className="font-headline text-lg flex items-center">
+                    <Settings className="mr-2 h-5 w-5 text-primary" /> Preferences & Notifications
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-3">
+                  <InfoItem label="Primary Language" value={currentProfile.primaryLanguage || 'Not set'} />
+                  <InfoItem label="Preferred Communication" value={currentProfile.preferredCommunicationChannel || 'Not set'} />
+                  
+                  <Separator />
+                  <h4 className="font-medium pt-1 text-muted-foreground">Notification Channels:</h4>
+                  <ul className="list-disc list-inside pl-4 text-xs">
+                    <li>Email: {currentProfile.notificationPreferences?.email ? 'Enabled' : 'Disabled'}</li>
+                    <li>SMS: {currentProfile.notificationPreferences?.sms ? 'Enabled' : 'Disabled'}</li>
+                    <li>Push Notifications: {currentProfile.notificationPreferences?.push ? 'Enabled' : 'Disabled'}</li>
+                    <li>WhatsApp: {currentProfile.notificationPreferences?.whatsApp ? 'Enabled' : 'Disabled'}</li>
+                  </ul>
+                  {!Object.values(currentProfile.notificationPreferences || {}).some(Boolean) && <p className="text-xs text-muted-foreground pl-4">No notification channels explicitly enabled.</p>}
+                  
+                  <Separator />
+                  <h4 className="font-medium pt-1 text-muted-foreground">Subscribed Alerts:</h4>
+                  <ul className="list-disc list-inside pl-4 text-xs">
+                    <li>Daily Summary: {currentProfile.alertsToggle?.dailySummary ? 'Subscribed' : 'Not Subscribed'}</li>
+                    <li>Weekly Summary: {currentProfile.alertsToggle?.weeklySummary ? 'Subscribed' : 'Not Subscribed'}</li>
+                    <li>Price Alerts: {currentProfile.alertsToggle?.priceAlerts ? 'Subscribed' : 'Not Subscribed'}</li>
+                    <li>Pest Alerts: {currentProfile.alertsToggle?.pestAlerts ? 'Subscribed' : 'Not Subscribed'}</li>
+                  </ul>
+                  {!Object.values(currentProfile.alertsToggle || {}).some(Boolean) && <p className="text-xs text-muted-foreground pl-4">No specific alerts subscribed.</p>}
+
+                  <Separator />
+                  <InfoItem label="Agricultural Tips" value={currentProfile.receiveAgriculturalTips ? 'Subscribed' : 'Not Subscribed'} />
+                  <InfoItem label="Weather Updates" value={currentProfile.receiveWeatherUpdates ? 'Subscribed' : 'Not Subscribed'} />
+                </CardContent>
+              </Card>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -189,21 +502,27 @@ interface InfoItemProps {
 }
 
 function InfoItem({ icon: Icon, label, value, className }: InfoItemProps) {
-  if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
-     // Still render if it's a boolean false or number 0
-    if (typeof value === 'boolean' || typeof value === 'number') {
-      // Allow to proceed
-    } else {
-      return null; // Don't render if value is truly empty/undefined/null string
-    }
+  const isConsideredEmpty = value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
+  
+  if (isConsideredEmpty && typeof value !== 'boolean' && typeof value !== 'number') {
+    return null; 
   }
+
+  let displayValue = value;
+  if (typeof value === 'boolean') {
+    displayValue = value ? "Yes" : "No";
+  }
+
   return (
-    <div className={cn("py-2 flex justify-between items-start border-b border-border/50 last:border-b-0", className)}>
-      <span className="font-medium text-muted-foreground flex items-center whitespace-nowrap mr-2">
+    <div className={cn("py-2 flex flex-col sm:flex-row sm:justify-between sm:items-start border-b border-border/50 last:border-b-0", className)}>
+      <span className="font-medium text-muted-foreground flex items-center whitespace-nowrap mb-1 sm:mb-0 sm:mr-2">
         {Icon && <Icon className="mr-2 h-4 w-4 text-primary/80 shrink-0" />}
         {label}:
       </span>
-      {typeof value === 'string' ? <span className="text-right text-foreground break-words">{value}</span> : <div className="text-right text-foreground break-words">{value}</div>}
+      {typeof displayValue === 'string' ? <span className="sm:text-right text-foreground break-words">{displayValue}</span> : <div className="sm:text-right text-foreground break-words">{displayValue}</div>}
     </div>
   );
 }
+
+
+    
