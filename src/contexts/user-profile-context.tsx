@@ -41,7 +41,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       setUser(currentUser);
       if (currentUser) {
         setIsLoading(true);
-        setError(null);
+        // setError(null); // Clear error initially for a new auth state
         const userDocRef = doc(db, 'users', currentUser.uid);
         
         const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
@@ -49,26 +49,31 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             const profileData = docSnap.data() as AgriFAASUserProfile;
             setUserProfile(profileData);
             setIsAdmin(profileData.role?.includes('Admin') || false);
+            setError(null); // Successfully fetched profile, clear any previous profile errors
           } else {
             setUserProfile(null);
             setIsAdmin(false);
             console.warn(`User profile not found in Firestore for UID: ${currentUser.uid}. This may occur if registration didn't complete, the profile was deleted, or if this is an old user account without a profile document.`);
-            // setError("User profile not found. Some features may be limited. If this persists, please contact support.");
+            setError(`User profile document not found in Firestore for your account (UID: ${currentUser.uid}). Please complete registration or contact support if you believe this is an error.`);
           }
           setIsLoading(false);
-        }, (profileError) => {
-          console.error("Error fetching user profile:", profileError);
-          setError("Failed to fetch user profile. Some features might be unavailable.");
+        }, (firestoreError: any) => { // Catching Firestore errors for onSnapshot
+          console.error("Error fetching user profile from Firestore:", firestoreError);
+          if (firestoreError.code === 'permission-denied') {
+            setError("Permission denied: Could not fetch your user profile from Firestore. This is likely due to Firestore security rules. Please ensure rules allow authenticated users to read their own profile in the 'users' collection.");
+          } else {
+            setError(`Failed to fetch user profile due to a database error (code: ${firestoreError.code || 'unknown'}). Some features might be unavailable. Please try again or contact support.`);
+          }
           setUserProfile(null);
           setIsAdmin(false);
           setIsLoading(false);
         });
-        return () => unsubscribeProfile(); // Cleanup profile listener when auth state changes or component unmounts
+        return () => unsubscribeProfile(); 
       } else {
         setUserProfile(null);
         setIsAdmin(false);
         setIsLoading(false);
-        setError(null);
+        setError(null); // No user, so no profile error
       }
     }, (authError) => {
         console.error("Auth state change error:", authError);
@@ -76,7 +81,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
     });
 
-    return () => unsubscribeAuth(); // Cleanup auth listener on component unmount
+    return () => unsubscribeAuth();
   }, []);
 
   return (
