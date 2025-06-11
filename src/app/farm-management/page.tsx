@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tractor, Shovel, Seedling, ShieldAlert, Wheat } from 'lucide-react';
+import { Tractor, Shovel, Sprout, ShieldAlert, Wheat } from 'lucide-react'; // Changed Seedling to Sprout
 import Link from 'next/link';
 
 export default function FarmManagementPage() {
@@ -27,7 +27,7 @@ export default function FarmManagementPage() {
         <FeatureCard
           title="Planting"
           description="Activities such as seed selection, sowing or transplanting seedlings, and ensuring correct plant spacing."
-          icon={Seedling}
+          icon={Sprout} // Changed Seedling to Sprout
           href="/farm-management/planting"
           cta="Manage Planting"
         />
