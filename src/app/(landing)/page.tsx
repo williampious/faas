@@ -5,9 +5,27 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Zap, Leaf, BarChart, UserPlus, Tractor, CalendarCheck, Brain, Settings2 } from 'lucide-react'; // Added new icons
+import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users } from 'lucide-react'; 
 
 export default function LandingPage() {
+  const whyAgriFAASPoints = [
+    {
+      icon: Lightbulb,
+      title: "Simplify Complexity",
+      description: "Streamline every aspect of your farm management, from planning to harvest, all in one intuitive platform designed for ease of use.",
+    },
+    {
+      icon: TrendingUp,
+      title: "Boost Productivity",
+      description: "Make smarter decisions with AI-powered insights, real-time data, and precision tools to optimize yields and resources effectively.",
+    },
+    {
+      icon: Users,
+      title: "Empower Connection",
+      description: "Connect your entire team, manage roles, and access critical information, empowering every stakeholder in the agricultural value chain.",
+    }
+  ];
+
   const appSteps = [
     {
       icon: UserPlus,
@@ -93,6 +111,20 @@ export default function LandingPage() {
             </CardFooter>
           </Card>
         </div>
+        
+        <div className="text-center max-w-5xl mx-auto mb-16">
+          <h2 className="text-3xl font-semibold text-foreground/90 mb-10 font-headline">Why AgriFAAS Connect?</h2>
+          <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6">
+            {whyAgriFAASPoints.map((point, index) => (
+              <BenefitCard 
+                key={index}
+                icon={point.icon}
+                title={point.title}
+                description={point.description}
+              />
+            ))}
+          </div>
+        </div>
 
         <div className="text-center max-w-5xl mx-auto">
           <h2 className="text-3xl font-semibold text-foreground/90 mb-10 font-headline">How AgriFAAS Connect Works For You</h2>
@@ -110,6 +142,26 @@ export default function LandingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+interface BenefitCardProps {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+}
+
+function BenefitCard({ icon: Icon, title, description }: BenefitCardProps) {
+  return (
+    <Card className="bg-card/80 dark:bg-card/60 shadow-lg hover:shadow-xl transition-shadow duration-300 p-6 text-center flex flex-col items-center h-full">
+      <div className="p-3 bg-primary/10 rounded-full inline-block mb-4">
+        <Icon className="h-10 w-10 text-primary" />
+      </div>
+      <CardTitle className="text-xl text-primary mb-2 font-semibold">{title}</CardTitle>
+      <CardContent className="p-0 flex-grow">
+        <p className="text-muted-foreground text-sm">{description}</p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -138,3 +190,4 @@ function StepCard({ stepNumber, icon: Icon, title, description }: StepCardProps)
     </Card>
   );
 }
+
