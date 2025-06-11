@@ -14,7 +14,7 @@ import {
   Home,
   ShieldHalf, 
   UsersRound, 
-  Sprout, // Added Sprout icon
+  Tractor, // Changed from Sprout
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -36,7 +36,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/crop-management', label: 'Crop Management', icon: Sprout }, // Added Crop Management
+  { href: '/farm-management', label: 'Farm Management', icon: Tractor }, // Changed from Crop Management and Sprout
   { href: '/farm-calendar', label: 'Farm Calendar', icon: CalendarDays },
   { href: '/resource-inventory', label: 'Resource Inventory', icon: Archive },
   { href: '/weather-monitoring', label: 'Weather Monitoring', icon: CloudSun },
