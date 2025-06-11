@@ -5,13 +5,38 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Zap, Leaf, BarChart } from 'lucide-react';
-// No longer need redirect logic here, root layout handles it.
+import { ArrowRight, Zap, Leaf, BarChart, UserPlus, Tractor, CalendarCheck, Brain, Settings2 } from 'lucide-react'; // Added new icons
 
 export default function LandingPage() {
+  const appSteps = [
+    {
+      icon: UserPlus,
+      title: "Personalized Setup",
+      description: "Register easily and tailor your experience based on your unique farming role in the agricultural ecosystem.",
+    },
+    {
+      icon: Tractor,
+      title: "Full Farm Management",
+      description: "Access a comprehensive suite to manage every stage, from detailed land preparation to efficient harvesting, all in one place.",
+    },
+    {
+      icon: CalendarCheck,
+      title: "Precision Planning",
+      description: "Organize all your activities effectively with an integrated farm calendar and a robust task management system.",
+    },
+    {
+      icon: Brain,
+      title: "Smart Decisions",
+      description: "Leverage AI planting advice, location-specific weather forecasts, and resource tracking for optimal results.",
+    },
+    {
+      icon: Settings2,
+      title: "Centralized Control",
+      description: "Get a clear dashboard overview of key farm aspects, and for admins, access tools for effective user management.",
+    }
+  ];
+
   return (
-    // This div now acts as the main container for the landing page content
-    // and can have specific styles like background gradients.
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12">
       <div className="container mx-auto px-4">
         <header className="mb-12 text-center">
@@ -69,21 +94,18 @@ export default function LandingPage() {
           </Card>
         </div>
 
-        <div className="text-center max-w-4xl mx-auto">
-          <h2 className="text-3xl font-semibold text-foreground/90 mb-8 font-headline">Why AgriFAAS Connect?</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <FeatureCard 
-              icon={Zap}
-              title="Smart Farming" 
-              description="Leverage AI for planting advice, weather monitoring, and resource management." />
-            <FeatureCard 
-              icon={Leaf}
-              title="Resource Hub" 
-              description="Access a comprehensive inventory and connect with suppliers." />
-            <FeatureCard 
-              icon={BarChart}
-              title="Seamless Operations" 
-              description="Manage tasks, track progress, and organize your farm calendar efficiently." />
+        <div className="text-center max-w-5xl mx-auto">
+          <h2 className="text-3xl font-semibold text-foreground/90 mb-10 font-headline">How AgriFAAS Connect Works For You</h2>
+          <div className="grid md:grid-cols-1 lg:grid-cols-5 gap-6">
+            {appSteps.map((step, index) => (
+              <StepCard 
+                key={index}
+                stepNumber={index + 1}
+                icon={step.icon}
+                title={step.title}
+                description={step.description}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -91,22 +113,26 @@ export default function LandingPage() {
   );
 }
 
-interface FeatureCardProps {
+interface StepCardProps {
+  stepNumber: number;
   icon: React.ElementType;
   title: string;
   description: string;
 }
 
-function FeatureCard({ icon: Icon, title, description }: FeatureCardProps) {
+function StepCard({ stepNumber, icon: Icon, title, description }: StepCardProps) {
   return (
-    <Card className="bg-card/80 dark:bg-card/50 shadow-lg hover:shadow-xl transition-shadow duration-300 p-6 text-center">
-      <div className="mb-4 flex justify-center">
-        <div className="p-3 bg-primary/10 rounded-full">
-          <Icon className="h-8 w-8 text-primary" />
+    <Card className="bg-card/80 dark:bg-card/60 shadow-lg hover:shadow-xl transition-shadow duration-300 p-5 text-center flex flex-col items-center h-full">
+      <div className="relative mb-4">
+        <div className="p-3 bg-primary/10 rounded-full inline-block">
+          <Icon className="h-10 w-10 text-primary" />
+        </div>
+        <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+          {stepNumber}
         </div>
       </div>
-      <CardTitle className="text-xl text-primary mb-2">{title}</CardTitle>
-      <CardContent className="p-0">
+      <CardTitle className="text-lg text-primary mb-2 font-semibold">{title}</CardTitle>
+      <CardContent className="p-0 flex-grow">
         <p className="text-muted-foreground text-sm">{description}</p>
       </CardContent>
     </Card>
