@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,13 +16,16 @@ import { Loader2, UserPlus } from 'lucide-react';
 import Image from 'next/image';
 import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, type User } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore'; // Removed serverTimestamp for now for simplicity
+import { doc, setDoc } from 'firebase/firestore';
 import type { AgriFAASUserProfile, UserRole } from '@/types/user';
+
+const availableRegisterRoles: UserRole[] = ['Farmer', 'Investor', 'Farm Manager', 'Farm Staff', 'Agric Extension Officer'];
 
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  role: z.enum(availableRegisterRoles, { required_error: 'Please select a role.' }),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -39,6 +43,7 @@ export default function RegisterPage() {
       fullName: '',
       email: '',
       password: '',
+      role: undefined,
     },
   });
 
@@ -63,10 +68,10 @@ export default function RegisterPage() {
       const firebaseUser: User = userCredential.user;
       console.log('User registered with Firebase Auth:', firebaseUser.uid);
 
-      const roles: UserRole[] = ['Farmer'];
+      const userRoles: UserRole[] = [data.role];
       if (firebaseUser.email && firebaseUser.email.toLowerCase() === FIRST_ADMIN_EMAIL.toLowerCase()) {
-        if (!roles.includes('Admin')) {
-            roles.push('Admin');
+        if (!userRoles.includes('Admin')) {
+            userRoles.push('Admin');
         }
       }
 
@@ -76,7 +81,7 @@ export default function RegisterPage() {
         firebaseUid: firebaseUser.uid,
         fullName: data.fullName,
         emailAddress: firebaseUser.email || data.email,
-        role: roles,
+        role: userRoles, // Use the selected role
         accountStatus: 'Active',
         registrationDate: currentDateIso,
         createdAt: currentDateIso,
@@ -86,10 +91,8 @@ export default function RegisterPage() {
       };
       
       await setDoc(doc(db, 'users', firebaseUser.uid), newUserProfile);
-      console.log('User profile created in Firestore for user:', firebaseUser.uid, 'with roles:', roles);
+      console.log('User profile created in Firestore for user:', firebaseUser.uid, 'with roles:', userRoles);
 
-      // Redirection to /dashboard is now handled by the root layout after auth state update
-      // router.push('/dashboard'); 
     } catch (firebaseError: any) {
       console.error('Firebase Registration or Profile Creation Error:', firebaseError);
       let errorMessage = "An error occurred during registration. Please try again.";
@@ -108,7 +111,7 @@ export default function RegisterPage() {
 
   return (
     <div className="w-full bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-950">
-      <Card className="w-full max-w-md shadow-2xl mx-auto my-auto"> {/* Added mx-auto my-auto for centering within the div */}
+      <Card className="w-full max-w-md shadow-2xl mx-auto my-auto">
         <CardHeader className="space-y-1 text-center p-8">
            <Link href="/" className="flex justify-center mb-4">
               <Image src="/agrifaas-logo.png" alt="AgriFAAS Connect Logo" width={280} height={84} data-ai-hint="logo agriculture" objectFit="contain" />
@@ -162,6 +165,26 @@ export default function RegisterPage() {
               />
               {form.formState.errors.password && (
                 <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="role">Your Primary Role</Label>
+              <Select 
+                onValueChange={(value) => form.setValue('role', value as UserRole)}
+                defaultValue={form.getValues('role')}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRegisterRoles.map(r => (
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.role && (
+                <p className="text-sm text-destructive">{form.formState.errors.role.message}</p>
               )}
             </div>
             <Button type="submit" className="w-full text-lg py-6 mt-2" disabled={isLoading}>

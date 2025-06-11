@@ -6,9 +6,11 @@
 export type UserRole =
   | 'Farmer'
   | 'Investor'
-  | 'Admin' // Added Admin role
+  | 'Admin'
   | 'Field Agent'
-  | 'Farm Manager';
+  | 'Farm Manager'
+  | 'Farm Staff' // Added
+  | 'Agric Extension Officer'; // Added
 
 export type Gender = 'Male' | 'Female' | 'Other' | 'PreferNotToSay';
 
