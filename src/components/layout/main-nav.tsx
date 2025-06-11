@@ -14,6 +14,7 @@ import {
   Home,
   ShieldHalf, 
   UsersRound, 
+  Sprout, // Added Sprout icon
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -35,6 +36,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/crop-management', label: 'Crop Management', icon: Sprout }, // Added Crop Management
   { href: '/farm-calendar', label: 'Farm Calendar', icon: CalendarDays },
   { href: '/resource-inventory', label: 'Resource Inventory', icon: Archive },
   { href: '/weather-monitoring', label: 'Weather Monitoring', icon: CloudSun },
@@ -58,11 +60,11 @@ export function MainNav() {
         <SidebarMenuButton
           className={cn(
             'w-full justify-start text-base',
-            pathname === item.href
+            pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href)) // Highlight parent for sub-routes
               ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground'
               : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
           )}
-          isActive={pathname === item.href}
+          isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
           tooltip={{ children: item.label, className: "font-body" }}
         >
           <item.icon className="h-5 w-5 mr-2" />
