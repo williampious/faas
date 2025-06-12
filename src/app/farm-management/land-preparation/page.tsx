@@ -23,9 +23,13 @@ import { Separator } from '@/components/ui/separator';
 const activityTypes = ['Field Clearing', 'Weeding', 'Ploughing', 'Harrowing', 'Levelling', 'Manure Spreading', 'Herbicide Application'] as const;
 type LandPreparationActivityType = typeof activityTypes[number];
 
+const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Other'] as const;
+type CostCategory = typeof costCategories[number];
+
 const costItemSchema = z.object({
-  id: z.string().optional(), // for existing items during edit
+  id: z.string().optional(),
   description: z.string().min(1, "Description is required.").max(100),
+  category: z.enum(costCategories, { required_error: "Category is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
   quantity: z.preprocess(
     (val) => parseFloat(String(val)),
@@ -35,13 +39,13 @@ const costItemSchema = z.object({
     (val) => parseFloat(String(val)),
     z.number().min(0.01, "Unit price must be greater than 0.")
   ),
-  total: z.number().optional(), // Will be calculated
+  total: z.number().optional(),
 });
 
 type CostItemFormValues = z.infer<typeof costItemSchema>;
 
 interface CostItem extends CostItemFormValues {
-  id: string; // Ensure ID is always present after creation
+  id: string;
   total: number;
 }
 
@@ -65,7 +69,7 @@ const activityFormSchema = z.object({
 
 type ActivityFormValues = z.infer<typeof activityFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'landPreparationActivities_v2'; // Changed key due to structure change
+const LOCAL_STORAGE_KEY = 'landPreparationActivities_v3';
 
 export default function LandPreparationPage() {
   const [activities, setActivities] = useState<LandPreparationActivity[]>([]);
@@ -123,7 +127,7 @@ export default function LandPreparationPage() {
         date: activityToEdit.date,
         areaAffected: activityToEdit.areaAffected,
         notes: activityToEdit.notes || '',
-        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID() })) || [],
+        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID(), category: ci.category || costCategories[0] })) || [],
       });
     } else {
       setEditingActivity(null);
@@ -142,6 +146,7 @@ export default function LandPreparationPage() {
     const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
       ...ci,
       id: ci.id || crypto.randomUUID(),
+      category: ci.category || costCategories[0], // Ensure category has a default
       quantity: Number(ci.quantity),
       unitPrice: Number(ci.unitPrice),
       total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
@@ -235,7 +240,7 @@ export default function LandPreparationPage() {
                 <section className="space-y-4 p-4 border rounded-lg">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-primary">Cost Items</h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', unit: '', quantity: 1, unitPrice: 0 })}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], unit: '', quantity: 1, unitPrice: 0 })}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item
                     </Button>
                   </div>
@@ -246,14 +251,22 @@ export default function LandPreparationPage() {
                     return (
                       <div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <FormField control={form.control} name={`costItems.${index}.description`} render={({ field: f }) => (
-                            <FormItem><FormLabel>Description*</FormLabel><FormControl><Input placeholder="e.g., Glyphosate" {...f} /></FormControl><FormMessage /></FormItem>)}
+                           <FormField control={form.control} name={`costItems.${index}.category`} render={({ field: f }) => (
+                            <FormItem><FormLabel>Category*</FormLabel>
+                              <Select onValueChange={f.onChange} defaultValue={f.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
+                                <SelectContent>{costCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                              </Select><FormMessage />
+                            </FormItem>)}
                           />
-                          <FormField control={form.control} name={`costItems.${index}.unit`} render={({ field: f }) => (
-                            <FormItem><FormLabel>Unit*</FormLabel><FormControl><Input placeholder="e.g., Liters, Bags, Days" {...f} /></FormControl><FormMessage /></FormItem>)}
+                          <FormField control={form.control} name={`costItems.${index}.description`} render={({ field: f }) => (
+                            <FormItem><FormLabel>Description*</FormLabel><FormControl><Input placeholder="e.g., Glyphosate, Weeding labor" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                          <FormField control={form.control} name={`costItems.${index}.unit`} render={({ field: f }) => (
+                            <FormItem><FormLabel>Unit*</FormLabel><FormControl><Input placeholder="e.g., Liters, Days" {...f} /></FormControl><FormMessage /></FormItem>)}
+                          />
                           <FormField control={form.control} name={`costItems.${index}.quantity`} render={({ field: f }) => (
                             <FormItem><FormLabel>Quantity*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`costItems.${index}.total`, parseFloat(e.target.value) * (form.getValues(`costItems.${index}.unitPrice`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)}
                           />
@@ -357,14 +370,14 @@ export default function LandPreparationPage() {
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
             <p>&bull; This section helps you track crucial groundwork and associated costs before planting.</p>
-            <p>&bull; Log activities and itemize costs for materials, labor, services, etc.</p>
+            <p>&bull; Log activities and itemize costs by category (Material/Input, Labor, Equipment, etc.).</p>
             <p>&bull; Record the date, specific area affected, and any relevant notes for each activity.</p>
             <p>&bull; The total cost for each activity is automatically calculated and displayed.</p>
-            <p>&bull; Future enhancements will include resource allocation (labor, equipment, materials) and aggregated cost reporting across all farm management stages.</p>
         </CardContent>
       </Card>
     </div>
   );
 }
+    
 
     
