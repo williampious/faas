@@ -70,6 +70,7 @@ const activityFormSchema = z.object({
 type ActivityFormValues = z.infer<typeof activityFormSchema>;
 
 const LOCAL_STORAGE_KEY = 'landPreparationActivities_v3';
+const ACTIVITY_FORM_ID = 'land-prep-activity-form';
 
 export default function LandPreparationPage() {
   const [activities, setActivities] = useState<LandPreparationActivity[]>([]);
@@ -146,7 +147,7 @@ export default function LandPreparationPage() {
     const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
       ...ci,
       id: ci.id || crypto.randomUUID(),
-      category: ci.category || costCategories[0], // Ensure category has a default
+      category: ci.category || costCategories[0], 
       quantity: Number(ci.quantity),
       unitPrice: Number(ci.unitPrice),
       total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
@@ -213,9 +214,9 @@ export default function LandPreparationPage() {
               {editingActivity ? 'Update the details and costs of this activity.' : 'Enter details and costs for the new activity.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-grow overflow-y-auto pr-2">
+          <div className="flex-grow overflow-y-auto pr-2 py-4"> {/* Scrollable content area */}
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form id={ACTIVITY_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Activity Details</h3>
                   <FormField control={form.control} name="activityType" render={({ field }) => (
@@ -296,18 +297,17 @@ export default function LandPreparationPage() {
                       />
                     </div>
                 </section>
-                
-                <DialogFooter className="sticky bottom-0 bg-background py-4 px-6 border-t mt-auto">
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancel</Button>
-                  </DialogClose>
-                  <Button type="submit">
-                    {editingActivity ? 'Save Changes' : 'Log Activity'}
-                  </Button>
-                </DialogFooter>
               </form>
             </Form>
           </div>
+          <DialogFooter className="py-4 px-6 border-t">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button type="submit" form={ACTIVITY_FORM_ID}>
+              {editingActivity ? 'Save Changes' : 'Log Activity'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -378,6 +378,8 @@ export default function LandPreparationPage() {
     </div>
   );
 }
+    
+
     
 
     

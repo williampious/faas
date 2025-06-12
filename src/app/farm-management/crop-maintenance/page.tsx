@@ -33,9 +33,13 @@ const maintenanceActivityTypes = [
 ] as const;
 type CropMaintenanceActivityType = typeof maintenanceActivityTypes[number];
 
+const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Other'] as const;
+type CostCategory = typeof costCategories[number];
+
 const costItemSchema = z.object({
   id: z.string().optional(),
   description: z.string().min(1, "Description is required.").max(100),
+  category: z.enum(costCategories, { required_error: "Category is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
   quantity: z.preprocess(
     (val) => parseFloat(String(val)),
@@ -59,9 +63,9 @@ interface CropMaintenanceActivity {
   id: string;
   activityType: CropMaintenanceActivityType;
   date: string; // ISO string "yyyy-MM-dd"
-  cropsAffected: string; // e.g., "Tomatoes, Peppers"
-  areaAffected: string; // e.g., "Greenhouse Section B"
-  activityDetails?: string; // Specifics like "Applied NPK 15-15-15", "Scouted for aphids"
+  cropsAffected: string; 
+  areaAffected: string; 
+  activityDetails?: string; 
   notes?: string;
   costItems: CostItem[];
   totalActivityCost: number;
@@ -79,7 +83,8 @@ const activityFormSchema = z.object({
 
 type ActivityFormValues = z.infer<typeof activityFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'cropMaintenanceActivities_v1';
+const LOCAL_STORAGE_KEY = 'cropMaintenanceActivities_v2'; // Version bump due to cost category
+const ACTIVITY_FORM_ID = 'crop-maintenance-form';
 
 export default function CropMaintenancePage() {
   const [activities, setActivities] = useState<CropMaintenanceActivity[]>([]);
@@ -138,11 +143,19 @@ export default function CropMaintenancePage() {
         ...activityToEdit,
         activityDetails: activityToEdit.activityDetails || '',
         notes: activityToEdit.notes || '',
-        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID() })) || [],
+        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID(), category: ci.category || costCategories[0] })) || [],
       });
     } else {
       setEditingActivity(null);
-      form.reset();
+      form.reset({
+        activityType: undefined,
+        date: '',
+        cropsAffected: '',
+        areaAffected: '',
+        activityDetails: '',
+        notes: '',
+        costItems: [],
+      });
     }
     setIsModalOpen(true);
   };
@@ -151,6 +164,7 @@ export default function CropMaintenancePage() {
     const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
       ...ci,
       id: ci.id || crypto.randomUUID(),
+      category: ci.category || costCategories[0],
       quantity: Number(ci.quantity),
       unitPrice: Number(ci.unitPrice),
       total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
@@ -218,9 +232,9 @@ export default function CropMaintenancePage() {
               {editingActivity ? 'Update the details and costs of this maintenance activity.' : 'Enter details and costs for the new maintenance activity.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-grow overflow-y-auto pr-2">
+          <div className="flex-grow overflow-y-auto pr-2 py-4"> {/* Scrollable content area */}
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form id={ACTIVITY_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Activity Details</h3>
                   <FormField control={form.control} name="activityType" render={({ field }) => (
@@ -251,7 +265,7 @@ export default function CropMaintenancePage() {
                 <section className="space-y-4 p-4 border rounded-lg">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-primary">Cost Items</h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', unit: '', quantity: 1, unitPrice: 0 })}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], unit: '', quantity: 1, unitPrice: 0 })}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item
                     </Button>
                   </div>
@@ -262,14 +276,22 @@ export default function CropMaintenancePage() {
                     return (
                       <div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <FormField control={form.control} name={`costItems.${index}.category`} render={({ field: f }) => (
+                            <FormItem><FormLabel>Category*</FormLabel>
+                              <Select onValueChange={f.onChange} defaultValue={f.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
+                                <SelectContent>{costCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                              </Select><FormMessage />
+                            </FormItem>)}
+                          />
                           <FormField control={form.control} name={`costItems.${index}.description`} render={({ field: f }) => (
                             <FormItem><FormLabel>Description*</FormLabel><FormControl><Input placeholder="e.g., NPK Fertilizer, Labor for weeding" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                           <FormField control={form.control} name={`costItems.${index}.unit`} render={({ field: f }) => (
                             <FormItem><FormLabel>Unit*</FormLabel><FormControl><Input placeholder="e.g., Bag, Hour, Liter" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                           <FormField control={form.control} name={`costItems.${index}.quantity`} render={({ field: f }) => (
                             <FormItem><FormLabel>Quantity*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`costItems.${index}.total`, parseFloat(e.target.value) * (form.getValues(`costItems.${index}.unitPrice`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)}
                           />
@@ -299,18 +321,17 @@ export default function CropMaintenancePage() {
                       />
                     </div>
                 </section>
-                
-                <DialogFooter className="sticky bottom-0 bg-background py-4 px-6 border-t mt-auto">
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancel</Button>
-                  </DialogClose>
-                  <Button type="submit">
-                    {editingActivity ? 'Save Changes' : 'Log Activity'}
-                  </Button>
-                </DialogFooter>
               </form>
             </Form>
           </div>
+          <DialogFooter className="py-4 px-6 border-t">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button type="submit" form={ACTIVITY_FORM_ID}>
+              {editingActivity ? 'Save Changes' : 'Log Activity'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -376,7 +397,7 @@ export default function CropMaintenancePage() {
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
             <p>&bull; This section helps track diverse ongoing crop care tasks and their associated costs.</p>
             <p>&bull; Log activities such as irrigation, fertilization, pest/disease control, weeding, pruning, etc.</p>
-            <p>&bull; Itemize costs for inputs (fertilizers, pesticides), labor, water usage, equipment rental, and more.</p>
+            <p>&bull; Itemize costs for inputs (fertilizers, pesticides), labor, water usage, equipment rental, and more by category.</p>
             <p>&bull; The total cost for each maintenance activity is automatically calculated.</p>
             <p>&bull; Consistent logging here is vital for understanding operational expenses throughout the crop cycle.</p>
         </CardContent>
@@ -384,6 +405,8 @@ export default function CropMaintenancePage() {
     </div>
   );
 }
+    
+
     
 
     

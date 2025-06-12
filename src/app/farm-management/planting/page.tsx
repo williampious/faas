@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Sprout, PlusCircle, Trash2, Edit2 } from 'lucide-react'; // Changed Seedling to Sprout
+import { Sprout, PlusCircle, Trash2, Edit2 } from 'lucide-react'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,9 +23,13 @@ import { Separator } from '@/components/ui/separator';
 const plantingMethods = ['Direct Sowing', 'Transplanting', 'Broadcasting', 'Drilling'] as const;
 type PlantingMethod = typeof plantingMethods[number];
 
+const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Other'] as const;
+type CostCategory = typeof costCategories[number];
+
 const costItemSchema = z.object({
   id: z.string().optional(),
   description: z.string().min(1, "Description is required.").max(100),
+  category: z.enum(costCategories, { required_error: "Category is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
   quantity: z.preprocess(
     (val) => parseFloat(String(val)),
@@ -71,7 +75,8 @@ const plantingRecordFormSchema = z.object({
 
 type PlantingRecordFormValues = z.infer<typeof plantingRecordFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'plantingRecords_v1';
+const LOCAL_STORAGE_KEY = 'plantingRecords_v2'; // Version bump due to cost category
+const ACTIVITY_FORM_ID = 'planting-record-form';
 
 export default function PlantingPage() {
   const [records, setRecords] = useState<PlantingRecord[]>([]);
@@ -132,11 +137,20 @@ export default function PlantingPage() {
         notes: recordToEdit.notes || '',
         variety: recordToEdit.variety || '',
         seedSource: recordToEdit.seedSource || '',
-        costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID() })) || [],
+        costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID(), category: ci.category || costCategories[0] })) || [],
       });
     } else {
       setEditingRecord(null);
-      form.reset();
+      form.reset({
+        cropType: '',
+        variety: '',
+        datePlanted: '',
+        areaPlanted: '',
+        seedSource: '',
+        plantingMethod: undefined,
+        notes: '',
+        costItems: [],
+      });
     }
     setIsModalOpen(true);
   };
@@ -145,6 +159,7 @@ export default function PlantingPage() {
     const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
       ...ci,
       id: ci.id || crypto.randomUUID(),
+      category: ci.category || costCategories[0],
       quantity: Number(ci.quantity),
       unitPrice: Number(ci.unitPrice),
       total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
@@ -213,9 +228,9 @@ export default function PlantingPage() {
               {editingRecord ? 'Update details and costs for this planting record.' : 'Enter details and costs for the new planting record.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-grow overflow-y-auto pr-2">
+          <div className="flex-grow overflow-y-auto pr-2 py-4"> {/* Scrollable content area */}
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form id={ACTIVITY_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Planting Details</h3>
                   <FormField control={form.control} name="cropType" render={({ field }) => (
@@ -249,7 +264,7 @@ export default function PlantingPage() {
                 <section className="space-y-4 p-4 border rounded-lg">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-primary">Cost Items</h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', unit: '', quantity: 1, unitPrice: 0 })}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], unit: '', quantity: 1, unitPrice: 0 })}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item
                     </Button>
                   </div>
@@ -260,14 +275,22 @@ export default function PlantingPage() {
                     return (
                       <div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                           <FormField control={form.control} name={`costItems.${index}.category`} render={({ field: f }) => (
+                            <FormItem><FormLabel>Category*</FormLabel>
+                              <Select onValueChange={f.onChange} defaultValue={f.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
+                                <SelectContent>{costCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                              </Select><FormMessage />
+                            </FormItem>)}
+                          />
                           <FormField control={form.control} name={`costItems.${index}.description`} render={({ field: f }) => (
                             <FormItem><FormLabel>Description*</FormLabel><FormControl><Input placeholder="e.g., Maize Seed (Obaatanpa)" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                           <FormField control={form.control} name={`costItems.${index}.unit`} render={({ field: f }) => (
                             <FormItem><FormLabel>Unit*</FormLabel><FormControl><Input placeholder="e.g., kg, bag, hour" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                           <FormField control={form.control} name={`costItems.${index}.quantity`} render={({ field: f }) => (
                             <FormItem><FormLabel>Quantity*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`costItems.${index}.total`, parseFloat(e.target.value) * (form.getValues(`costItems.${index}.unitPrice`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)}
                           />
@@ -297,18 +320,17 @@ export default function PlantingPage() {
                       />
                     </div>
                 </section>
-                
-                <DialogFooter className="sticky bottom-0 bg-background py-4 px-6 border-t mt-auto">
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancel</Button>
-                  </DialogClose>
-                  <Button type="submit">
-                    {editingRecord ? 'Save Changes' : 'Log Record'}
-                  </Button>
-                </DialogFooter>
               </form>
             </Form>
           </div>
+          <DialogFooter className="py-4 px-6 border-t">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button type="submit" form={ACTIVITY_FORM_ID}>
+              {editingRecord ? 'Save Changes' : 'Log Record'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -381,4 +403,6 @@ export default function PlantingPage() {
     </div>
   );
 }
+    
+
     
