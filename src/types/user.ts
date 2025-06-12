@@ -45,6 +45,8 @@ export interface FarmHubDetails {
   irrigationAccess?: boolean;
   productivityScore?: number; // e.g., 0-100
   previousSeasonPerformance?: string; // Could be a summary or link to detailed report
+  soilType?: string; // Added for farmer profiling
+  farmingTechniquesUsed?: string[]; // Added for farmer profiling
 }
 
 export interface MobileMoneyWallet {
@@ -174,6 +176,8 @@ export interface AgriFAASUserProfile {
   farmDetails?: FarmHubDetails;
   assignedRegion?: string; // AEO assigned region or Farmer's primary region
   assignedDistrict?: string; // AEO assigned district or Farmer's primary district
+  farmChallenges?: string[]; // Added for farmer profiling
+  farmerNeeds?: string[]; // Added for farmer profiling
 
   // 4. Financial & Mobile Money
   mobileMoneyWallets?: MobileMoneyWallet[]; // User might have multiple
@@ -217,3 +221,4 @@ export interface AgriFAASUserProfile {
   createdAt: any; // Can be string (ISO) or Firestore ServerTimestamp
   updatedAt: any; // Can be string (ISO) or Firestore ServerTimestamp
 }
+
