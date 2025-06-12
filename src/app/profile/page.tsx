@@ -61,6 +61,9 @@ const profileFormSchema = z.object({
   }).optional(),
   receiveAgriculturalTips: z.boolean().optional(),
   receiveWeatherUpdates: z.boolean().optional(),
+  // AEO specific fields
+  assignedRegion: z.string().optional(),
+  assignedDistrict: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -71,6 +74,7 @@ export default function UserProfilePage() {
   const { toast } = useToast();
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isAEO = userProfile?.role?.includes('Agric Extension Officer') || false;
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -108,6 +112,8 @@ export default function UserProfilePage() {
         },
         receiveAgriculturalTips: userProfile.receiveAgriculturalTips || false,
         receiveWeatherUpdates: userProfile.receiveWeatherUpdates || false,
+        assignedRegion: userProfile.assignedRegion || '',
+        assignedDistrict: userProfile.assignedDistrict || '',
       });
     }
   }, [userProfile, form, isEditMode]); // Reset form when userProfile changes or edit mode is toggled
@@ -126,10 +132,15 @@ export default function UserProfilePage() {
         updatedAt: serverTimestamp() as any, // Firestore will convert this
       };
       
-      // Ensure empty strings for optional fields are treated as 'undefined' or removed if not desired
       if (profileDataToUpdate.phoneNumber === '') delete profileDataToUpdate.phoneNumber;
       if (profileDataToUpdate.gender === '') delete profileDataToUpdate.gender;
-      // ... similar checks for other optional string fields if backend expects absence rather than empty string
+      if (!isAEO) { // Non-AEOs should not be ableto update these fields
+        delete profileDataToUpdate.assignedRegion;
+        delete profileDataToUpdate.assignedDistrict;
+      } else {
+        profileDataToUpdate.assignedRegion = data.assignedRegion || ''; // Keep as empty string if cleared by AEO
+        profileDataToUpdate.assignedDistrict = data.assignedDistrict || '';
+      }
 
 
       const userDocRef = doc(db, 'users', user.uid);
@@ -293,7 +304,7 @@ export default function UserProfilePage() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select your gender" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            <SelectItem value="">Prefer not to say</SelectItem>
+                            {/* <SelectItem value="">Prefer not to say</SelectItem> Removed this line */}
                             {genderOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -302,6 +313,38 @@ export default function UserProfilePage() {
                     )}
                   />
                 </section>
+
+                 {/* AEO Specific Fields */}
+                {isAEO && (
+                  <section className="space-y-4 p-4 border rounded-lg">
+                    <h3 className="text-lg font-semibold text-primary">AEO Assignment</h3>
+                    <FormField
+                      control={form.control}
+                      name="assignedRegion"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Assigned Region</FormLabel>
+                          <FormControl><Input placeholder="e.g., Volta Region" {...field} /></FormControl>
+                          <FormDescription>The primary region you are assigned to as an AEO.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="assignedDistrict"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Assigned District</FormLabel>
+                          <FormControl><Input placeholder="e.g., South Tongu" {...field} /></FormControl>
+                          <FormDescription>The primary district you are assigned to within your region.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </section>
+                )}
+
 
                 {/* Address Section */}
                 <section className="space-y-4 p-4 border rounded-lg">
@@ -326,7 +369,7 @@ export default function UserProfilePage() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select channel" /></SelectTrigger></FormControl>
                           <SelectContent>
-                             <SelectItem value="">Not specified</SelectItem>
+                             {/* <SelectItem value="">Not specified</SelectItem> Removed this line */}
                             {communicationChannelOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -431,6 +474,21 @@ export default function UserProfilePage() {
                 <InfoItem label="Firebase UID" value={currentProfile.firebaseUid} className="text-xs break-all" />
               </CardContent>
             </Card>
+            
+            {isAEO && (
+               <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle className="font-headline text-lg flex items-center">
+                     <MapPin className="mr-2 h-5 w-5 text-primary" /> AEO Assignment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <InfoItem label="Assigned Region" value={currentProfile.assignedRegion || 'Not set'} />
+                  <InfoItem label="Assigned District" value={currentProfile.assignedDistrict || 'Not set'} />
+                </CardContent>
+              </Card>
+            )}
+
           </div>
 
           <div className="md:col-span-2 space-y-6">
@@ -523,6 +581,3 @@ function InfoItem({ icon: Icon, label, value, className }: InfoItemProps) {
     </div>
   );
 }
-
-
-    

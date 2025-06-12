@@ -219,7 +219,7 @@ export default function FarmerDirectoryPage() {
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger></FormControl>
                     <SelectContent>
-                      <SelectItem value="">Prefer not to say</SelectItem>
+                      {/* <SelectItem value="">Prefer not to say</SelectItem> Removed this line */}
                       {genderOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
                     </SelectContent>
                   </Select><FormMessage />
