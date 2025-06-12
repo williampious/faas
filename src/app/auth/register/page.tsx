@@ -31,6 +31,7 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const FIRST_ADMIN_EMAIL = 'admin@agrifaas.com';
+const DEV_TESTER_EMAIL = 'willapplepie@gmail.com';
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -68,12 +69,27 @@ export default function RegisterPage() {
       const firebaseUser: User = userCredential.user;
       console.log('User registered with Firebase Auth:', firebaseUser.uid);
 
-      const userRoles: UserRole[] = [data.role];
-      if (firebaseUser.email && firebaseUser.email.toLowerCase() === FIRST_ADMIN_EMAIL.toLowerCase()) {
-        if (!userRoles.includes('Admin')) {
+      let userRoles: UserRole[] = [data.role]; // Start with the selected role
+
+      if (firebaseUser.email) {
+        const userEmailLower = firebaseUser.email.toLowerCase();
+        if (userEmailLower === FIRST_ADMIN_EMAIL.toLowerCase()) {
+          if (!userRoles.includes('Admin')) {
             userRoles.push('Admin');
+          }
+        } else if (userEmailLower === DEV_TESTER_EMAIL.toLowerCase()) {
+          // Grant all key roles to the developer/tester account
+          userRoles = ['Admin', 'Agric Extension Officer', 'Farmer', 'Investor', 'Farm Manager', 'Farm Staff'];
+          // Ensure the selected role is included if it's not one of these, though the above list is comprehensive
+          if (!userRoles.includes(data.role)) {
+            userRoles.push(data.role);
+          }
+           // Remove duplicates just in case
+          userRoles = [...new Set(userRoles)];
+          console.log(`Developer tester account ${DEV_TESTER_EMAIL} registered. Assigning all key roles.`);
         }
       }
+
 
       const currentDateIso = new Date().toISOString();
       const newUserProfile: AgriFAASUserProfile = {
@@ -81,17 +97,22 @@ export default function RegisterPage() {
         firebaseUid: firebaseUser.uid,
         fullName: data.fullName,
         emailAddress: firebaseUser.email || data.email,
-        role: userRoles, // Use the selected role
+        role: userRoles,
         accountStatus: 'Active',
         registrationDate: currentDateIso,
         createdAt: currentDateIso,
         updatedAt: currentDateIso,
         phoneNumber: '',
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
+        // Default AEO fields to empty strings for the dev tester if they have that role
+        assignedRegion: userRoles.includes('Agric Extension Officer') ? '' : undefined,
+        assignedDistrict: userRoles.includes('Agric Extension Officer') ? '' : undefined,
       };
       
       await setDoc(doc(db, 'users', firebaseUser.uid), newUserProfile);
       console.log('User profile created in Firestore for user:', firebaseUser.uid, 'with roles:', userRoles);
+      // Let the root layout handle redirection
+      // router.push('/dashboard');
 
     } catch (firebaseError: any) {
       console.error('Firebase Registration or Profile Creation Error:', firebaseError);
