@@ -158,10 +158,11 @@ export interface AgriFAASUserProfile {
 
   // 2. Contact & Login Info
   phoneNumber?: string; // Optional for initial registration
-  emailAddress?: string;
+  emailAddress?: string; // Also optional for farmers added by AEO initially
   address?: {
     street?: string;
     city?: string;
+    community?: string; // Added community
     region?: string;
     country?: string;
     postalCode?: string;
@@ -171,6 +172,8 @@ export interface AgriFAASUserProfile {
 
   // 3. Farm & Hub Details (Primarily for Farmer, Farm Manager roles)
   farmDetails?: FarmHubDetails;
+  assignedRegion?: string; // AEO assigned region or Farmer's primary region
+  assignedDistrict?: string; // AEO assigned district or Farmer's primary district
 
   // 4. Financial & Mobile Money
   mobileMoneyWallets?: MobileMoneyWallet[]; // User might have multiple
@@ -187,7 +190,7 @@ export interface AgriFAASUserProfile {
   employmentDetails?: EmploymentDetails;
 
   // 6. System & Permissions
-  firebaseUid: string; // Firebase Authentication User ID
+  firebaseUid: string; // Firebase Authentication User ID (can be placeholder initially for AEO-added farmers)
   rbacTags?: string[]; // More granular permissions beyond general role
   appAccess?: AppAccessType[];
   loginHistory?: LoginHistoryEntry[];
@@ -205,7 +208,12 @@ export interface AgriFAASUserProfile {
   receiveAgriculturalTips?: boolean;
   receiveWeatherUpdates?: boolean;
   
+  // 8. AEO Specific Linkage
+  managedByAEO?: string; // UID of the AEO who manages/added this farmer
+  initialAeoRegion?: string; // Region of AEO at time of farmer creation
+  initialAeoDistrict?: string; // District of AEO at time of farmer creation
+
   // Timestamps
-  createdAt: string; // ISO 8601 datetime string
-  updatedAt: string; // ISO 8601 datetime string
+  createdAt: any; // Can be string (ISO) or Firestore ServerTimestamp
+  updatedAt: any; // Can be string (ISO) or Firestore ServerTimestamp
 }
