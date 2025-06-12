@@ -12,9 +12,15 @@ import {
   BrainCircuit,
   UserCircle,
   Home,
-  ShieldHalf, 
-  UsersRound, 
-  Tractor, // Changed from Sprout
+  ShieldHalf,
+  UsersRound,
+  Tractor,
+  Compass, // Added for AEO Dashboard
+  Users, // Already present, can be used for Farmer Directory
+  Contact, // Added for Farmer Profiles (conceptually, actual link might differ)
+  MessageSquareText, // Added for Support Logs
+  BarChart3, // Added for AEO Reports
+  BookOpenCheck, // Added for Knowledge Base
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -22,6 +28,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarSeparator,
+  SidebarGroupLabel, // Added import
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/contexts/user-profile-context';
@@ -30,13 +37,14 @@ interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  adminOnly?: boolean;
+  adminOnly?: boolean; // For items strictly for admins
+  // aeoOnly?: boolean; // This can be removed if sections are handled by role checks
 }
 
 const navItems: NavItem[] = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/farm-management', label: 'Farm Management', icon: Tractor }, // Changed from Crop Management and Sprout
+  { href: '/farm-management', label: 'Farm Management', icon: Tractor },
   { href: '/farm-calendar', label: 'Farm Calendar', icon: CalendarDays },
   { href: '/resource-inventory', label: 'Resource Inventory', icon: Archive },
   { href: '/weather-monitoring', label: 'Weather Monitoring', icon: CloudSun },
@@ -50,9 +58,21 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/users', label: 'User Management', icon: UsersRound, adminOnly: true },
 ];
 
+const aeoNavItems: NavItem[] = [
+  { href: '/aeo/dashboard', label: 'AEO Dashboard', icon: Compass },
+  { href: '/aeo/farmer-directory', label: 'Farmer Directory', icon: Users },
+  // Farmer profiles will typically be accessed via the directory, so a direct link here might be less common
+  // { href: '/aeo/farmer-profile', label: 'Farmer Profiles', icon: Contact },
+  { href: '/aeo/support-communication', label: 'Support Logs', icon: MessageSquareText },
+  { href: '/aeo/reports', label: 'AEO Reports', icon: BarChart3 },
+  { href: '/aeo/knowledge-transfer', label: 'Knowledge Base', icon: BookOpenCheck },
+];
+
+
 export function MainNav() {
   const pathname = usePathname();
-  const { isAdmin, isLoading: isUserLoading } = useUserProfile();
+  const { userProfile, isLoading: isUserLoading, isAdmin } = useUserProfile();
+  const isAEO = !isUserLoading && !!userProfile?.role?.includes('Agric Extension Officer');
 
   const renderNavItem = (item: NavItem) => (
     <SidebarMenuItem key={item.href}>
@@ -77,10 +97,22 @@ export function MainNav() {
   return (
     <SidebarMenu>
       {navItems.map(renderNavItem)}
+
+      {/* Admin Navigation Section */}
       {!isUserLoading && isAdmin && (
         <>
           <SidebarSeparator className="my-2" />
+           <SidebarGroupLabel className="px-2 group-data-[collapsible=icon]:hidden">Admin Tools</SidebarGroupLabel>
           {adminNavItems.map(renderNavItem)}
+        </>
+      )}
+
+      {/* AEO Navigation Section */}
+      {!isUserLoading && isAEO && (
+        <>
+          <SidebarSeparator className="my-2" />
+          <SidebarGroupLabel className="px-2 group-data-[collapsible=icon]:hidden">AEO Tools</SidebarGroupLabel>
+          {aeoNavItems.map(renderNavItem)}
         </>
       )}
     </SidebarMenu>
