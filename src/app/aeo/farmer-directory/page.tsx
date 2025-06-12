@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Users, PlusCircle, Loader2, AlertTriangle, ListFilter, UserPlus, Edit, Eye } from 'lucide-react';
+import { Users, PlusCircle, Loader2, AlertTriangle, ListFilter, UserPlus, Edit, Eye, CalendarIcon } from 'lucide-react';
 import type { AgriFAASUserProfile, Gender } from '@/types/user';
 import { db, isFirebaseClientConfigured } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, doc, setDoc } from 'firebase/firestore';
@@ -22,6 +22,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import Link from 'next/link';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format, parseISO, isValid } from 'date-fns';
+import { cn } from '@/lib/utils';
+
 
 const genderOptions: Gender[] = ['Male', 'Female', 'Other', 'PreferNotToSay'];
 const usersCollectionName = 'users';
@@ -30,6 +35,7 @@ const farmerFormSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
   phoneNumber: z.string().optional().or(z.literal('')),
   emailAddress: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
+  dateOfBirth: z.date().optional(),
   gender: z.enum([...genderOptions, ""] as [string, ...string[]]).optional(),
   addressStreet: z.string().optional(),
   addressCity: z.string().optional(),
@@ -61,6 +67,7 @@ export default function FarmerDirectoryPage() {
       fullName: '',
       phoneNumber: '',
       emailAddress: '',
+      dateOfBirth: undefined,
       gender: '',
       addressStreet: '',
       addressCity: '',
@@ -73,7 +80,6 @@ export default function FarmerDirectoryPage() {
   useEffect(() => {
     const fetchFarmers = async () => {
       if (isAeoProfileLoading || !aeoProfile || !aeoProfile.userId) {
-        // Wait for AEO profile to load or if AEO is not defined, do nothing.
         if(!isAeoProfileLoading && !aeoProfile) setError("AEO profile not found. Cannot fetch farmers.");
         setIsLoadingFarmers(false);
         return;
@@ -87,8 +93,6 @@ export default function FarmerDirectoryPage() {
       setIsLoadingFarmers(true);
       setError(null);
       try {
-        // Query for farmers managed by this AEO OR in the AEO's region/district
-        // For simplicity, starting with managedByAEO
         const q = query(
           collection(db, usersCollectionName),
           where('managedByAEO', '==', aeoProfile.userId),
@@ -123,17 +127,18 @@ export default function FarmerDirectoryPage() {
 
     const newFarmerProfile: AgriFAASUserProfile = {
       userId: farmerId,
-      firebaseUid: farmerId, // Placeholder until actual auth user is created
+      firebaseUid: farmerId, 
       fullName: data.fullName,
       phoneNumber: data.phoneNumber || undefined,
       emailAddress: data.emailAddress || undefined,
+      dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, 'yyyy-MM-dd') : undefined,
       gender: data.gender as Gender || undefined,
       address: {
         street: data.addressStreet || undefined,
         city: data.addressCity || undefined,
         community: data.addressCommunity,
-        region: aeoProfile.assignedRegion, // Farmer's region set to AEO's region
-        country: 'Ghana', // Default country
+        region: aeoProfile.assignedRegion, 
+        country: 'Ghana', 
       },
       gpsCoordinates: (data.gpsLatitude !== undefined && data.gpsLongitude !== undefined)
         ? { latitude: data.gpsLatitude, longitude: data.gpsLongitude }
@@ -194,7 +199,7 @@ export default function FarmerDirectoryPage() {
       />
 
       <Dialog open={isAddFarmerModalOpen} onOpenChange={(isOpen) => {
-        if (isSubmitting && !isOpen) return; // Prevent closing while submitting
+        if (isSubmitting && !isOpen) return; 
         setIsAddFarmerModalOpen(isOpen);
         if (!isOpen) form.reset();
       }}>
@@ -214,12 +219,52 @@ export default function FarmerDirectoryPage() {
               <FormField control={form.control} name="emailAddress" render={({ field }) => (
                 <FormItem><FormLabel>Email Address (Optional)</FormLabel><FormControl><Input type="email" placeholder="farmer@example.com" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
+               <FormField
+                  control={form.control}
+                  name="dateOfBirth"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Date of Birth (Optional)</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               <FormField control={form.control} name="gender" render={({ field }) => (
                 <FormItem><FormLabel>Gender</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger></FormControl>
                     <SelectContent>
-                      {/* <SelectItem value="">Prefer not to say</SelectItem> Removed this line */}
                       {genderOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
                     </SelectContent>
                   </Select><FormMessage />
@@ -302,7 +347,7 @@ export default function FarmerDirectoryPage() {
                           <Eye className="h-3.5 w-3.5 mr-1" /> View
                         </Button>
                       </Link>
-                      <Button variant="outline" size="sm" disabled> {/* Placeholder for Edit */}
+                      <Button variant="outline" size="sm" disabled> 
                         <Edit className="h-3.5 w-3.5 mr-1" /> Edit
                       </Button>
                     </TableCell>
@@ -320,3 +365,4 @@ export default function FarmerDirectoryPage() {
     </div>
   );
 }
+
