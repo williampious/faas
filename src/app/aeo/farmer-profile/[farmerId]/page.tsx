@@ -139,8 +139,8 @@ export default function FarmerProfilePage() {
           <AlertTriangle className="h-5 w-5" />
           <AlertTitle>Error Loading Profile</AlertTitle>
           <ShadcnAlertDescription>{error}</ShadcnAlertDescription>
-          <Button variant="outline" onClick={() => router.back()} className="mt-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+          <Button variant="outline" onClick={() => router.push('/aeo/farmer-directory')} className="mt-4">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Go Back to Directory
           </Button>
         </Alert>
       </div>
@@ -152,8 +152,8 @@ export default function FarmerProfilePage() {
       <div className="container mx-auto py-10 text-center">
         <User className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
         <p className="text-xl text-muted-foreground">Farmer profile could not be displayed.</p>
-         <Button variant="outline" onClick={() => router.back()} className="mt-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+         <Button variant="outline" onClick={() => router.push('/aeo/farmer-directory')} className="mt-4">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Go Back to Directory
         </Button>
       </div>
     );
@@ -175,7 +175,7 @@ export default function FarmerProfilePage() {
         description={`Detailed information for ${farmer.fullName}. Managed by AEO: ${aeoProfile?.fullName || 'Unknown'}`}
         action={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => router.back()}>
+            <Button variant="outline" onClick={() => router.push('/aeo/farmer-directory')}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Directory
             </Button>
             <Button disabled> {/* Placeholder for Edit */}

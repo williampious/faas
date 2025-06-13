@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Users, PlusCircle, Loader2, AlertTriangle, ListFilter, UserPlus, Edit, Eye, CalendarIcon } from 'lucide-react';
+import { Users, PlusCircle, Loader2, AlertTriangle, ListFilter, UserPlus, Edit, Eye, CalendarIcon, ArrowLeft } from 'lucide-react';
 import type { AgriFAASUserProfile, Gender } from '@/types/user';
 import { db, isFirebaseClientConfigured } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, doc, setDoc } from 'firebase/firestore';
@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 
 const genderOptions: Gender[] = ['Male', 'Female', 'Other', 'PreferNotToSay'];
@@ -55,6 +56,7 @@ type FarmerFormValues = z.infer<typeof farmerFormSchema>;
 export default function FarmerDirectoryPage() {
   const { userProfile: aeoProfile, isLoading: isAeoProfileLoading } = useUserProfile();
   const { toast } = useToast();
+  const router = useRouter();
   const [farmers, setFarmers] = useState<AgriFAASUserProfile[]>([]);
   const [isLoadingFarmers, setIsLoadingFarmers] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -188,6 +190,9 @@ export default function FarmerDirectoryPage() {
         description="Manage farmer profiles, track assignments, and organize contact information."
         action={
           <div className="flex gap-2">
+             <Button variant="outline" onClick={() => router.push('/aeo/dashboard')}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to AEO Dashboard
+            </Button>
             <Button variant="outline" disabled>
               <ListFilter className="mr-2 h-4 w-4" /> Filter (Soon)
             </Button>
