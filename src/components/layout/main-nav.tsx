@@ -20,7 +20,8 @@ import {
   MessageSquareText, 
   BarChart3, 
   BookOpenCheck,
-  FileText, // Added for Financial Reports
+  FileText,
+  Banknote, // Added for Budgeting
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -38,6 +39,7 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   adminOnly?: boolean;
+  group?: string; // For grouping under a common parent like "Reports"
 }
 
 const navItems: NavItem[] = [
@@ -49,7 +51,8 @@ const navItems: NavItem[] = [
   { href: '/weather-monitoring', label: 'Weather Monitoring', icon: CloudSun },
   { href: '/task-management', label: 'Task Management', icon: ListChecks },
   { href: '/planting-advice', label: 'Planting Advice', icon: BrainCircuit },
-  { href: '/reports/financial-dashboard', label: 'Financial Reports', icon: FileText }, // New Item
+  { href: '/reports/financial-dashboard', label: 'Financial Summary', icon: FileText, group: 'Reports' }, 
+  { href: '/reports/budgeting', label: 'Budgeting', icon: Banknote, group: 'Reports' },
   { href: '/profile', label: 'User Profile', icon: UserCircle },
 ];
 
@@ -72,17 +75,24 @@ export function MainNav() {
   const { userProfile, isLoading: isUserLoading, isAdmin } = useUserProfile();
   const isAEO = !isUserLoading && !!userProfile?.role?.includes('Agric Extension Officer');
 
+  const isActive = (href: string, group?: string) => {
+    if (group === 'Reports') { // Handle group active state
+        return pathname.startsWith('/reports/');
+    }
+    return pathname === href || (href !== '/' && pathname.startsWith(href) && href !== '/dashboard' && href !== '/aeo/dashboard' && href !== '/admin/dashboard');
+  };
+
   const renderNavItem = (item: NavItem) => (
     <SidebarMenuItem key={item.href}>
       <Link href={item.href}>
         <SidebarMenuButton
           className={cn(
             'w-full justify-start text-base',
-            pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href) && item.href !== '/dashboard' && item.href !== '/aeo/dashboard' && item.href !== '/admin/dashboard') // More specific active check
+             isActive(item.href, item.group)
               ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground'
               : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
           )}
-          isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href) && item.href !== '/dashboard' && item.href !== '/aeo/dashboard' && item.href !== '/admin/dashboard')}
+          isActive={isActive(item.href, item.group)}
           tooltip={{ children: item.label, className: "font-body" }}
         >
           <item.icon className="h-5 w-5 mr-2" />
@@ -91,10 +101,22 @@ export function MainNav() {
       </Link>
     </SidebarMenuItem>
   );
+  
+  const generalNavItems = navItems.filter(item => !item.group);
+  const reportsNavItems = navItems.filter(item => item.group === 'Reports');
+
 
   return (
     <SidebarMenu>
-      {navItems.map(renderNavItem)}
+      {generalNavItems.map(renderNavItem)}
+
+      {reportsNavItems.length > 0 && (
+        <>
+          <SidebarSeparator className="my-2" />
+          <SidebarGroupLabel className="px-2 group-data-[collapsible=icon]:hidden">Reports & Planning</SidebarGroupLabel>
+          {reportsNavItems.map(renderNavItem)}
+        </>
+      )}
 
       {!isUserLoading && isAdmin && (
         <>
@@ -114,3 +136,4 @@ export function MainNav() {
     </SidebarMenu>
   );
 }
+
