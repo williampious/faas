@@ -10,11 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea'; // Added import
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Edit2, Trash2, Banknote, CalendarRange, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Edit2, Trash2, Banknote, CalendarRange, ArrowLeft, Eye } from 'lucide-react';
 import { format, parseISO, isValid, isAfter, isEqual } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Budget } from '@/types/budget';
@@ -36,7 +36,7 @@ const budgetFormSchema = z.object({
 
 type BudgetFormValues = z.infer<typeof budgetFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'farmBudgets_v1';
+const LOCAL_STORAGE_KEY = 'farmBudgets_v1'; // Keep v1 for now, structure of budget shell hasn't changed much
 const BUDGET_FORM_ID = 'budget-form';
 
 export default function BudgetingPage() {
@@ -61,13 +61,23 @@ export default function BudgetingPage() {
     setIsMounted(true);
     const storedBudgets = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (storedBudgets) {
-      setBudgets(JSON.parse(storedBudgets));
+      const parsedBudgets = JSON.parse(storedBudgets) as Budget[];
+      // Ensure totalBudgetedAmount is correctly calculated for display
+      const updatedBudgets = parsedBudgets.map(budget => ({
+        ...budget,
+        totalBudgetedAmount: budget.categories.reduce((sum, cat) => sum + (cat.budgetedAmount || 0), 0)
+      }));
+      setBudgets(updatedBudgets);
     }
   }, []);
 
   useEffect(() => {
     if (isMounted) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(budgets));
+       const budgetsToStore = budgets.map(budget => ({
+        ...budget,
+        totalBudgetedAmount: budget.categories.reduce((sum, cat) => sum + (cat.budgetedAmount || 0), 0)
+      }));
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(budgetsToStore));
     }
   }, [budgets, isMounted]);
 
@@ -96,7 +106,7 @@ export default function BudgetingPage() {
     const now = new Date().toISOString();
     if (editingBudget) {
       const updatedBudget: Budget = {
-        ...editingBudget,
+        ...editingBudget, // Retain existing categories and totalBudgetedAmount (which might be 0 if no categories yet)
         ...data,
         notes: data.notes || undefined,
         updatedAt: now,
@@ -108,8 +118,8 @@ export default function BudgetingPage() {
         id: crypto.randomUUID(),
         ...data,
         notes: data.notes || undefined,
-        categories: [], // Initialize with empty categories
-        totalBudgetedAmount: 0, // Initial total
+        categories: [], 
+        totalBudgetedAmount: 0,
         createdAt: now,
         updatedAt: now,
       };
@@ -182,10 +192,9 @@ export default function BudgetingPage() {
                 <FormField control={form.control} name="notes" render={({ field }) => (
                   <FormItem><FormLabel>Notes (Optional)</FormLabel><FormControl><Textarea placeholder="Any additional details or goals for this budget" {...field} /></FormControl><FormMessage /></FormItem>)}
                 />
-                {/* Categories and Line Items will be added here in the next step */}
                 <Card className="mt-4 bg-muted/30 p-3">
                     <CardDescription className="text-xs text-muted-foreground">
-                        Detailed budget categories and line items will be configurable after creating the initial budget shell. This feature is coming soon.
+                        Detailed budget categories and line items are managed after creating the budget shell. Click "View/Manage Details" on a budget to proceed.
                     </CardDescription>
                 </Card>
               </form>
@@ -204,7 +213,7 @@ export default function BudgetingPage() {
         <CardHeader>
           <CardTitle>Existing Budgets</CardTitle>
           <CardDescription>
-            {budgets.length > 0 ? "Manage your farm budgets." : "No budgets created yet. Click 'Create New Budget' to start."}
+            {budgets.length > 0 ? "Manage your farm budgets. Click 'View/Manage Details' to add categories and line items." : "No budgets created yet. Click 'Create New Budget' to start."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -230,11 +239,11 @@ export default function BudgetingPage() {
                     <TableCell>GHS {budget.totalBudgetedAmount.toFixed(2)}</TableCell>
                     <TableCell>{isValid(parseISO(budget.createdAt)) ? format(parseISO(budget.createdAt), 'PP') : 'N/A'}</TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => router.push(`/reports/budgeting/${budget.id}`)} disabled>
-                        <Edit2 className="h-3.5 w-3.5 mr-1" /> View/Edit Details (Soon)
+                      <Button variant="outline" size="sm" onClick={() => router.push(`/reports/budgeting/${budget.id}`)}>
+                        <Eye className="h-3.5 w-3.5 mr-1" /> View/Manage Details
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => handleOpenModal(budget)}>
-                        <CalendarRange className="h-3.5 w-3.5 mr-1" /> Edit Dates/Name
+                        <CalendarRange className="h-3.5 w-3.5 mr-1" /> Edit Shell
                       </Button>
                       <Button variant="destructive" size="sm" onClick={() => handleDeleteBudget(budget.id)}>
                         <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
@@ -259,7 +268,7 @@ export default function BudgetingPage() {
             <CardTitle className="text-lg font-semibold text-secondary-foreground">Budgeting Module - Next Steps</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-sm text-muted-foreground space-y-1">
-            <p>&bull; <strong>Detailed Budget Breakdown:</strong> Soon, you'll be able to click "View/Edit Details" to add categories (e.g., Land Prep, Planting, Labor) and specific line items with budgeted amounts for each budget.</p>
+            <p>&bull; <strong>Detailed Budget Breakdown:</strong> Click "View/Manage Details" on a budget to add categories (e.g., Land Prep, Planting, Labor) and specific line items with budgeted amounts.</p>
             <p>&bull; <strong>Budget vs. Actuals:</strong> Future enhancements will link these budgets to actual income and expenses logged in other modules for variance analysis.</p>
             <p>&bull; <strong>Reporting:</strong> Generate reports to see how your spending aligns with your budget.</p>
         </CardContent>
@@ -267,3 +276,4 @@ export default function BudgetingPage() {
     </div>
   );
 }
+

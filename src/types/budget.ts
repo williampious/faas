@@ -14,9 +14,9 @@ export interface BudgetLineItem {
 export interface BudgetCategory {
   id: string;
   name: string; // e.g., "Land Preparation", "Planting", "Labor", "Materials"
-  budgetedAmount: number; // Sum of line items in this category
+  budgetedAmount: number; // Sum of line items in this category, or direct entry for now
   actualAmount?: number; // Sum of actuals for line items in this category
-  lineItems: BudgetLineItem[];
+  lineItems: BudgetLineItem[]; // Will be used in a future step
 }
 
 export interface Budget {
@@ -31,3 +31,4 @@ export interface Budget {
   createdAt: string; // ISO datetime string
   updatedAt: string; // ISO datetime string
 }
+
