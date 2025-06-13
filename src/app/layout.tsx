@@ -119,6 +119,15 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setIsClient(true);
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.workbox !== undefined) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => {
+          console.log('[ServiceWorker] Registered successfully with scope: ', reg.scope);
+        })
+        .catch(error => {
+          console.error('[ServiceWorker] Registration failed: ', error);
+        });
+    }
   }, []);
 
   useEffect(() => {
@@ -148,7 +157,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   }
   
   if (profileError && !pathname.startsWith('/auth/') && pathname !== '/') {
-    // The console.error previously here has been removed as UserProfileProvider logs a more detailed error.
+    // A more detailed error is logged by UserProfileProvider
     
     const performSignOutFromErrorPage = async () => {
       if (!auth) {
@@ -246,6 +255,14 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#8CC63F" />
+        {/* Add other PWA related meta tags if needed, e.g., for iOS */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="AgriFAAS" />
+        {/* You'll need to create actual apple-touch-icon.png files in /public */}
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
         <UserProfileProvider>
