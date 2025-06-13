@@ -87,7 +87,7 @@ function FeatureCard({ title, description, icon: Icon, href, cta, disabled }: Fe
       </CardHeader>
       <CardContent className="flex flex-col flex-grow">
         <p className="text-sm text-muted-foreground mb-4 flex-grow">{description}</p>
-        <Link href={disabled ? "#" : href} passHref legacyBehavior>
+        <Link href={disabled ? "#" : href}>
           <Button className="w-full mt-auto" disabled={disabled}>
             {cta}
           </Button>
@@ -96,3 +96,4 @@ function FeatureCard({ title, description, icon: Icon, href, cta, disabled }: Fe
     </Card>
   );
 }
+
