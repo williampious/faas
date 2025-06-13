@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Sprout, PlusCircle, Trash2, Edit2 } from 'lucide-react'; 
+import { Sprout, PlusCircle, Trash2, Edit2, ArrowLeft } from 'lucide-react'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { useRouter } from 'next/navigation';
 
 const plantingMethods = ['Direct Sowing', 'Transplanting', 'Broadcasting', 'Drilling'] as const;
 type PlantingMethod = typeof plantingMethods[number];
@@ -75,7 +76,7 @@ const plantingRecordFormSchema = z.object({
 
 type PlantingRecordFormValues = z.infer<typeof plantingRecordFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'plantingRecords_v2'; // Version bump due to cost category
+const LOCAL_STORAGE_KEY = 'plantingRecords_v2'; 
 const ACTIVITY_FORM_ID = 'planting-record-form';
 
 export default function PlantingPage() {
@@ -84,6 +85,7 @@ export default function PlantingPage() {
   const [editingRecord, setEditingRecord] = useState<PlantingRecord | null>(null);
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
 
   const form = useForm<PlantingRecordFormValues>({
     resolver: zodResolver(plantingRecordFormSchema),
@@ -208,9 +210,14 @@ export default function PlantingPage() {
         icon={Sprout}
         description="Log, track, and manage all planting activities and associated costs."
         action={
-          <Button onClick={() => handleOpenModal()}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Log New Planting Record
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push('/farm-management')}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Farm Management
+            </Button>
+            <Button onClick={() => handleOpenModal()}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Log New Planting Record
+            </Button>
+          </div>
         }
       />
 
@@ -228,7 +235,7 @@ export default function PlantingPage() {
               {editingRecord ? 'Update details and costs for this planting record.' : 'Enter details and costs for the new planting record.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-grow overflow-y-auto pr-2 py-4"> {/* Scrollable content area */}
+          <div className="flex-grow overflow-y-auto pr-2 py-4">
             <Form {...form}>
               <form id={ACTIVITY_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <section className="space-y-4 p-4 border rounded-lg">
@@ -395,7 +402,7 @@ export default function PlantingPage() {
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
             <p>&bull; This section helps track details and costs associated with planting activities.</p>
-            <p>&bull; Log records for each crop, variety, area, and method. Itemize costs for seeds, labor, machinery, etc.</p>
+            <p>&bull; Log records for each crop, variety, area, and method. Itemize costs for seeds, labor, machinery, etc. by category.</p>
             <p>&bull; The total cost for each planting record is automatically calculated.</p>
             <p>&bull; This data is crucial for understanding per-crop expenditure and overall farm financial health.</p>
         </CardContent>

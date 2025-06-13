@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Wheat, PlusCircle, Trash2, Edit2 } from 'lucide-react';
+import { Wheat, PlusCircle, Trash2, Edit2, ArrowLeft, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { useRouter } from 'next/navigation';
 
 const yieldUnits = ['kg', 'bags (50kg)', 'bags (100kg)', 'crates', 'tons', 'bunches', 'pieces'] as const;
 type YieldUnit = typeof yieldUnits[number];
@@ -39,14 +40,37 @@ const costItemSchema = z.object({
     (val) => parseFloat(String(val)),
     z.number().min(0.01, "Unit price must be greater than 0.")
   ),
-  total: z.number().optional(),
+  total: z.number().optional(), // For internal calculation, not part of the form input itself
 });
 
 type CostItemFormValues = z.infer<typeof costItemSchema>;
 
 interface CostItem extends CostItemFormValues {
+  id: string; // Ensure ID is always present after processing
+  total: number; // Ensure total is always present after processing
+}
+
+const saleItemSchema = z.object({
+  id: z.string().optional(),
+  buyer: z.string().min(1, "Buyer name is required.").max(100),
+  quantitySold: z.preprocess(
+    (val) => parseFloat(String(val)),
+    z.number().min(0.01, "Quantity sold must be greater than 0.")
+  ),
+  unitOfSale: z.string().min(1, "Unit of sale is required.").max(50),
+  pricePerUnit: z.preprocess(
+    (val) => parseFloat(String(val)),
+    z.number().min(0.01, "Price per unit must be greater than 0.")
+  ),
+  saleDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid sale date is required." }),
+  totalSaleAmount: z.number().optional(), // For internal calculation
+});
+
+type SaleItemFormValues = z.infer<typeof saleItemSchema>;
+
+interface SaleItem extends SaleItemFormValues {
   id: string;
-  total: number;
+  totalSaleAmount: number;
 }
 
 interface HarvestingRecord {
@@ -63,6 +87,8 @@ interface HarvestingRecord {
   notes?: string;
   costItems: CostItem[];
   totalHarvestCost: number;
+  salesDetails?: SaleItem[];
+  totalSalesIncome: number;
 }
 
 const harvestRecordFormSchema = z.object({
@@ -80,11 +106,12 @@ const harvestRecordFormSchema = z.object({
   storageLocation: z.string().max(100).optional(),
   notes: z.string().max(500).optional(),
   costItems: z.array(costItemSchema).optional(),
+  salesDetails: z.array(saleItemSchema).optional(),
 });
 
 type HarvestRecordFormValues = z.infer<typeof harvestRecordFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'harvestingRecords_v2'; // Version bump due to cost category
+const LOCAL_STORAGE_KEY = 'harvestingRecords_v3'; // Version bump for sales details
 const ACTIVITY_FORM_ID = 'harvesting-record-form';
 
 export default function HarvestingPage() {
@@ -93,6 +120,7 @@ export default function HarvestingPage() {
   const [editingRecord, setEditingRecord] = useState<HarvestingRecord | null>(null);
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
 
   const form = useForm<HarvestRecordFormValues>({
     resolver: zodResolver(harvestRecordFormSchema),
@@ -108,15 +136,21 @@ export default function HarvestingPage() {
       storageLocation: '',
       notes: '',
       costItems: [],
+      salesDetails: [],
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields: costFields, append: appendCost, remove: removeCost } = useFieldArray({
     control: form.control,
     name: "costItems",
   });
-
   const watchedCostItems = form.watch("costItems");
+
+  const { fields: saleFields, append: appendSale, remove: removeSale } = useFieldArray({
+    control: form.control,
+    name: "salesDetails",
+  });
+  const watchedSaleItems = form.watch("salesDetails");
 
   const calculateTotalCost = (items: CostItemFormValues[] | undefined) => {
     if (!items) return 0;
@@ -126,6 +160,16 @@ export default function HarvestingPage() {
       return acc + (quantity * unitPrice);
     }, 0);
   };
+
+  const calculateTotalIncome = (items: SaleItemFormValues[] | undefined) => {
+    if (!items) return 0;
+    return items.reduce((acc, item) => {
+      const quantity = Number(item.quantitySold) || 0;
+      const pricePerUnit = Number(item.pricePerUnit) || 0;
+      return acc + (quantity * pricePerUnit);
+    }, 0);
+  };
+
 
   useEffect(() => {
     setIsMounted(true);
@@ -152,6 +196,7 @@ export default function HarvestingPage() {
         postHarvestActivities: recordToEdit.postHarvestActivities || '',
         storageLocation: recordToEdit.storageLocation || '',
         costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID(), category: ci.category || costCategories[0] })) || [],
+        salesDetails: recordToEdit.salesDetails?.map(si => ({...si, id: si.id || crypto.randomUUID()})) || [],
       });
     } else {
       setEditingRecord(null);
@@ -167,6 +212,7 @@ export default function HarvestingPage() {
         storageLocation: '',
         notes: '',
         costItems: [],
+        salesDetails: [],
       });
     }
     setIsModalOpen(true);
@@ -181,13 +227,22 @@ export default function HarvestingPage() {
       unitPrice: Number(ci.unitPrice),
       total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
     }));
+    const totalHarvestCost = calculateTotalCost(processedCostItems);
 
-    const totalHarvestCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
+    const processedSaleItems: SaleItem[] = (data.salesDetails || []).map(si => ({
+      ...si,
+      id: si.id || crypto.randomUUID(),
+      quantitySold: Number(si.quantitySold),
+      pricePerUnit: Number(si.pricePerUnit),
+      totalSaleAmount: (Number(si.quantitySold) || 0) * (Number(si.pricePerUnit) || 0),
+    }));
+    const totalSalesIncome = calculateTotalIncome(processedSaleItems);
+
 
     if (editingRecord) {
       setRecords(
         records.map((rec) =>
-          rec.id === editingRecord.id ? { ...editingRecord, ...data, costItems: processedCostItems, totalHarvestCost } : rec
+          rec.id === editingRecord.id ? { ...editingRecord, ...data, costItems: processedCostItems, totalHarvestCost, salesDetails: processedSaleItems, totalSalesIncome } : rec
         )
       );
       toast({ title: "Harvest Record Updated", description: `Record for ${data.cropType} has been updated.` });
@@ -202,6 +257,8 @@ export default function HarvestingPage() {
         notes: data.notes || undefined,
         costItems: processedCostItems,
         totalHarvestCost,
+        salesDetails: processedSaleItems,
+        totalSalesIncome,
       };
       setRecords(prev => [...prev, newRecord]);
       toast({ title: "Harvest Record Logged", description: `Record for ${data.cropType} has been successfully logged.` });
@@ -225,11 +282,16 @@ export default function HarvestingPage() {
       <PageHeader
         title="Harvesting & Post-Harvest Management"
         icon={Wheat}
-        description="Log harvest activities, yield data, and associated costs."
+        description="Log harvest activities, yield data, sales, and associated costs."
         action={
-          <Button onClick={() => handleOpenModal()}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Log New Harvest Record
-          </Button>
+           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push('/farm-management')}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Farm Management
+            </Button>
+            <Button onClick={() => handleOpenModal()}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Log New Harvest Record
+            </Button>
+          </div>
         }
       />
 
@@ -240,16 +302,17 @@ export default function HarvestingPage() {
           setEditingRecord(null);
         }
       }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingRecord ? 'Edit Harvest Record' : 'Log New Harvest Record'}</DialogTitle>
             <DialogDescription>
               {editingRecord ? 'Update details for this harvest record.' : 'Enter details for the new harvest record.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-grow overflow-y-auto pr-2 py-4"> {/* Scrollable content area */}
+          <div className="flex-grow overflow-y-auto pr-2 py-4">
             <Form {...form}>
               <form id={ACTIVITY_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Harvest Details Section */}
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Harvest Details</h3>
                   <FormField control={form.control} name="cropType" render={({ field }) => (
@@ -270,11 +333,10 @@ export default function HarvestingPage() {
                     />
                     <FormField control={form.control} name="yieldUnit" render={({ field }) => (
                       <FormItem><FormLabel>Yield Unit*</FormLabel>
-                        <Input list="yieldUnitsDatalist" placeholder="e.g., kg, bags" {...field} />
-                        <datalist id="yieldUnitsDatalist">
-                            {yieldUnits.map(unit => <option key={unit} value={unit} />)}
-                        </datalist>
-                        <FormMessage />
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger></FormControl>
+                          <SelectContent>{yieldUnits.map(unit => <SelectItem key={unit} value={unit}>{unit}</SelectItem>)}</SelectContent>
+                        </Select><FormMessage />
                       </FormItem>)}
                     />
                   </div>
@@ -292,21 +354,22 @@ export default function HarvestingPage() {
                   />
                 </section>
 
+                {/* Cost Items Section */}
                 <section className="space-y-4 p-4 border rounded-lg">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-primary">Cost Items</h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], unit: '', quantity: 1, unitPrice: 0 })}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => appendCost({ description: '', category: costCategories[0], unit: '', quantity: 1, unitPrice: 0 })}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item
                     </Button>
                   </div>
-                  {fields.map((field, index) => {
+                  {costFields.map((field, index) => {
                     const quantity = form.watch(`costItems.${index}.quantity`) || 0;
                     const unitPrice = form.watch(`costItems.${index}.unitPrice`) || 0;
                     const itemTotal = Number(quantity) * Number(unitPrice);
                     return (
                       <div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <FormField control={form.control} name={`costItems.${index}.category`} render={({ field: f }) => (
+                           <FormField control={form.control} name={`costItems.${index}.category`} render={({ field: f }) => (
                             <FormItem><FormLabel>Category*</FormLabel>
                               <Select onValueChange={f.onChange} defaultValue={f.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
@@ -322,42 +385,78 @@ export default function HarvestingPage() {
                           <FormField control={form.control} name={`costItems.${index}.unit`} render={({ field: f }) => (
                             <FormItem><FormLabel>Unit*</FormLabel><FormControl><Input placeholder="e.g., Hours, Crates, Trip" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
-                          <FormField control={form.control} name={`costItems.${index}.quantity`} render={({ field: f }) => (
+                           <FormField control={form.control} name={`costItems.${index}.quantity`} render={({ field: f }) => (
                             <FormItem><FormLabel>Quantity*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`costItems.${index}.total`, parseFloat(e.target.value) * (form.getValues(`costItems.${index}.unitPrice`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)}
                           />
                            <FormField control={form.control} name={`costItems.${index}.unitPrice`} render={({ field: f }) => (
                             <FormItem><FormLabel>Unit Price*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`costItems.${index}.total`, parseFloat(e.target.value) * (form.getValues(`costItems.${index}.quantity`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)}
                           />
-                          <div>
-                            <Label>Item Total</Label>
-                            <Input value={itemTotal.toFixed(2)} readOnly disabled className="font-semibold bg-input" />
-                          </div>
+                          <div><Label>Item Total</Label><Input value={itemTotal.toFixed(2)} readOnly disabled className="font-semibold bg-input" /></div>
                         </div>
-                        <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 text-destructive hover:bg-destructive/10" onClick={() => remove(index)}>
+                        <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 text-destructive hover:bg-destructive/10" onClick={() => removeCost(index)}>
                           <Trash2 className="h-4 w-4" /><span className="sr-only">Remove Item</span>
                         </Button>
                       </div>
                     );
                   })}
-                  {fields.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No cost items added yet.</p>}
+                  {costFields.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No cost items added yet.</p>}
+                  <Separator className="my-4" />
+                  <div className="flex justify-end items-center space-x-3"><Label className="text-md font-semibold">Total Harvest Cost:</Label>
+                    <Input value={calculateTotalCost(watchedCostItems).toFixed(2)} readOnly disabled className="w-32 font-bold text-lg text-right bg-input" />
+                  </div>
+                </section>
+
+                {/* Sales Details Section */}
+                <section className="space-y-4 p-4 border rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-semibold text-primary">Sales Details</h3>
+                    <Button type="button" size="sm" variant="outline" onClick={() => appendSale({ buyer: '', quantitySold: 1, unitOfSale: '', pricePerUnit: 0, saleDate: format(new Date(), 'yyyy-MM-dd') })}>
+                      <DollarSign className="mr-2 h-4 w-4" /> Add Sale
+                    </Button>
+                  </div>
+                  {saleFields.map((field, index) => {
+                    const quantity = form.watch(`salesDetails.${index}.quantitySold`) || 0;
+                    const pricePerUnit = form.watch(`salesDetails.${index}.pricePerUnit`) || 0;
+                    const itemTotal = Number(quantity) * Number(pricePerUnit);
+                     return (
+                      <div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <FormField control={form.control} name={`salesDetails.${index}.buyer`} render={({ field: f }) => (
+                            <FormItem><FormLabel>Buyer*</FormLabel><FormControl><Input placeholder="e.g., Market Trader A" {...f} /></FormControl><FormMessage /></FormItem>)}
+                          />
+                          <FormField control={form.control} name={`salesDetails.${index}.saleDate`} render={({ field: f }) => (
+                            <FormItem><FormLabel>Sale Date*</FormLabel><FormControl><Input type="date" {...f} /></FormControl><FormMessage /></FormItem>)}
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                           <FormField control={form.control} name={`salesDetails.${index}.quantitySold`} render={({ field: f }) => (
+                            <FormItem><FormLabel>Quantity Sold*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`salesDetails.${index}.totalSaleAmount`, parseFloat(e.target.value) * (form.getValues(`salesDetails.${index}.pricePerUnit`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)}
+                          />
+                          <FormField control={form.control} name={`salesDetails.${index}.unitOfSale`} render={({ field: f }) => (
+                            <FormItem><FormLabel>Unit of Sale*</FormLabel><FormControl><Input placeholder="e.g., kg, crate, bag" {...f} /></FormControl><FormMessage /></FormItem>)}
+                          />
+                           <FormField control={form.control} name={`salesDetails.${index}.pricePerUnit`} render={({ field: f }) => (
+                            <FormItem><FormLabel>Price Per Unit*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`salesDetails.${index}.totalSaleAmount`, parseFloat(e.target.value) * (form.getValues(`salesDetails.${index}.quantitySold`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)}
+                          />
+                          <div><Label>Sale Total</Label><Input value={itemTotal.toFixed(2)} readOnly disabled className="font-semibold bg-input" /></div>
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 text-destructive hover:bg-destructive/10" onClick={() => removeSale(index)}>
+                          <Trash2 className="h-4 w-4" /><span className="sr-only">Remove Sale Item</span>
+                        </Button>
+                      </div>
+                    );
+                  })}
+                  {saleFields.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No sales details added yet for this harvest.</p>}
                    <Separator className="my-4" />
-                   <div className="flex justify-end items-center space-x-3">
-                      <Label className="text-md font-semibold">Total Harvest Cost:</Label>
-                      <Input
-                        value={calculateTotalCost(watchedCostItems).toFixed(2)}
-                        readOnly
-                        disabled
-                        className="w-32 font-bold text-lg text-right bg-input"
-                      />
-                    </div>
+                  <div className="flex justify-end items-center space-x-3"><Label className="text-md font-semibold">Total Sales Income (This Harvest):</Label>
+                    <Input value={calculateTotalIncome(watchedSaleItems).toFixed(2)} readOnly disabled className="w-36 font-bold text-lg text-right bg-input" />
+                  </div>
                 </section>
               </form>
             </Form>
           </div>
           <DialogFooter className="py-4 px-6 border-t">
-            <DialogClose asChild>
-              <Button type="button" variant="outline">Cancel</Button>
-            </DialogClose>
+            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
             <Button type="submit" form={ACTIVITY_FORM_ID}>
               {editingRecord ? 'Save Changes' : 'Log Record'}
             </Button>
@@ -369,7 +468,7 @@ export default function HarvestingPage() {
         <CardHeader>
           <CardTitle>Logged Harvest Records</CardTitle>
           <CardDescription>
-            View all recorded harvest activities, yields, and their total costs. Edit or delete as needed.
+            View all recorded harvest activities, yields, sales and their total costs/income. Edit or delete as needed.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -380,8 +479,8 @@ export default function HarvestingPage() {
                   <TableHead>Crop Type</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Yield</TableHead>
-                  <TableHead>Area Harvested</TableHead>
                   <TableHead className="text-right">Total Cost</TableHead>
+                  <TableHead className="text-right">Total Income</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -391,19 +490,11 @@ export default function HarvestingPage() {
                     <TableCell className="font-medium">{record.cropType} {record.variety && `(${record.variety})`}</TableCell>
                     <TableCell>{isValid(parseISO(record.dateHarvested)) ? format(parseISO(record.dateHarvested), 'PP') : 'Invalid Date'}</TableCell>
                     <TableCell>{record.yieldQuantity} {record.yieldUnit}</TableCell>
-                    <TableCell>{record.areaHarvested}</TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {record.totalHarvestCost.toFixed(2)}
-                    </TableCell>
+                    <TableCell className="text-right font-semibold">{record.totalHarvestCost.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-semibold text-green-600">{record.totalSalesIncome.toFixed(2)}</TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="icon" onClick={() => handleOpenModal(record)} className="h-8 w-8">
-                        <Edit2 className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button variant="destructive" size="icon" onClick={() => handleDeleteRecord(record.id)} className="h-8 w-8">
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
+                      <Button variant="outline" size="icon" onClick={() => handleOpenModal(record)} className="h-8 w-8"><Edit2 className="h-4 w-4" /><span className="sr-only">Edit</span></Button>
+                      <Button variant="destructive" size="icon" onClick={() => handleDeleteRecord(record.id)} className="h-8 w-8"><Trash2 className="h-4 w-4" /><span className="sr-only">Delete</span></Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -419,13 +510,12 @@ export default function HarvestingPage() {
         </CardContent>
       </Card>
       <Card className="mt-6 bg-muted/30 p-4">
-        <CardHeader className="p-0 pb-2">
-            <CardTitle className="text-base font-semibold text-muted-foreground">About Harvesting Costing</CardTitle>
-        </CardHeader>
+        <CardHeader className="p-0 pb-2"><CardTitle className="text-base font-semibold text-muted-foreground">About Harvesting & Sales Costing</CardTitle></CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This section helps track yield data and costs associated with harvesting and initial post-harvest activities.</p>
+            <p>&bull; This section helps track yield data, sales income, and costs associated with harvesting and initial post-harvest activities.</p>
             <p>&bull; Log details for each crop harvested, including yield quantity, units, quality, and where it's stored.</p>
             <p>&bull; Itemize costs by category for labor, equipment, transportation, packaging, etc.</p>
+            <p>&bull; Add details for each sale made from this harvest, including buyer, quantity, price, and date.</p>
             <p>&bull; This data is vital for assessing crop profitability and managing post-harvest logistics.</p>
         </CardContent>
       </Card>
