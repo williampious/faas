@@ -148,7 +148,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   }
   
   if (profileError && !pathname.startsWith('/auth/') && pathname !== '/') {
-    console.error("UserProfileContext error in RootLayout:", profileError);
+    // The console.error previously here has been removed as UserProfileProvider logs a more detailed error.
     
     const performSignOutFromErrorPage = async () => {
       if (!auth) {
