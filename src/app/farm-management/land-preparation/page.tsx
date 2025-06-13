@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler, Controller } from 'react-ho
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Shovel, PlusCircle, Trash2, Edit2, DollarSign } from 'lucide-react';
+import { Shovel, PlusCircle, Trash2, Edit2, DollarSign, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { useRouter } from 'next/navigation';
 
 const activityTypes = ['Field Clearing', 'Weeding', 'Ploughing', 'Harrowing', 'Levelling', 'Manure Spreading', 'Herbicide Application'] as const;
 type LandPreparationActivityType = typeof activityTypes[number];
@@ -78,6 +79,7 @@ export default function LandPreparationPage() {
   const [editingActivity, setEditingActivity] = useState<LandPreparationActivity | null>(null);
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
 
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
@@ -194,9 +196,14 @@ export default function LandPreparationPage() {
         icon={Shovel}
         description="Log, track, and manage all activities and associated costs for preparing your land."
         action={
-          <Button onClick={() => handleOpenModal()}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Log New Activity
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push('/farm-management')}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Farm Management
+            </Button>
+            <Button onClick={() => handleOpenModal()}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Log New Activity
+            </Button>
+          </div>
         }
       />
 
