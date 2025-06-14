@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  output: 'standalone', // Recommended for Docker/Cloud Run deployments
 };
 
 export default nextConfig;
