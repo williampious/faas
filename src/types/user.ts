@@ -4,13 +4,14 @@
  */
 
 export type UserRole =
-  | 'Farmer'
+  | 'Admin' // Primary system administrator, first user gets this.
+  | 'Manager' // Access to full operations, task delegation, reports
+  | 'FieldOfficer' // Limited to field data entry, task updates
+  | 'HRManager' // Access to employee records, attendance, payroll
+  | 'Farmer' // General farmer role
   | 'Investor'
-  | 'Admin'
-  | 'Field Agent'
-  | 'Farm Manager'
-  | 'Farm Staff' // Added
-  | 'Agric Extension Officer'; // Added
+  | 'Farm Staff'
+  | 'Agric Extension Officer';
 
 export type Gender = 'Male' | 'Female' | 'Other' | 'PreferNotToSay';
 
@@ -151,7 +152,7 @@ export interface AgriFAASUserProfile {
   // 1. Basic Information
   userId: string; // Auto-generated UUID, primary key
   fullName: string;
-  role: UserRole[]; // Can have multiple roles, e.g. Farmer and Admin
+  role: UserRole[]; // Can have multiple roles
   gender?: Gender;
   dateOfBirth?: string; // ISO 8601 date string
   nationalId?: string; // Ghana Card Number
@@ -159,30 +160,30 @@ export interface AgriFAASUserProfile {
   primaryLanguage?: string; // e.g., 'en', 'twi', 'ewe'
 
   // 2. Contact & Login Info
-  phoneNumber?: string; // Optional for initial registration
-  emailAddress?: string; // Also optional for farmers added by AEO initially
+  phoneNumber?: string;
+  emailAddress?: string;
   address?: {
     street?: string;
     city?: string;
-    community?: string; // Added community
+    community?: string;
     region?: string;
     country?: string;
     postalCode?: string;
   };
-  gpsCoordinates?: GPSCoordinates; // For farm location or primary address
+  gpsCoordinates?: GPSCoordinates;
   preferredCommunicationChannel?: CommunicationChannel;
 
-  // 3. Farm & Hub Details (Primarily for Farmer, Farm Manager roles)
+  // 3. Farm & Hub Details
   farmDetails?: FarmHubDetails;
-  assignedRegion?: string; // AEO assigned region or Farmer's primary region
-  assignedDistrict?: string; // AEO assigned district or Farmer's primary district
-  farmChallenges?: string[]; // Added for farmer profiling
-  farmerNeeds?: string[]; // Added for farmer profiling
+  assignedRegion?: string;
+  assignedDistrict?: string;
+  farmChallenges?: string[];
+  farmerNeeds?: string[];
 
   // 4. Financial & Mobile Money
-  mobileMoneyWallets?: MobileMoneyWallet[]; // User might have multiple
+  mobileMoneyWallets?: MobileMoneyWallet[];
   bankAccounts?: BankAccountDetails[];
-  investmentPortfolio?: Investment[]; // Relevant for Investor role
+  investmentPortfolio?: Investment[];
   loansOrFundingReceived?: Loan[];
   digitalWalletBalance?: {
     amount: number;
@@ -190,35 +191,34 @@ export interface AgriFAASUserProfile {
   };
   transactionHistory?: Transaction[];
 
-  // 5. HR & Employment (Relevant for Farmers/Workers, Field Agents if employed by a hub)
+  // 5. HR & Employment
   employmentDetails?: EmploymentDetails;
 
   // 6. System & Permissions
-  firebaseUid: string; // Firebase Authentication User ID (can be placeholder initially for AEO-added farmers)
-  rbacTags?: string[]; // More granular permissions beyond general role
+  firebaseUid: string;
+  rbacTags?: string[];
   appAccess?: AppAccessType[];
   loginHistory?: LoginHistoryEntry[];
-  lastActiveTimestamp?: string; // ISO 8601 datetime string
-  lastLoginTimestamp?: string; // ISO 8601 datetime string
-  deviceId?: string; // For push notifications, session management
-  deviceType?: string; // e.g., 'iOS', 'Android', 'Web'
+  lastActiveTimestamp?: string;
+  lastLoginTimestamp?: string;
+  deviceId?: string;
+  deviceType?: string;
   accountStatus: 'Active' | 'PendingVerification' | 'Suspended' | 'Deactivated';
-  registrationDate: string; // ISO 8601 datetime string
+  registrationDate: string;
 
   // 7. Notifications & Preferences
   notificationPreferences?: NotificationPreferences;
-  languagePreference?: string; // Overrides primaryLanguage if set
+  languagePreference?: string;
   alertsToggle?: AlertToggles;
   receiveAgriculturalTips?: boolean;
   receiveWeatherUpdates?: boolean;
   
   // 8. AEO Specific Linkage
-  managedByAEO?: string; // UID of the AEO who manages/added this farmer
-  initialAeoRegion?: string; // Region of AEO at time of farmer creation
-  initialAeoDistrict?: string; // District of AEO at time of farmer creation
+  managedByAEO?: string;
+  initialAeoRegion?: string;
+  initialAeoDistrict?: string;
 
   // Timestamps
-  createdAt: any; // Can be string (ISO) or Firestore ServerTimestamp
-  updatedAt: any; // Can be string (ISO) or Firestore ServerTimestamp
+  createdAt: any; // Firestore ServerTimestamp on creation
+  updatedAt: any; // Firestore ServerTimestamp on update
 }
-

@@ -16,7 +16,7 @@ import type { AgriFAASUserProfile, UserRole } from '@/types/user';
 import { db, isFirebaseClientConfigured } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
-import { useUserProfile } from '@/contexts/user-profile-context'; // To check if current user is admin
+import { useUserProfile } from '@/contexts/user-profile-context'; 
 
 const usersCollectionName = 'users';
 
@@ -32,7 +32,8 @@ export default function AdminUsersPage() {
   const [selectedStatus, setSelectedStatus] = useState<AgriFAASUserProfile['accountStatus']>('Active');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const availableRoles: UserRole[] = ['Farmer', 'Admin', 'Field Agent', 'Farm Manager', 'Investor'];
+  // Updated list of roles an Admin can assign
+  const availableRoles: UserRole[] = ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Investor', 'Farm Staff', 'Agric Extension Officer'];
 
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export default function AdminUsersPage() {
          setIsLoading(false);
          return;
       }
-      if (isAuthLoading) return; // Wait for auth check
+      if (isAuthLoading) return; 
 
       setIsLoading(true);
       setError(null);
@@ -63,7 +64,7 @@ export default function AdminUsersPage() {
         const querySnapshot = await getDocs(usersQuery);
         const fetchedUsers = querySnapshot.docs.map(docSnapshot => ({
           ...docSnapshot.data(),
-          userId: docSnapshot.id, // Ensure userId is the doc ID
+          userId: docSnapshot.id, 
         })) as AgriFAASUserProfile[];
         setUsers(fetchedUsers);
       } catch (err) {
@@ -111,7 +112,6 @@ export default function AdminUsersPage() {
             updatedAt: serverTimestamp() 
         });
         
-        // Update local state
         setUsers(users.map(u => u.userId === editingUser.userId ? {...u, role: selectedRoles, accountStatus: selectedStatus } : u));
         setIsEditModalOpen(false);
         setEditingUser(null);
@@ -124,7 +124,7 @@ export default function AdminUsersPage() {
   };
 
 
-  if (isAuthLoading || (isLoading && !users.length)) {
+  if (isAuthLoading || (isLoading && !users.length && !error)) { // Added !error condition here
     return (
       <div className="flex justify-center items-center py-10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -132,8 +132,8 @@ export default function AdminUsersPage() {
       </div>
     );
   }
-
-  if (error && !isLoading) { 
+  
+  if (error && (!isLoading || users.length === 0) ) {  // Display error if loading is done OR if there are no users to show alongside the error
      return (
         <div className="container mx-auto py-10">
          <Alert variant="destructive" className="mb-6 max-w-lg mx-auto">
@@ -165,13 +165,12 @@ export default function AdminUsersPage() {
         icon={UsersRound}
         description="View, manage, and assign roles to AgriFAAS Connect users."
         action={
-          <Button disabled> {/* Placeholder for Add User functionality */}
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New User (Coming Soon)
+          <Button disabled> 
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New User (Invite System Coming Soon)
           </Button>
         }
       />
 
-      {/* Edit User Dialog */}
       <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => {
           if (isSubmitting && !isOpen) return;
           setIsEditModalOpen(isOpen);
@@ -196,9 +195,10 @@ export default function AdminUsersPage() {
             )}
             <div>
                 <Label htmlFor="roles" className="font-semibold">Roles</Label>
-                <div className="mt-2 grid grid-cols-2 gap-2">
+                <p className="text-xs text-muted-foreground mb-2">Select one or more roles for the user.</p>
+                <div className="mt-2 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
                     {availableRoles.map(role => (
-                        <div key={role} className="flex items-center space-x-2">
+                        <div key={role} className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded-md">
                             <input 
                                 type="checkbox" 
                                 id={`role-${role}`} 
@@ -208,7 +208,7 @@ export default function AdminUsersPage() {
                                 className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
                                 disabled={isSubmitting}
                             />
-                            <Label htmlFor={`role-${role}`} className="text-sm font-normal">{role}</Label>
+                            <Label htmlFor={`role-${role}`} className="text-sm font-normal cursor-pointer">{role}</Label>
                         </div>
                     ))}
                 </div>
@@ -227,9 +227,6 @@ export default function AdminUsersPage() {
                     </SelectContent>
                 </Select>
             </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-                <p>Note: Assigning users to specific farm plots or tasks is managed elsewhere (feature in development).</p>
-            </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
@@ -247,7 +244,7 @@ export default function AdminUsersPage() {
       <Card className="shadow-lg">
         <CardContent className="pt-6">
           <Table>
-            {users.length === 0 && <TableCaption>No users found or yet to be loaded.</TableCaption>}
+            {users.length === 0 && !isLoading && <TableCaption>No users found. New users will appear here after registration.</TableCaption>}
             <TableHeader>
               <TableRow>
                 <TableHead>Full Name</TableHead>
@@ -265,7 +262,7 @@ export default function AdminUsersPage() {
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {user.role?.map(r => <Badge key={r} variant={r === 'Admin' ? 'default' : 'secondary'}>{r}</Badge>)}
-                      {!user.role?.length && <Badge variant="outline">No Roles</Badge>}
+                      {(!user.role || user.role.length === 0) && <Badge variant="outline">No Roles Assigned</Badge>}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -289,10 +286,10 @@ export default function AdminUsersPage() {
             <CardTitle className="text-base font-semibold text-muted-foreground">Admin User Management Notes</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This page allows admins to view all registered users and modify their roles and account status.</p>
-            <p>&bull; To designate a user as an admin, add the 'Admin' role via the 'Edit' action.</p>
-            <p>&bull; The 'Add New User' functionality is planned. Currently, users register themselves through the public registration page.</p>
-            <p>&bull; Assigning users to specific farm plots, acres, or linking them directly to tasks from this interface are features for future development.</p>
+            <p>&bull; This page allows Admins to view all registered users and modify their roles and account status.</p>
+            <p>&bull; The first user to register automatically becomes an 'Admin'. Subsequent users register with no roles and must be assigned roles here.</p>
+            <p>&bull; Available roles for assignment now include: Manager, FieldOfficer, HRManager, and others.</p>
+            <p>&bull; An 'Invite New User' system is planned for future development.</p>
         </CardContent>
       </Card>
     </div>

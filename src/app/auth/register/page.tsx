@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,23 +14,20 @@ import { useState } from 'react';
 import { Loader2, UserPlus } from 'lucide-react';
 import Image from 'next/image';
 import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, signOut, type User } from 'firebase/auth'; // Added signOut
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'; // Added serverTimestamp
+import { createUserWithEmailAndPassword, signOut, type User } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp, collection, getDocs, query, limit } from 'firebase/firestore';
 import type { AgriFAASUserProfile, UserRole } from '@/types/user';
 
-const availableRegisterRoles: UserRole[] = ['Farmer', 'Investor', 'Farm Manager', 'Farm Staff', 'Agric Extension Officer'];
-
+// Registration form no longer includes role selection, as roles are assigned by Admin
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-  role: z.enum(availableRegisterRoles, { required_error: 'Please select a role.' }),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
-const FIRST_ADMIN_EMAIL = 'admin@agrifaas.com';
-const DEV_TESTER_EMAIL = 'willapplepie@gmail.com';
+const usersCollectionName = 'users';
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -44,7 +40,6 @@ export default function RegisterPage() {
       fullName: '',
       email: '',
       password: '',
-      role: undefined,
     },
   });
 
@@ -67,79 +62,92 @@ export default function RegisterPage() {
     let firebaseUser: User | null = null;
 
     try {
+      // Check if any user already exists. If not, this is the first user (Admin/Owner).
+      // This check is done before creating the auth user to avoid unnecessary auth user creation if the query fails.
+      // However, there's a slight race condition risk. A more robust check would be after auth user creation but before Firestore write.
+      // For simplicity and given client-side constraints, we'll proceed with a check just before Firestore write.
+
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       firebaseUser = userCredential.user;
       console.log('User registered with Firebase Auth:', firebaseUser.uid);
 
-      let userRoles: UserRole[] = [data.role]; 
+      let userRoles: UserRole[] = []; // Default to no roles for subsequent users
 
-      if (firebaseUser.email) {
-        const userEmailLower = firebaseUser.email.toLowerCase();
-        if (userEmailLower === FIRST_ADMIN_EMAIL.toLowerCase()) {
-          if (!userRoles.includes('Admin')) {
-            userRoles.push('Admin');
-          }
-        } else if (userEmailLower === DEV_TESTER_EMAIL.toLowerCase()) {
-          userRoles = ['Admin', 'Agric Extension Officer', 'Farmer', 'Investor', 'Farm Manager', 'Farm Staff'];
-          if (!userRoles.includes(data.role)) {
-            userRoles.push(data.role);
-          }
-          userRoles = [...new Set(userRoles)];
-          console.log(`Developer tester account ${DEV_TESTER_EMAIL} registered. Assigning all key roles.`);
-        }
+      // Check if this is the first user to assign Admin role
+      const usersQuery = query(collection(db, usersCollectionName), limit(1)); // Check if any document exists
+      const existingUsersSnapshot = await getDocs(usersQuery);
+      
+      // If existingUsersSnapshot is empty, it means no users documents exist *yet*.
+      // The current user's document is about to be created. So, if after this check, the snapshot is empty,
+      // this user will be the first.
+      // A more precise check would be querySnapshot.docs.filter(doc => doc.id !== firebaseUser.uid).length === 0
+      // But for the very first user, limit(1) and checking empty is sufficient before this user's doc is written.
+
+      let isFirstUser = false;
+      if (existingUsersSnapshot.empty) {
+        // This means the collection is completely empty. The current user will be the first.
+        isFirstUser = true;
+      } else if (existingUsersSnapshot.size === 1 && existingUsersSnapshot.docs[0].id === firebaseUser.uid) {
+        // This case handles a scenario where the query runs *after* the current user's document might have been (partially) created
+        // in a previous failed attempt that wasn't cleaned up, but it's the only document.
+        // This is less likely with the new sign-out logic on failure but added for robustness.
+        // Essentially, if the only user found is the one currently being registered, they are effectively the first.
+        isFirstUser = true;
       }
 
-      // Prepare profile data, using serverTimestamp for Firestore
+
+      if (isFirstUser) {
+        userRoles = ['Admin']; // First user becomes Admin
+        console.log(`First user detected (UID: ${firebaseUser.uid}). Assigning 'Admin' role.`);
+      } else {
+         console.log(`Subsequent user detected (UID: ${firebaseUser.uid}). Assigning no default roles. Admin will assign.`);
+      }
+
       const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
         userId: firebaseUser.uid,
         firebaseUid: firebaseUser.uid,
         fullName: data.fullName,
         emailAddress: firebaseUser.email || data.email,
         role: userRoles,
-        accountStatus: 'Active', // Default to Active, can be changed by admin or verification flow later
+        accountStatus: 'Active',
         registrationDate: new Date().toISOString(),
-        phoneNumber: '', // Default empty
+        phoneNumber: '',
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
-        assignedRegion: userRoles.includes('Agric Extension Officer') ? '' : undefined,
-        assignedDistrict: userRoles.includes('Agric Extension Officer') ? '' : undefined,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
       
-      await setDoc(doc(db, 'users', firebaseUser.uid), profileForFirestore);
+      await setDoc(doc(db, usersCollectionName, firebaseUser.uid), profileForFirestore);
       console.log('User profile created in Firestore for user:', firebaseUser.uid, 'with roles:', userRoles);
-      // If both Auth and Firestore profile creation are successful, 
-      // the onAuthStateChanged listener in UserProfileProvider will handle redirection to dashboard.
+
+      // Successful registration and profile creation.
+      // UserProfileProvider will handle redirection to dashboard.
+      // If this was the first user (Admin), they might need a special welcome/setup flow later.
 
     } catch (registrationError: any) {
       console.error('Registration Process Error:', registrationError);
       
-      // Check if it's an auth error (like email-already-in-use) or a profile creation error
-      if (registrationError.code === 'auth/email-already-in-use') {
-        setError('This email address is already in use. Please try a different email or sign in.');
-      } else if (registrationError.code === 'auth/weak-password') {
-        setError('The password is too weak. Please use a stronger password.');
-      } else {
-        // This block handles errors that might occur AFTER auth user creation but DURING profile creation,
-        // or other general errors.
-        let displayError = `Registration failed: ${registrationError.message || 'An unknown error occurred. Please try again.'}`;
+      let displayError = `Registration failed: ${registrationError.message || 'An unknown error occurred. Please try again.'}`;
 
-        if (firebaseUser) {
-          // If firebaseUser exists, Auth part succeeded. The error is likely with Firestore or subsequent logic.
-          // Attempt to sign out the user to prevent an inconsistent state (auth user without a profile).
-          console.warn('Authentication succeeded but a subsequent step in registration failed. Attempting to sign out user:', firebaseUser.uid);
-          try {
-            await signOut(auth);
-            console.log('User signed out due to incomplete registration process.');
-            displayError = `Account creation was interrupted: ${registrationError.message || 'Profile setup failed.'} Your initial account step was rolled back. Please try registering again or contact support.`;
-          } catch (signOutError: any) {
-            console.error('CRITICAL: Failed to sign out user after registration error:', signOutError);
-            // This is a worse state: user created in Auth, profile failed, sign out failed.
-            displayError = `Critical error during registration. An account may have been partially created. Please contact support. (Error: ${registrationError.message} / SignoutFail: ${signOutError.message})`;
-          }
-        }
-        setError(displayError);
+      if (registrationError.code === 'auth/email-already-in-use') {
+        displayError = 'This email address is already in use. Please try a different email or sign in.';
+      } else if (registrationError.code === 'auth/weak-password') {
+        displayError = 'The password is too weak. Please use a stronger password.';
       }
+      
+      if (firebaseUser) {
+        // If auth user was created but Firestore profile failed or another error occurred
+        console.warn('Authentication succeeded but a subsequent step in registration failed. Attempting to sign out user:', firebaseUser.uid);
+        try {
+          await signOut(auth);
+          console.log('User signed out due to incomplete registration process.');
+          displayError = `Account creation was interrupted: ${registrationError.message || 'Profile setup failed.'} Your initial account step was rolled back. Please try registering again or contact support.`;
+        } catch (signOutError: any) {
+          console.error('CRITICAL: Failed to sign out user after registration error:', signOutError);
+          displayError = `Critical error during registration. An account may have been partially created. Please contact support. (Error: ${registrationError.message} / SignoutFail: ${signOutError.message})`;
+        }
+      }
+      setError(displayError);
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +162,7 @@ export default function RegisterPage() {
           </Link>
           <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create Account</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Join AgriFAAS Connect today!
+            Join AgriFAAS Connect! The first user will become the Admin.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8 grid gap-6">
@@ -203,26 +211,7 @@ export default function RegisterPage() {
                 <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
               )}
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="role">Your Primary Role</Label>
-              <Select 
-                onValueChange={(value) => form.setValue('role', value as UserRole)}
-                defaultValue={form.getValues('role')}
-                disabled={isLoading}
-              >
-                <SelectTrigger id="role">
-                  <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableRegisterRoles.map(r => (
-                    <SelectItem key={r} value={r}>{r}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.role && (
-                <p className="text-sm text-destructive">{form.formState.errors.role.message}</p>
-              )}
-            </div>
+            {/* Role selection is removed as per new logic */}
             <Button type="submit" className="w-full text-lg py-6 mt-2" disabled={isLoading}>
               {isLoading ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -245,4 +234,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
