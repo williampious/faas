@@ -27,12 +27,14 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isFirebaseClientConfigured) {
-      setError("Firebase client configuration is missing. App features dependent on Firebase may not work as expected.");
+      // This is the error if NEXT_PUBLIC_... vars are missing or placeholders
+      setError("CRITICAL INIT PHASE 1: Firebase client environment variables (NEXT_PUBLIC_...) appear to be missing, incomplete, or use placeholder values. Please ensure these are correctly set in your hosting environment (e.g., Vercel, Cloud Run) and that the latest deployment includes these changes. App features dependent on Firebase will not work.");
       setIsLoading(false);
       return;
     }
     if (!auth || !db) {
-      setError("Firebase auth or db service is not available. App features dependent on Firebase may not work as expected.");
+      // This error occurs if Firebase init passed the env var check, but services are still null
+      setError("CRITICAL INIT PHASE 2: Firebase services (Auth/DB) are not available even after environment variables seem correct. This could indicate a deeper issue with Firebase SDK initialization. Contact support if this persists after verifying environment variables.");
       setIsLoading(false);
       return;
     }
