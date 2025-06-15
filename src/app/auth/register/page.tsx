@@ -15,8 +15,8 @@ import { useState } from 'react';
 import { Loader2, UserPlus } from 'lucide-react';
 import Image from 'next/image';
 import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, type User } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, signOut, type User } from 'firebase/auth'; // Added signOut
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'; // Added serverTimestamp
 import type { AgriFAASUserProfile, UserRole } from '@/types/user';
 
 const availableRegisterRoles: UserRole[] = ['Farmer', 'Investor', 'Farm Manager', 'Farm Staff', 'Agric Extension Officer'];
@@ -64,12 +64,14 @@ export default function RegisterPage() {
       return;
     }
 
+    let firebaseUser: User | null = null;
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      const firebaseUser: User = userCredential.user;
+      firebaseUser = userCredential.user;
       console.log('User registered with Firebase Auth:', firebaseUser.uid);
 
-      let userRoles: UserRole[] = [data.role]; // Start with the selected role
+      let userRoles: UserRole[] = [data.role]; 
 
       if (firebaseUser.email) {
         const userEmailLower = firebaseUser.email.toLowerCase();
@@ -78,53 +80,66 @@ export default function RegisterPage() {
             userRoles.push('Admin');
           }
         } else if (userEmailLower === DEV_TESTER_EMAIL.toLowerCase()) {
-          // Grant all key roles to the developer/tester account
           userRoles = ['Admin', 'Agric Extension Officer', 'Farmer', 'Investor', 'Farm Manager', 'Farm Staff'];
-          // Ensure the selected role is included if it's not one of these, though the above list is comprehensive
           if (!userRoles.includes(data.role)) {
             userRoles.push(data.role);
           }
-           // Remove duplicates just in case
           userRoles = [...new Set(userRoles)];
           console.log(`Developer tester account ${DEV_TESTER_EMAIL} registered. Assigning all key roles.`);
         }
       }
 
-
-      const currentDateIso = new Date().toISOString();
-      const newUserProfile: AgriFAASUserProfile = {
+      // Prepare profile data, using serverTimestamp for Firestore
+      const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
         userId: firebaseUser.uid,
         firebaseUid: firebaseUser.uid,
         fullName: data.fullName,
         emailAddress: firebaseUser.email || data.email,
         role: userRoles,
-        accountStatus: 'Active',
-        registrationDate: currentDateIso,
-        createdAt: currentDateIso,
-        updatedAt: currentDateIso,
-        phoneNumber: '',
+        accountStatus: 'Active', // Default to Active, can be changed by admin or verification flow later
+        registrationDate: new Date().toISOString(),
+        phoneNumber: '', // Default empty
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
-        // Default AEO fields to empty strings for the dev tester if they have that role
         assignedRegion: userRoles.includes('Agric Extension Officer') ? '' : undefined,
         assignedDistrict: userRoles.includes('Agric Extension Officer') ? '' : undefined,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
       
-      await setDoc(doc(db, 'users', firebaseUser.uid), newUserProfile);
+      await setDoc(doc(db, 'users', firebaseUser.uid), profileForFirestore);
       console.log('User profile created in Firestore for user:', firebaseUser.uid, 'with roles:', userRoles);
-      // Let the root layout handle redirection
-      // router.push('/dashboard');
+      // If both Auth and Firestore profile creation are successful, 
+      // the onAuthStateChanged listener in UserProfileProvider will handle redirection to dashboard.
 
-    } catch (firebaseError: any) {
-      console.error('Firebase Registration or Profile Creation Error:', firebaseError);
-      let errorMessage = "An error occurred during registration. Please try again.";
-      if (firebaseError.code === 'auth/email-already-in-use') {
-        errorMessage = 'This email address is already in use. Please try a different email or sign in.';
-      } else if (firebaseError.code === 'auth/weak-password') {
-        errorMessage = 'The password is too weak. Please use a stronger password.';
-      } else if (firebaseError.code) {
-        errorMessage = `Registration failed: ${firebaseError.message}`;
+    } catch (registrationError: any) {
+      console.error('Registration Process Error:', registrationError);
+      
+      // Check if it's an auth error (like email-already-in-use) or a profile creation error
+      if (registrationError.code === 'auth/email-already-in-use') {
+        setError('This email address is already in use. Please try a different email or sign in.');
+      } else if (registrationError.code === 'auth/weak-password') {
+        setError('The password is too weak. Please use a stronger password.');
+      } else {
+        // This block handles errors that might occur AFTER auth user creation but DURING profile creation,
+        // or other general errors.
+        let displayError = `Registration failed: ${registrationError.message || 'An unknown error occurred. Please try again.'}`;
+
+        if (firebaseUser) {
+          // If firebaseUser exists, Auth part succeeded. The error is likely with Firestore or subsequent logic.
+          // Attempt to sign out the user to prevent an inconsistent state (auth user without a profile).
+          console.warn('Authentication succeeded but a subsequent step in registration failed. Attempting to sign out user:', firebaseUser.uid);
+          try {
+            await signOut(auth);
+            console.log('User signed out due to incomplete registration process.');
+            displayError = `Account creation was interrupted: ${registrationError.message || 'Profile setup failed.'} Your initial account step was rolled back. Please try registering again or contact support.`;
+          } catch (signOutError: any) {
+            console.error('CRITICAL: Failed to sign out user after registration error:', signOutError);
+            // This is a worse state: user created in Auth, profile failed, sign out failed.
+            displayError = `Critical error during registration. An account may have been partially created. Please contact support. (Error: ${registrationError.message} / SignoutFail: ${signOutError.message})`;
+          }
+        }
+        setError(displayError);
       }
-      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -230,3 +245,4 @@ export default function RegisterPage() {
     </div>
   );
 }
+
