@@ -119,8 +119,8 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setIsClient(true);
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && window.workbox !== undefined) {
-      navigator.serviceWorker.register('/sw.js')
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js') // Register our new sw.js
         .then(reg => {
           console.log('[ServiceWorker] Registered successfully with scope: ', reg.scope);
         })
@@ -128,7 +128,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
           console.error('[ServiceWorker] Registration failed: ', error);
         });
     }
-  }, []);
+  }, []); // Runs once on mount
 
   useEffect(() => {
     if (!isClient || isLoading) return; 
@@ -157,8 +157,6 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   }
   
   if (profileError && !pathname.startsWith('/auth/') && pathname !== '/') {
-    // A more detailed error is logged by UserProfileProvider
-    
     const performSignOutFromErrorPage = async () => {
       if (!auth) {
         console.error('Firebase auth instance is not available for sign out from error page.');
@@ -175,7 +173,6 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
           title: "Signed Out",
           description: "You have been successfully signed out.",
         });
-        // Redirection will be handled by UserProfileProvider auth state change
       } catch (error: any) {
         console.error('Error signing out from error page:', error);
         toast({
