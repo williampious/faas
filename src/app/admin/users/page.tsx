@@ -460,10 +460,11 @@ export default function AdminUsersPage() {
             <CardTitle className="text-base font-semibold text-muted-foreground">Admin User Management Notes</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This page allows Admins to view all registered users, modify their roles and account status, and create new users.</p>
-            <p>&bull; When adding a new user, you will set their initial password. Please communicate this securely to the user.</p>
-            <p>&bull; The first user to register automatically becomes an 'Admin'. Subsequent users register with no roles by default (unless created by an Admin with roles).</p>
-            <p>&bull; A more advanced 'Invite New User' system (via email link) is planned for future development.</p>
+            <p>&bull; This page allows Admins to view all registered users, modify their roles and account status, and create new users (via the "Add New User" button).</p>
+            <p>&bull; When adding a new user directly, you will set their initial password. Please communicate this securely to the user and advise them to change it upon first login.</p>
+            <p>&bull; The first user to register with the application automatically becomes an 'Admin'. Subsequent users register with no roles by default (unless created directly by an Admin with roles).</p>
+            <p>&bull; For users to register themselves: direct them to the standard registration page (typically found at your app's URL followed by /auth/register). Once registered, they will appear in this list, and you can then assign them appropriate roles using the 'Edit' button.</p>
+            <p>&bull; A more advanced 'Invite New User' system (e.g., via email link with pre-assigned roles) is planned for future development.</p>
         </CardContent>
       </Card>
     </div>
