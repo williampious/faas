@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tractor, Shovel, Sprout, ShieldAlert, Wheat } from 'lucide-react'; // Changed Seedling to Sprout
+import { Tractor, Shovel, Sprout, ShieldAlert, Wheat, LayoutGrid, Layers } from 'lucide-react'; 
 import Link from 'next/link';
 
 export default function FarmManagementPage() {
@@ -16,7 +16,7 @@ export default function FarmManagementPage() {
         description="Oversee and manage all stages of your farming operations, from land preparation to post-harvest."
       />
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <FeatureCard
           title="Land Preparation"
           description="Tasks including field clearing, weeding, ploughing/tilling, harrowing, and levelling the land for planting."
@@ -27,7 +27,7 @@ export default function FarmManagementPage() {
         <FeatureCard
           title="Planting"
           description="Activities such as seed selection, sowing or transplanting seedlings, and ensuring correct plant spacing."
-          icon={Sprout} // Changed Seedling to Sprout
+          icon={Sprout}
           href="/farm-management/planting"
           cta="Manage Planting"
         />
@@ -44,6 +44,20 @@ export default function FarmManagementPage() {
           icon={Wheat}
           href="/farm-management/harvesting"
           cta="Manage Harvesting"
+        />
+        <FeatureCard
+          title="Plot/Field Management"
+          description="Define, map, and manage individual farm plots or fields. Track history, soil types, and specific activities per plot."
+          icon={LayoutGrid}
+          href="/farm-management/plot-field-management"
+          cta="Manage Plots/Fields"
+        />
+        <FeatureCard
+          title="Soil & Water Management"
+          description="Track soil test results, plan amendments, manage water sources, and optimize irrigation strategies."
+          icon={Layers}
+          href="/farm-management/soil-water-management"
+          cta="Manage Soil & Water"
         />
       </div>
 
@@ -96,4 +110,3 @@ function FeatureCard({ title, description, icon: Icon, href, cta, disabled }: Fe
     </Card>
   );
 }
-

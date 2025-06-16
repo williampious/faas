@@ -25,6 +25,8 @@ import {
   Briefcase, // For HR Manager
   Settings2, // For Manager (Operations)
   ClipboardList, // For Field Officer (Data Entry/Tasks)
+  LayoutGrid, // For Plot/Field Management
+  Layers, // For Soil & Water Management
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -59,6 +61,14 @@ const baseNavItems: NavItem[] = [
   { href: '/planting-advice', label: 'AI Advice', icon: BrainCircuit, roles: ['Admin', 'Manager', 'Farmer', 'Agric Extension Officer'] },
   { href: '/profile', label: 'My Profile', icon: UserCircle, roles: ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Agric Extension Officer', 'Investor', 'Farm Staff'] },
 ];
+
+// Farm Management Sub-items (if we want to show them directly in nav)
+// For now, these are linked from the /farm-management page itself.
+// If they need to be in the main nav, they would be added here with a 'group' or similar.
+// Example:
+// { href: '/farm-management/plot-field-management', label: 'Plot Management', icon: LayoutGrid, group: 'Farm Ops Details', roles: ['Admin', 'Manager', 'Farmer'] },
+// { href: '/farm-management/soil-water-management', label: 'Soil & Water', icon: Layers, group: 'Farm Ops Details', roles: ['Admin', 'Manager', 'Farmer'] },
+
 
 // Role-specific items or sections
 const managerNavItems: NavItem[] = [
@@ -109,6 +119,10 @@ export function MainNav() {
     // Make dashboard active only if it's the exact path, not a prefix for other dashboards
     if (href === '/dashboard' || href === '/admin/dashboard' || href === '/aeo/dashboard' || href === '/hr/dashboard') {
         return pathname === href;
+    }
+    // For nested farm management pages, make the parent active
+    if (href === '/farm-management' && pathname.startsWith('/farm-management/')) {
+        return true;
     }
     return pathname.startsWith(href);
   };
