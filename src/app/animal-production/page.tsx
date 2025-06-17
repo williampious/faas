@@ -12,11 +12,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as DialogModalDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'; // Aliased DialogDescription
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'; // Added FormDescription
-import { Beef, Settings, PlusCircle, Edit, Info } from 'lucide-react';
+import { Beef, Settings, PlusCircle, Edit, Info, Home as HomeIcon, Utensils, ShieldCheck, BarChartBig, LinkIcon, Construction } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { LivestockProductionFocus, AnimalType, ManagementSystem } from '@/types/livestock';
 import { animalTypes, managementSystems } from '@/types/livestock';
 import { format } from 'date-fns';
+import Link from 'next/link';
+
 
 const focusFormSchema = z.object({
   projectName: z.string().max(100).optional(),
@@ -28,6 +30,40 @@ type FocusFormValues = z.infer<typeof focusFormSchema>;
 
 const LOCAL_STORAGE_KEY_LIVESTOCK_FOCUS = 'livestockProductionFocus_v1';
 const FOCUS_FORM_ID = 'livestock-focus-form';
+
+interface ModuleCardProps {
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  href?: string;
+  disabled?: boolean;
+}
+
+function ModuleCard({ title, description, icon: Icon, href, disabled }: ModuleCardProps) {
+  const cardContent = (
+    <Card className={`shadow-md hover:shadow-lg transition-shadow flex flex-col h-full ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+          <Icon className="h-7 w-7 text-primary" />
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col flex-grow">
+        <p className="text-sm text-muted-foreground mb-4 flex-grow">{description}</p>
+        <Button variant="outline" className="w-full mt-auto" disabled={disabled}>
+          {disabled ? 'Coming Soon' : 'Manage'}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  if (disabled || !href) {
+    return cardContent;
+  }
+
+  return <Link href={href} passHref legacyBehavior>{cardContent}</Link>;
+}
+
 
 export default function AnimalProductionPage() {
   const [currentFocus, setCurrentFocus] = useState<LivestockProductionFocus | null>(null);
@@ -79,7 +115,7 @@ export default function AnimalProductionPage() {
 
   const onSubmit: SubmitHandler<FocusFormValues> = (data) => {
     const newFocus: LivestockProductionFocus = {
-      id: currentFocus?.id || 'default_focus', // Keep a consistent ID if only one focus is managed
+      id: currentFocus?.id || crypto.randomUUID(), 
       projectName: data.projectName || `${data.animalType} - ${data.managementSystem}`,
       animalType: data.animalType,
       managementSystem: data.managementSystem,
@@ -89,6 +125,16 @@ export default function AnimalProductionPage() {
     toast({ title: "Livestock Focus Updated", description: `Production focus set to ${newFocus.projectName}.` });
     setIsModalOpen(false);
   };
+  
+  const animalProductionModules: ModuleCardProps[] = [
+    { title: "Housing & Infrastructure", description: "Manage barns, pens, cages, capacity, ventilation, and biosecurity.", icon: HomeIcon, href: "/animal-production/housing" },
+    { title: "Feeding & Nutrition", description: "Track feed types, schedules, inventory, and specific dietary needs.", icon: Utensils, disabled: true },
+    { title: "Health Care & Biosecurity", description: "Log vaccinations, health monitoring, medication, and quarantine protocols.", icon: ShieldCheck, disabled: true },
+    { title: "Production Management", description: "Track species-specific outputs like egg collection or weight gain.", icon: BarChartBig, disabled: true },
+    { title: "Breeding & Incubation", description: "Manage breeding ratios, incubation, fertility, and hatch rates.", icon: Construction, href: "/animal-production/breeding", disabled: true }, // Placeholder for breeding
+    { title: "Record Keeping & Marketing", description: "Log activities, generate reports, and track sales.", icon: LinkIcon, disabled: true }, // Combined for brevity
+  ];
+
 
   if (!isMounted) {
     return (
@@ -104,7 +150,7 @@ export default function AnimalProductionPage() {
       <PageHeader
         title="Animal Production Management"
         icon={Beef}
-        description="Define your livestock focus to tailor management modules."
+        description="Define your livestock focus to tailor management modules for housing, feeding, health, and more."
         action={
           <Button onClick={handleOpenModal}>
             {currentFocus ? <Edit className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />}
@@ -121,7 +167,7 @@ export default function AnimalProductionPage() {
           <DialogHeader>
             <DialogTitle>{currentFocus ? 'Change Livestock Focus' : 'Set Up Livestock Production Focus'}</DialogTitle>
             <DialogModalDescription>
-              Select the primary animal type and management system for your current operation.
+              Select the primary animal type and management system for your current operation. This will tailor the available modules.
             </DialogModalDescription>
           </DialogHeader>
           <Form {...form}>
@@ -156,7 +202,7 @@ export default function AnimalProductionPage() {
       </Dialog>
 
       {currentFocus ? (
-        <Card className="shadow-lg">
+        <Card className="mb-8 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center"><Settings className="mr-2 h-5 w-5 text-primary" /> Current Livestock Focus</CardTitle>
             <CardDescription>
@@ -171,7 +217,7 @@ export default function AnimalProductionPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="shadow-lg border-dashed border-primary/50">
+        <Card className="mb-8 shadow-lg border-dashed border-primary/50">
           <CardHeader className="text-center">
              <Beef className="mx-auto h-16 w-16 text-primary/70 mb-3" />
             <CardTitle>No Livestock Focus Set</CardTitle>
@@ -187,19 +233,16 @@ export default function AnimalProductionPage() {
           </CardContent>
         </Card>
       )}
-
-      <Card className="mt-6 bg-secondary/30 p-4">
-        <CardHeader className="p-0 pb-2">
-            <CardTitle className="text-lg font-semibold text-secondary-foreground flex items-center">
-                <Info className="mr-2 h-5 w-5"/> Next Steps & Future Modules
-            </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 text-sm text-muted-foreground space-y-1">
-            <p>&bull; Based on your selected "Livestock Focus" above, subsequent modules will become available here.</p>
-            <p>&bull; Future modules will include: Housing & Infrastructure, Feeding & Nutrition, Health Care & Biosecurity, Production Management (e.g., Egg/Meat specific logs), Breeding, Record Keeping, Marketing, and Compliance.</p>
-            <p>&bull; The system will eventually provide tailored recommendations for space, feed, and care based on your selections.</p>
-        </CardContent>
-      </Card>
+      
+      {currentFocus && (
+        <div>
+          <h2 className="text-2xl font-semibold mb-4 font-headline">Management Modules</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {animalProductionModules.map(module => <ModuleCard key={module.title} {...module} />)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -18,9 +18,46 @@ export interface LivestockProductionFocus {
   lastUpdatedAt: string; // ISO datetime string
 }
 
-// Future types for housing, feeding, health etc. will go here
+// --- Cost Item related types (can be shared or re-defined if specific adjustments are needed) ---
+export const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Other'] as const;
+export type CostCategory = typeof costCategories[number];
+
+export interface CostItem {
+  id: string;
+  description: string;
+  category: CostCategory;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+// --- Housing & Infrastructure Types ---
+export const housingTypes = ['Barn', 'Free-Range Pen', 'Cages', 'Pond', 'Hutch', 'Coop', 'Stable', 'Other'] as const;
+export type HousingType = typeof housingTypes[number];
+
+export interface HousingRecord {
+  id: string;
+  name: string; 
+  housingType: HousingType;
+  capacity: number; 
+  capacityUnit: string; 
+  dateEstablished: string; // ISO "yyyy-MM-dd"
+  ventilationDetails?: string;
+  lightingDetails?: string;
+  shelterDetails?: string; 
+  biosecurityMeasures?: string; 
+  predatorProtection?: string; 
+  notes?: string;
+  costItems: CostItem[]; 
+  totalHousingCost: number;
+  createdAt: string; // ISO datetime string
+  updatedAt: string; // ISO datetime string
+}
+
+
+// Future types for feeding, health etc. will go here
 // e.g.,
-// export interface HousingRecord { ... }
 // export interface FeedingSchedule { ... }
 // export interface HealthLogEntry { ... }
 
