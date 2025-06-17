@@ -10,8 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as DialogModalDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'; // Aliased DialogDescription
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'; // Added FormDescription
 import { Beef, Settings, PlusCircle, Edit, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { LivestockProductionFocus, AnimalType, ManagementSystem } from '@/types/livestock';
@@ -120,9 +120,9 @@ export default function AnimalProductionPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{currentFocus ? 'Change Livestock Focus' : 'Set Up Livestock Production Focus'}</DialogTitle>
-            <DialogDescription>
+            <DialogModalDescription>
               Select the primary animal type and management system for your current operation.
-            </DialogDescription>
+            </DialogModalDescription>
           </DialogHeader>
           <Form {...form}>
             <form id={FOCUS_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
