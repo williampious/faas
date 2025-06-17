@@ -61,7 +61,7 @@ function ModuleCard({ title, description, icon: Icon, href, disabled }: ModuleCa
     return cardContent;
   }
 
-  return <Link href={href} passHref legacyBehavior>{cardContent}</Link>;
+  return <Link href={href}>{cardContent}</Link>;
 }
 
 
