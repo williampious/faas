@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users } from 'lucide-react'; 
+import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion } from 'lucide-react'; 
 
 export default function LandingPage() {
   const whyAgriFAASPoints = [
@@ -126,7 +126,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="text-center max-w-5xl mx-auto">
+        <div className="text-center max-w-5xl mx-auto mb-16">
           <h2 className="text-3xl font-semibold text-foreground/90 mb-10 font-headline">How AgriFAAS Connect Works For You</h2>
           <div className="grid md:grid-cols-1 lg:grid-cols-5 gap-6">
             {appSteps.map((step, index) => (
@@ -140,6 +140,29 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
+
+        {/* Help and FAQ Section */}
+        <div className="text-center max-w-3xl mx-auto mb-16 py-8 border-t border-border/50">
+          <h2 className="text-2xl font-semibold text-foreground/90 mb-6 font-headline">Need Help?</h2>
+          <p className="text-muted-foreground mb-6">
+            Find answers to common questions or learn more about how to use AgriFAAS Connect.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+            <Link href="/help" passHref>
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                <HelpCircle className="mr-2 h-5 w-5" />
+                Visit Help Center
+              </Button>
+            </Link>
+            <Link href="/faq" passHref>
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                <MessageCircleQuestion className="mr-2 h-5 w-5" />
+                View FAQs
+              </Button>
+            </Link>
+          </div>
+        </div>
+
       </div>
     </div>
   );
@@ -190,4 +213,3 @@ function StepCard({ stepNumber, icon: Icon, title, description }: StepCardProps)
     </Card>
   );
 }
-
