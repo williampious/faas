@@ -27,6 +27,7 @@ import {
   ClipboardList, // For Field Officer (Data Entry/Tasks)
   LayoutGrid, // For Plot/Field Management
   Layers, // For Soil & Water Management
+  Beef, // For Animal Production
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -54,6 +55,7 @@ interface NavItem {
 const baseNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Agric Extension Officer', 'Investor', 'Farm Staff'] },
   { href: '/farm-management', label: 'Farm Ops', icon: Tractor, roles: ['Admin', 'Manager', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
+  { href: '/animal-production', label: 'Animal Prod.', icon: Beef, roles: ['Admin', 'Manager', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
   { href: '/farm-calendar', label: 'Calendar', icon: CalendarDays, roles: ['Admin', 'Manager', 'FieldOfficer', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
   { href: '/task-management', label: 'Tasks', icon: ListChecks, roles: ['Admin', 'Manager', 'FieldOfficer', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
   { href: '/resource-inventory', label: 'Inventory', icon: Archive, roles: ['Admin', 'Manager', 'Farmer', 'Farm Staff'] },
@@ -62,48 +64,27 @@ const baseNavItems: NavItem[] = [
   { href: '/profile', label: 'My Profile', icon: UserCircle, roles: ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Agric Extension Officer', 'Investor', 'Farm Staff'] },
 ];
 
-// Farm Management Sub-items (if we want to show them directly in nav)
-// For now, these are linked from the /farm-management page itself.
-// If they need to be in the main nav, they would be added here with a 'group' or similar.
-// Example:
-// { href: '/farm-management/plot-field-management', label: 'Plot Management', icon: LayoutGrid, group: 'Farm Ops Details', roles: ['Admin', 'Manager', 'Farmer'] },
-// { href: '/farm-management/soil-water-management', label: 'Soil & Water', icon: Layers, group: 'Farm Ops Details', roles: ['Admin', 'Manager', 'Farmer'] },
-
-
 // Role-specific items or sections
 const managerNavItems: NavItem[] = [
-  // Managers see most base items. Additional specific views can be added here.
-  // For example, if reports/financial-dashboard is manager-specific or more detailed for them:
   { href: '/reports/financial-dashboard', label: 'Financial Reports', icon: FileText, group: 'Reports', roles: ['Admin', 'Manager', 'Investor'] },
   { href: '/reports/budgeting', label: 'Budgeting', icon: Banknote, group: 'Reports', roles: ['Admin', 'Manager', 'Investor'] },
 ];
 
-const fieldOfficerNavItems: NavItem[] = [
-  // Field Officers see a subset. 'Task Management' is already in baseNavItems.
-  // "GPS Tools", "Data Entry" could be sections within Task Management or new pages.
-  // For now, their view is filtered from baseNavItems.
-  // Example of a specific FO tool page (placeholder):
-  // { href: '/field-officer/data-entry', label: 'Field Data Entry', icon: ClipboardList, roles: ['FieldOfficer', 'Admin'] },
-];
+const fieldOfficerNavItems: NavItem[] = [];
 
 const hrManagerNavItems: NavItem[] = [
-  // "HR Dashboard", "Employee Records", "Attendance Log" are new concepts.
-  // Placeholders for now:
   { href: '/hr/dashboard', label: 'HR Dashboard', icon: Briefcase, roles: ['HRManager', 'Admin'] },
   { href: '/hr/employee-records', label: 'Employee Records', icon: Users, roles: ['HRManager', 'Admin'] },
-  // Attendance log might be a feature within employee records or task management.
 ];
 
 const adminSystemNavItems: NavItem[] = [
   { href: '/admin/dashboard', label: 'Admin Overview', icon: ShieldHalf, adminOnly: true },
   { href: '/admin/users', label: 'Manage Users', icon: UsersRound, adminOnly: true },
-  // { href: '/admin/settings', label: 'System Settings', icon: Settings2, adminOnly: true }, // Example future item
 ];
 
 const aeoNavItems: NavItem[] = [
   { href: '/aeo/dashboard', label: 'AEO Dashboard', icon: Compass, roles: ['Agric Extension Officer', 'Admin'] },
   { href: '/aeo/farmer-directory', label: 'Farmer Directory', icon: Users, roles: ['Agric Extension Officer', 'Admin'] },
-  // Other AEO items can be added if they are distinct from baseNav.
 ];
 
 
@@ -112,36 +93,35 @@ export function MainNav() {
   const { userProfile, isLoading: isUserLoading } = useUserProfile();
 
   const userRoles = userProfile?.role || [];
-  const isActualAdmin = userRoles.includes('Admin'); // The first user, or anyone assigned Admin role
+  const isActualAdmin = userRoles.includes('Admin'); 
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
-    // Make dashboard active only if it's the exact path, not a prefix for other dashboards
     if (href === '/dashboard' || href === '/admin/dashboard' || href === '/aeo/dashboard' || href === '/hr/dashboard') {
         return pathname === href;
     }
-    // For nested farm management pages, make the parent active
+    // For nested farm or animal production pages, make the parent active
     if (href === '/farm-management' && pathname.startsWith('/farm-management/')) {
+        return true;
+    }
+    if (href === '/animal-production' && pathname.startsWith('/animal-production/')) {
         return true;
     }
     return pathname.startsWith(href);
   };
 
   const canViewItem = (item: NavItem): boolean => {
-    if (isUserLoading) return false; // Don't show anything while loading roles
+    if (isUserLoading) return false; 
     if (item.adminOnly) return isActualAdmin;
-    if (!item.roles) return true; // No specific roles defined, visible to all authenticated (after login)
-    if (item.roles.some(role => userRoles.includes(role))) return true; // User has at least one of the required roles
+    if (!item.roles) return true; 
+    if (item.roles.some(role => userRoles.includes(role))) return true; 
     
-    // If item.hideWhenNoSpecificRole is true, and user has roles, but none match, hide it.
-    // This handles cases where a user has some roles, but not the specific one for this item.
     if (item.hideWhenNoSpecificRole && userRoles.length > 0 && !item.roles.some(role => userRoles.includes(role))) {
       return false;
     }
-    // If item has roles, user has no roles, then user cannot see it (unless it's adminOnly and they are Admin)
     if (item.roles.length > 0 && userRoles.length === 0 && !isActualAdmin) return false; 
 
-    return false; // Default to not showing if no conditions met
+    return false; 
   };
   
   const allNavItems: NavItem[] = [
@@ -149,23 +129,19 @@ export function MainNav() {
     ...managerNavItems,
     ...fieldOfficerNavItems,
     ...hrManagerNavItems,
-    ...aeoNavItems, // AEO specific tools
-    ...adminSystemNavItems // System admin tools at the end
+    ...aeoNavItems, 
+    ...adminSystemNavItems 
   ];
 
-  // Deduplicate items by href, prioritizing items with more specific role definitions or adminOnly flags
   const uniqueNavItems = allNavItems.reduce((acc, current) => {
     const existingItem = acc.find(item => item.href === current.href);
     if (!existingItem) {
       acc.push(current);
     } else {
-      // Prioritization logic: if current item is more specific (e.g. adminOnly)
       if (current.adminOnly && !existingItem.adminOnly) {
         acc = acc.filter(item => item.href !== current.href);
         acc.push(current);
-      } else if (current.roles && (!existingItem.roles || current.roles.length < existingItem.roles.length)) {
-         // This logic might need refinement if roles are additive rather than restrictive
-      }
+      } 
     }
     return acc;
   }, [] as NavItem[]);
@@ -173,7 +149,6 @@ export function MainNav() {
 
   const visibleNavItems = uniqueNavItems.filter(canViewItem);
 
-  // Group items for rendering
   const generalItems = visibleNavItems.filter(item => !item.group && !item.adminOnly && !item.href.startsWith('/aeo/') && !item.href.startsWith('/hr/'));
   const reportItems = visibleNavItems.filter(item => item.group === 'Reports');
   const hrItems = visibleNavItems.filter(item => item.href.startsWith('/hr/'));
@@ -209,7 +184,6 @@ export function MainNav() {
     );
   }
   
-  // If user has no roles and is not admin, maybe show only profile link or a message
   if (userRoles.length === 0 && !isActualAdmin && !isUserLoading) {
     return (
       <SidebarMenu>
@@ -262,3 +236,4 @@ export function MainNav() {
     </SidebarMenu>
   );
 }
+
