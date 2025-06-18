@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin, Link as LinkIcon } from 'lucide-react'; 
+import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin, Link as LinkIcon, DollarSign } from 'lucide-react'; 
 
 export default function LandingPage() {
   const whyAgriFAASPoints = [
@@ -142,12 +142,12 @@ export default function LandingPage() {
         </div>
 
         {/* Help and FAQ Section */}
-        <div className="text-center max-w-3xl mx-auto mb-16 py-8 border-t border-border/50">
+        <div className="text-center max-w-4xl mx-auto mb-16 py-8 border-t border-border/50">
           <h2 className="text-2xl font-semibold text-foreground/90 mb-6 font-headline">Need Help?</h2>
           <p className="text-muted-foreground mb-6">
             Find answers to common questions or learn more about how to use AgriFAAS Connect.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+          <div className="flex flex-wrap justify-center items-center gap-4">
             <Link href="/help" passHref>
               <Button variant="outline" size="lg" className="w-full sm:w-auto">
                 <HelpCircle className="mr-2 h-5 w-5" />
@@ -164,6 +164,12 @@ export default function LandingPage() {
               <Button variant="outline" size="lg" className="w-full sm:w-auto">
                 <LayoutList className="mr-2 h-5 w-5" />
                 View Features
+              </Button>
+            </Link>
+            <Link href="/pricing" passHref>
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                <DollarSign className="mr-2 h-5 w-5" />
+                View Pricing
               </Button>
             </Link>
           </div>
