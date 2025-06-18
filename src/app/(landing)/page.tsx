@@ -5,9 +5,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin, Link as LinkIcon, DollarSign } from 'lucide-react'; 
+import { ArrowRight, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin, Link as LinkIcon, DollarSign, Menu } from 'lucide-react'; 
+import { useState } from 'react';
 
 export default function LandingPage() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const whyAgriFAASPoints = [
     {
       icon: Lightbulb,
@@ -54,11 +57,74 @@ export default function LandingPage() {
     },
   ];
 
+  const navLinks = [
+    { href: "/features", label: "Features" },
+    { href: "/pricing", label: "Pricing" },
+    { href: "#contact-us", label: "Contact" },
+  ];
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50">
+      {/* Top Navigation Bar */}
+      <nav className="sticky top-0 z-50 bg-background/80 dark:bg-slate-900/80 backdrop-blur-md shadow-sm">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-20">
+            <Link href="/" className="flex-shrink-0">
+              <Image
+                src="/agrifaas-logo.png"
+                alt="AgriFAAS Connect Logo"
+                width={180} 
+                height={60} 
+                objectFit="contain"
+                priority
+              />
+            </Link>
+            {/* Desktop Menu */}
+            <div className="hidden md:flex items-center space-x-6">
+              {navLinks.map((link) => (
+                <Link key={link.label} href={link.href} passHref>
+                  <Button variant="link" className="text-foreground/80 hover:text-primary dark:text-foreground/70 dark:hover:text-primary text-base">
+                    {link.label}
+                  </Button>
+                </Link>
+              ))}
+            </div>
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <Button
+                variant="ghost"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                aria-label="Toggle menu"
+              >
+                <Menu className="h-6 w-6" />
+              </Button>
+            </div>
+          </div>
+        </div>
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden absolute top-20 left-0 right-0 bg-background dark:bg-slate-900 shadow-lg py-2 z-40">
+            <div className="container mx-auto px-4 flex flex-col space-y-2">
+              {navLinks.map((link) => (
+                <Link key={link.label} href={link.href} passHref>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-foreground/80 hover:text-primary dark:text-foreground/70 dark:hover:text-primary text-base py-3"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Button>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </nav>
+
       <div className="container mx-auto px-4 py-8 sm:py-12">
-        <header className="mb-12 text-center">
-          <Link href="/" className="inline-block mb-4">
+        <header className="mb-12 text-center pt-8"> {/* Added pt-8 to give space from sticky nav */}
+          {/* Logo is now in the top nav, can be removed or kept as secondary branding */}
+          {/* <Link href="/" className="inline-block mb-4">
             <Image
               src="/agrifaas-logo.png"
               alt="AgriFAAS Connect Logo"
@@ -67,7 +133,7 @@ export default function LandingPage() {
               objectFit="contain"
               priority
             />
-          </Link>
+          </Link> */}
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-primary font-headline">
             Welcome to AgriFAAS Connect
           </h1>
@@ -176,7 +242,7 @@ export default function LandingPage() {
         </div>
       </div>
 
-      <footer className="bg-muted/50 dark:bg-muted/20 py-12 text-center border-t border-border/50">
+      <footer id="contact-us" className="bg-muted/50 dark:bg-muted/20 py-12 text-center border-t border-border/50">
         <div className="container mx-auto px-4">
           <p className="text-lg font-semibold text-primary mb-2">AgriFAAS Connect</p>
           <p className="text-sm text-muted-foreground mb-4">A flagship product of Cure Technologies</p>
@@ -258,4 +324,3 @@ function StepCard({ stepNumber, icon: Icon, title, description }: StepCardProps)
     </Card>
   );
 }
-
