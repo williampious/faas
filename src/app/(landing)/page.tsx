@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList } from 'lucide-react'; 
+import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin } from 'lucide-react'; 
 
 export default function LandingPage() {
   const whyAgriFAASPoints = [
@@ -51,12 +51,12 @@ export default function LandingPage() {
       icon: Settings2,
       title: "Centralized Control",
       description: "Get a clear dashboard overview of key farm aspects, and for admins, access tools for effective user management.",
-    }
+    },
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12">
-      <div className="container mx-auto px-4">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50">
+      <div className="container mx-auto px-4 py-8 sm:py-12">
         <header className="mb-12 text-center">
           <Link href="/" className="inline-block mb-4">
             <Image
@@ -168,8 +168,35 @@ export default function LandingPage() {
             </Link>
           </div>
         </div>
-
       </div>
+
+      <footer className="bg-muted/50 dark:bg-muted/20 py-12 text-center border-t border-border/50">
+        <div className="container mx-auto px-4">
+          <p className="text-lg font-semibold text-primary mb-2">AgriFAAS Connect</p>
+          <p className="text-sm text-muted-foreground mb-4">A flagship product of Cure Technologies</p>
+          
+          <div className="space-y-1 text-sm text-muted-foreground mb-6">
+            <p className="flex items-center justify-center">
+              <Mail className="mr-2 h-4 w-4" /> Email: <a href="mailto:support@curetchnologies.org" className="hover:text-primary hover:underline ml-1">support@curetchnologies.org</a>
+            </p>
+            <p className="flex items-center justify-center">
+              <Phone className="mr-2 h-4 w-4" /> Contact: 
+              <a href="tel:+233249499338" className="hover:text-primary hover:underline ml-1">+233 24 949 9338</a> / 
+              <a href="tel:+233277118442" className="hover:text-primary hover:underline ml-1">+233 27 711 8442</a>
+            </p>
+            <p className="flex items-center justify-center">
+              <MapPin className="mr-2 h-4 w-4" /> Office: 4th Floor, 1 Airport Square, Airport City, Accra Ghana.
+            </p>
+          </div>
+          
+          <p className="text-xs text-muted-foreground/80">
+            Copyright ©2025 Cure Technologies Support Group (CTSG Ventures)
+          </p>
+          <p className="text-xs text-muted-foreground/80 mt-1">
+            Creating Impactful Solutions for Africa.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
