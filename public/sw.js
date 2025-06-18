@@ -1,70 +1,75 @@
-// Basic Service Worker for AgriFAAS Connect
-
-// Define a cache name
+// public/sw.js
 const CACHE_NAME = 'agrifaas-connect-cache-v1';
-
-// List of files to cache on install (optional for a very basic setup)
-// For a Next.js app, be careful with caching JS/CSS bundles directly as they are often fingerprinted.
-// It's often better to let Next.js handle its specific assets and focus the SW on the app shell or specific static assets.
-const urlsToCache = [
-  '/', // Cache the root page
-  // '/offline.html', // You would need to create an offline.html page
-  '/agrifaas-logo.png', // Example: Cache your main logo if it's static
-  // Add other static assets like custom fonts if not handled by Next.js optimization
+const FILES_TO_CACHE = [
+  '/',
+  // Add other important static assets you want to pre-cache
+  // For Next.js, dynamic JS/CSS chunks are harder to pre-cache here.
+  // Runtime caching or more advanced service worker strategies are often used.
 ];
 
-// Install event: fires when the browser installs the service worker
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Install event fired');
-  // Perform install steps, like pre-caching static assets
-  // event.waitUntil(
-  //   caches.open(CACHE_NAME)
-  //     .then((cache) => {
-  //       console.log('[ServiceWorker] Opened cache:', CACHE_NAME);
-  //       return cache.addAll(urlsToCache.filter(url => !url.startsWith('https://placehold.co'))); // Example: Don't cache placeholders
-  //     })
-  //     .catch(err => {
-  //       console.error('[ServiceWorker] Cache addAll failed during install:', err);
-  //     })
-  // );
-  self.skipWaiting(); // Ensures the new service worker activates immediately
+  console.log('[ServiceWorker] Install');
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[ServiceWorker] Pre-caching offline resources');
+      // Filter out development/dynamic paths if any were accidentally included
+      const cacheableFiles = FILES_TO_CACHE.filter(url => !url.startsWith('/_next/'));
+      return cache.addAll(cacheableFiles).catch(error => {
+        console.error('[ServiceWorker] Failed to cache all files:', error, cacheableFiles);
+        // Optionally, decide if this should fail the install or proceed
+      });
+    })
+  );
+  self.skipWaiting();
 });
 
-// Activate event: fires when the service worker is activated
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activate event fired');
-  // Perform activate steps, such as cleaning up old caches
-  // event.waitUntil(
-  //   caches.keys().then((cacheNames) => {
-  //     return Promise.all(
-  //       cacheNames.map((cacheName) => {
-  //         if (cacheName !== CACHE_NAME) {
-  //           console.log('[ServiceWorker] Deleting old cache:', cacheName);
-  //           return caches.delete(cacheName);
-  //         }
-  //       })
-  //     );
-  //   })
-  // );
-  event.waitUntil(self.clients.claim()); // Allows the activated service worker to take control of the page immediately
+  console.log('[ServiceWorker] Activate');
+  event.waitUntil(
+    caches.keys().then((keyList) => {
+      return Promise.all(
+        keyList.map((key) => {
+          if (key !== CACHE_NAME) {
+            console.log('[ServiceWorker] Removing old cache', key);
+            return caches.delete(key);
+          }
+        })
+      );
+    })
+  );
+  return self.clients.claim();
 });
 
-// Fetch event: fires for every network request made by the page
 self.addEventListener('fetch', (event) => {
-  // console.log('[ServiceWorker] Fetch event for:', event.request.url);
-  // For a very basic service worker, we can just let the browser handle the fetch (network-first).
-  // More advanced strategies (cache-first, stale-while-revalidate) can be implemented here.
-  // Example: Network falling back to cache
-  // event.respondWith(
-  //   fetch(event.request).catch(() => {
-  //     return caches.match(event.request).then((response) => {
-  //       if (response) {
-  //         return response;
-  //       }
-  //       // if (event.request.mode === 'navigate') {
-  //       //   return caches.match('/offline.html'); // Return offline page for navigation requests
-  //       // }
-  //     });
-  //   })
-  // );
+  // Strategy: Network first, then cache for navigation requests (HTML pages)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          // If network fails, try to serve the root page from cache as a fallback
+          return caches.match('/');
+        })
+    );
+    return;
+  }
+
+  // Strategy: Cache first, then network for other assets (CSS, JS, images)
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request).then((fetchResponse) => {
+        // Optional: Cache new assets on the fly.
+        // Be careful with what you cache here, especially API responses or dynamic content.
+        if (fetchResponse.ok && event.request.method === 'GET') { // Only cache successful GET requests
+          const responseToCache = fetchResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return fetchResponse;
+      }).catch(error => {
+        console.warn(`[ServiceWorker] Fetch failed for ${event.request.url}; returning offline fallback if available or error.`, error);
+        // Optionally, return a generic offline placeholder for images/assets if not in cache
+      });
+    })
+  );
 });
