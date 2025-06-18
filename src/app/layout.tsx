@@ -50,7 +50,7 @@ function AppShell({ children }: { children: ReactNode }) {
         title: "Signed Out",
         description: "You have been successfully signed out.",
       });
-      // router.push('/auth/signin'); // UserProfileProvider will detect auth change and RootLayoutContent will redirect
+      // UserProfileProvider will detect auth change and RootLayoutContent will redirect
     } catch (error: any) {
       console.error('Error signing out:', error);
       toast({
@@ -128,20 +128,23 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
           console.error('[ServiceWorker] Registration failed: ', error);
         });
     }
-  }, []); // Runs once on mount
+  }, []);
 
   useEffect(() => {
     if (!isClient || isLoading) return; 
 
     const isAuthPage = pathname.startsWith('/auth/');
-    const isLandingPage = pathname === '/';
+    const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features'].includes(pathname);
 
-    if (user) { 
-      if (isLandingPage || isAuthPage) {
-        router.replace('/dashboard');
+    if (user) { // User is authenticated
+      if (isAuthPage) { // If logged in and on an auth page (e.g. /auth/signin)
+        router.replace('/dashboard'); // Redirect to dashboard
       }
-    } else { 
-      if (!isLandingPage && !isAuthPage) {
+      // No redirection if user is authenticated and on isPublicUnauthenticatedArea or other app pages
+    } else { // User is NOT authenticated
+      // If user is not authenticated AND they are trying to access a page that is NOT
+      // an auth page AND NOT one of the public unauthenticated area pages, then redirect to signin.
+      if (!isAuthPage && !isPublicUnauthenticatedArea) {
         router.replace('/auth/signin');
       }
     }
@@ -218,30 +221,21 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
     );
   }
 
+  const isAuthPage = pathname.startsWith('/auth/');
+  // Show AppShell if user is authenticated AND not on an auth page.
+  // This means AppShell will be shown for '/', '/faq', '/help', '/features', '/dashboard', '/profile', etc. when logged in.
+  const showAppShell = user && !isAuthPage;
 
-  const isAppRoute = !pathname.startsWith('/auth/') && pathname !== '/';
-
-  if (user && isAppRoute) {
+  if (showAppShell) {
     return <AppShell>{children}</AppShell>;
-  } else if (!user && (pathname.startsWith('/auth/') || pathname === '/')) {
+  } else {
+    // This renders children without AppShell if:
+    // 1. User is not authenticated (they will see public pages like '/', '/faq', or '/auth/*' pages based on redirection logic)
+    // 2. User IS authenticated but IS on an auth page (useEffect should be redirecting them, this handles transient state)
+    //    The loader for redirection is handled by the `useEffect` not blocking rendering if content is needed.
+    //    The general loading spinner or error page takes precedence if those conditions are met.
     return <>{children}</>;
-  } else if (!user && isAppRoute) {
-    return (
-        <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-background">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-lg text-muted-foreground">Redirecting...</p>
-        </div>
-    );
-  } else if (user && (pathname.startsWith('/auth/') || pathname === '/')) {
-     return (
-        <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-background">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-lg text-muted-foreground">Redirecting to dashboard...</p>
-        </div>
-    );
   }
-
-  return <>{children}</>;
 }
 
 
