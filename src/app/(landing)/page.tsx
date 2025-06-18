@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin } from 'lucide-react'; 
+import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin, Link as LinkIcon } from 'lucide-react'; 
 
 export default function LandingPage() {
   const whyAgriFAASPoints = [
@@ -187,6 +187,12 @@ export default function LandingPage() {
             <p className="flex items-center justify-center">
               <MapPin className="mr-2 h-4 w-4" /> Office: 4th Floor, 1 Airport Square, Airport City, Accra Ghana.
             </p>
+            <p className="flex items-center justify-center">
+              <LinkIcon className="mr-2 h-4 w-4" /> Website (AgriFAAS Connect): <a href="https://www.agrifaasconnect.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline ml-1">www.agrifaasconnect.com</a>
+            </p>
+            <p className="flex items-center justify-center">
+              <LinkIcon className="mr-2 h-4 w-4" /> Website (Cure Technologies): <a href="https://www.curetechnologies.org" target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline ml-1">www.curetechnologies.org</a>
+            </p>
           </div>
           
           <p className="text-xs text-muted-foreground/80">
@@ -246,3 +252,4 @@ function StepCard({ stepNumber, icon: Icon, title, description }: StepCardProps)
     </Card>
   );
 }
+
