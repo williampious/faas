@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion } from 'lucide-react'; 
+import { ArrowRight, Zap, Leaf, BarChart, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList } from 'lucide-react'; 
 
 export default function LandingPage() {
   const whyAgriFAASPoints = [
@@ -158,6 +158,12 @@ export default function LandingPage() {
               <Button variant="outline" size="lg" className="w-full sm:w-auto">
                 <MessageCircleQuestion className="mr-2 h-5 w-5" />
                 View FAQs
+              </Button>
+            </Link>
+            <Link href="/features" passHref>
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                <LayoutList className="mr-2 h-5 w-5" />
+                View Features
               </Button>
             </Link>
           </div>
