@@ -117,10 +117,12 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
+  const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features', '/pricing'].includes(pathname);
+
   useEffect(() => {
     setIsClient(true);
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js') // Register our new sw.js
+      navigator.serviceWorker.register('/sw.js')
         .then(reg => {
           console.log('[ServiceWorker] Registered successfully with scope: ', reg.scope);
         })
@@ -134,21 +136,19 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
     if (!isClient || isLoading) return; 
 
     const isAuthPage = pathname.startsWith('/auth/');
-    const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features'].includes(pathname);
+    // isPublicUnauthenticatedArea is defined above and will be fresh for each render
 
     if (user) { // User is authenticated
-      if (isAuthPage) { // If logged in and on an auth page (e.g. /auth/signin)
-        router.replace('/dashboard'); // Redirect to dashboard
+      if (isAuthPage) { 
+        router.replace('/dashboard'); 
       }
       // No redirection if user is authenticated and on isPublicUnauthenticatedArea or other app pages
     } else { // User is NOT authenticated
-      // If user is not authenticated AND they are trying to access a page that is NOT
-      // an auth page AND NOT one of the public unauthenticated area pages, then redirect to signin.
       if (!isAuthPage && !isPublicUnauthenticatedArea) {
         router.replace('/auth/signin');
       }
     }
-  }, [user, isLoading, pathname, router, isClient]);
+  }, [user, isLoading, pathname, router, isClient, isPublicUnauthenticatedArea]); // Added isPublicUnauthenticatedArea to ensure effect reruns if it changes (though it's derived from pathname)
 
   if (!isClient || isLoading) {
     return (
@@ -159,7 +159,9 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
     );
   }
   
-  if (profileError && !pathname.startsWith('/auth/') && pathname !== '/') {
+  // This block handles showing a full-page error if profile loading fails for a PROTECTED route.
+  // It should NOT show for public routes like /features, /pricing etc. if isPublicUnauthenticatedArea is working correctly.
+  if (profileError && !pathname.startsWith('/auth/') && !isPublicUnauthenticatedArea) {
     const performSignOutFromErrorPage = async () => {
       if (!auth) {
         console.error('Firebase auth instance is not available for sign out from error page.');
@@ -203,14 +205,14 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
               {profileError}
             </p>
             <p className="text-sm text-muted-foreground mb-1">
-              This might be a temporary issue. You can try:
+              This might be a temporary issue or a problem with data permissions. You can try:
             </p>
             <ul className="list-disc list-inside text-sm text-muted-foreground mb-4 text-left mx-auto max-w-xs">
               <li>Refreshing the page.</li>
               <li>Signing out and signing back in.</li>
             </ul>
             <p className="text-sm text-muted-foreground mb-4">
-              If the problem persists, please contact support.
+              If the problem persists, please check your Firebase Firestore security rules or contact support. The error often indicates that the rules do not allow your authenticated user to read their own profile from the 'users' collection.
             </p>
             <Button onClick={performSignOutFromErrorPage} variant="destructive">
               <LogOut className="mr-2 h-4 w-4" /> Sign Out
@@ -222,18 +224,11 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   }
 
   const isAuthPage = pathname.startsWith('/auth/');
-  // Show AppShell if user is authenticated AND not on an auth page.
-  // This means AppShell will be shown for '/', '/faq', '/help', '/features', '/dashboard', '/profile', etc. when logged in.
   const showAppShell = user && !isAuthPage;
 
   if (showAppShell) {
     return <AppShell>{children}</AppShell>;
   } else {
-    // This renders children without AppShell if:
-    // 1. User is not authenticated (they will see public pages like '/', '/faq', or '/auth/*' pages based on redirection logic)
-    // 2. User IS authenticated but IS on an auth page (useEffect should be redirecting them, this handles transient state)
-    //    The loader for redirection is handled by the `useEffect` not blocking rendering if content is needed.
-    //    The general loading spinner or error page takes precedence if those conditions are met.
     return <>{children}</>;
   }
 }
@@ -248,11 +243,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#8CC63F" />
-        {/* Add other PWA related meta tags if needed, e.g., for iOS */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="AgriFAAS" />
-        {/* You'll need to create actual apple-touch-icon.png files in /public */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
