@@ -59,6 +59,7 @@ export default function LandingPage() {
 
   const navLinks = [
     { href: "/features", label: "Features" },
+    { href: "/installation-guide", label: "Installation Guide" },
     { href: "#contact-us", label: "Contact" },
   ];
 
