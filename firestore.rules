@@ -1,0 +1,57 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users collection
+    match /users/{userId} {
+      // Allow user to create their own profile document.
+      // This is crucial for the registration process to succeed.
+      allow create: if request.auth != null && request.auth.uid == userId;
+
+      // Allow user to read their own profile document.
+      // Also, allow users with the 'Admin' role to read any user's profile.
+      allow read: if request.auth != null &&
+                     (request.auth.uid == userId ||
+                      (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin'])));
+
+      // Allow user to update their own profile document.
+      // Also, allow users with the 'Admin' role to update any user's profile (e.g., for assigning roles or changing account status).
+      allow update: if request.auth != null &&
+                       (request.auth.uid == userId ||
+                        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin'])));
+
+      // Restrict direct deletion of user profiles from the client-side.
+      // Deletions should typically be handled by Admin users, possibly through a backend function
+      // that also handles deleting the Firebase Auth user and any associated data.
+      // For client-side initiated delete by Admin:
+      allow delete: if request.auth != null &&
+                       (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin']));
+    }
+
+    // --- Placeholder for other collections ---
+    // As your application grows and you add more collections (e.g., for tasks, farm resources),
+    // you will need to add specific rules for them here.
+    // For example, if you have a 'tasks' collection:
+    //
+    // match /tasks/{taskId} {
+    //   // Allow authenticated users to read tasks, and only the creator or an Admin to write/delete
+    //   allow read: if request.auth != null;
+    //   allow write, delete: if request.auth != null && (request.auth.uid == resource.data.createdByUserId ||
+    //                             (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+    //                              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin'])));
+    // }
+    //
+    // By default, access to any path not explicitly matched is denied.
+    // If you need to make other collections readable/writable, add rules for them above this line.
+
+    // Default deny all reads and writes to any other paths not explicitly matched.
+    // This is a security best practice.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
