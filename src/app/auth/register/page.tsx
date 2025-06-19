@@ -62,45 +62,23 @@ export default function RegisterPage() {
     let firebaseUser: User | null = null;
 
     try {
-      // Check if any user already exists. If not, this is the first user (Admin/Owner).
-      // This check is done before creating the auth user to avoid unnecessary auth user creation if the query fails.
-      // However, there's a slight race condition risk. A more robust check would be after auth user creation but before Firestore write.
-      // For simplicity and given client-side constraints, we'll proceed with a check just before Firestore write.
-
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       firebaseUser = userCredential.user;
       console.log('User registered with Firebase Auth:', firebaseUser.uid);
 
-      let userRoles: UserRole[] = []; // Default to no roles for subsequent users
+      let userRoles: UserRole[] = [];
 
-      // Check if this is the first user to assign Admin role
-      const usersQuery = query(collection(db, usersCollectionName), limit(1)); // Check if any document exists
+      // Determine roles: First user is Admin, subsequent users are Farmers.
+      // This query checks if any user document exists *before* we attempt to create the current one.
+      const usersQuery = query(collection(db, usersCollectionName), limit(1));
       const existingUsersSnapshot = await getDocs(usersQuery);
       
-      // If existingUsersSnapshot is empty, it means no users documents exist *yet*.
-      // The current user's document is about to be created. So, if after this check, the snapshot is empty,
-      // this user will be the first.
-      // A more precise check would be querySnapshot.docs.filter(doc => doc.id !== firebaseUser.uid).length === 0
-      // But for the very first user, limit(1) and checking empty is sufficient before this user's doc is written.
-
-      let isFirstUser = false;
       if (existingUsersSnapshot.empty) {
-        // This means the collection is completely empty. The current user will be the first.
-        isFirstUser = true;
-      } else if (existingUsersSnapshot.size === 1 && existingUsersSnapshot.docs[0].id === firebaseUser.uid) {
-        // This case handles a scenario where the query runs *after* the current user's document might have been (partially) created
-        // in a previous failed attempt that wasn't cleaned up, but it's the only document.
-        // This is less likely with the new sign-out logic on failure but added for robustness.
-        // Essentially, if the only user found is the one currently being registered, they are effectively the first.
-        isFirstUser = true;
-      }
-
-
-      if (isFirstUser) {
-        userRoles = ['Admin']; // First user becomes Admin
+        userRoles = ['Admin'];
         console.log(`First user detected (UID: ${firebaseUser.uid}). Assigning 'Admin' role.`);
       } else {
-         console.log(`Subsequent user detected (UID: ${firebaseUser.uid}). Assigning no default roles. Admin will assign.`);
+        userRoles = ['Farmer']; // Default role for subsequent users
+        console.log(`Subsequent user detected (UID: ${firebaseUser.uid}). Assigning default 'Farmer' role.`);
       }
 
       const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
@@ -117,12 +95,13 @@ export default function RegisterPage() {
         updatedAt: serverTimestamp(),
       };
       
+      // CRITICAL STEP: Ensure Firestore rules allow this operation.
+      // e.g., match /users/{userId} { allow create: if request.auth.uid == userId; }
       await setDoc(doc(db, usersCollectionName, firebaseUser.uid), profileForFirestore);
       console.log('User profile created in Firestore for user:', firebaseUser.uid, 'with roles:', userRoles);
 
       // Successful registration and profile creation.
       // UserProfileProvider will handle redirection to dashboard.
-      // If this was the first user (Admin), they might need a special welcome/setup flow later.
 
     } catch (registrationError: any) {
       console.error('Registration Process Error:', registrationError);
@@ -133,6 +112,8 @@ export default function RegisterPage() {
         displayError = 'This email address is already in use. Please try a different email or sign in.';
       } else if (registrationError.code === 'auth/weak-password') {
         displayError = 'The password is too weak. Please use a stronger password.';
+      } else if (registrationError.code === 'permission-denied') {
+        displayError = 'Firestore Permission Denied: Could not save your profile. Please ensure Firestore rules allow user profile creation during registration. Contact support if this persists.';
       }
       
       if (firebaseUser) {
@@ -162,7 +143,7 @@ export default function RegisterPage() {
           </Link>
           <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create Account</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Join AgriFAAS Connect! The first user will become the Admin.
+            Join AgriFAAS Connect! The first user becomes Admin. Others default to 'Farmer'.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8 grid gap-6">
@@ -211,7 +192,6 @@ export default function RegisterPage() {
                 <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
               )}
             </div>
-            {/* Role selection is removed as per new logic */}
             <Button type="submit" className="w-full text-lg py-6 mt-2" disabled={isLoading}>
               {isLoading ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
