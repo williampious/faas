@@ -118,7 +118,7 @@ export default function RegisterPage() {
       
       if (firebaseUser) {
         // If auth user was created but Firestore profile failed or another error occurred
-        console.warn('Authentication succeeded but a subsequent step in registration failed. Attempting to sign out user:', firebaseUser.uid);
+        console.warn('Authentication succeeded but a subsequent step in registration failed. This often means Firestore setDoc failed (check Firestore rules). Attempting to sign out user:', firebaseUser.uid, 'Original error details:', registrationError);
         try {
           await signOut(auth);
           console.log('User signed out due to incomplete registration process.');

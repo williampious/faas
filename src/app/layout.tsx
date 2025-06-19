@@ -139,6 +139,8 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
     
     if (user) { // User is authenticated
       if (isAuthPage) { 
+        // This is where the redirect happens after successful registration (and profile load)
+        // User is on /auth/register, user object is now available, isLoading is false.
         router.replace('/dashboard'); 
       }
       // No redirection if user is authenticated and on isPublicUnauthenticatedArea or other app pages
@@ -254,4 +256,3 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     </html>
   );
 }
-
