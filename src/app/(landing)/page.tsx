@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin, Link as LinkIcon, DollarSign, Menu, DownloadCloud } from 'lucide-react'; 
+import { ArrowRight, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin, Link as LinkIcon, Menu, DownloadCloud } from 'lucide-react';
 import { useState } from 'react';
 
 export default function LandingPage() {
@@ -59,7 +59,6 @@ export default function LandingPage() {
 
   const navLinks = [
     { href: "/features", label: "Features" },
-    { href: "/pricing", label: "Pricing" },
     { href: "#contact-us", label: "Contact" },
   ];
 
@@ -73,8 +72,8 @@ export default function LandingPage() {
               <Image
                 src="/agrifaas-logo.png"
                 alt="AgriFAAS Connect Logo"
-                width={180} 
-                height={60} 
+                width={180}
+                height={60}
                 objectFit="contain"
                 priority
               />
@@ -166,12 +165,12 @@ export default function LandingPage() {
             </CardFooter>
           </Card>
         </div>
-        
+
         <div className="text-center max-w-5xl mx-auto mb-16">
           <h2 className="text-3xl font-semibold text-foreground/90 mb-10 font-headline">Why AgriFAAS Connect?</h2>
           <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6">
             {whyAgriFAASPoints.map((point, index) => (
-              <BenefitCard 
+              <BenefitCard
                 key={index}
                 icon={point.icon}
                 title={point.title}
@@ -185,7 +184,7 @@ export default function LandingPage() {
           <h2 className="text-3xl font-semibold text-foreground/90 mb-10 font-headline">How AgriFAAS Connect Works For You</h2>
           <div className="grid md:grid-cols-1 lg:grid-cols-5 gap-6">
             {appSteps.map((step, index) => (
-              <StepCard 
+              <StepCard
                 key={index}
                 stepNumber={index + 1}
                 icon={step.icon}
@@ -221,12 +220,6 @@ export default function LandingPage() {
                 View Features
               </Button>
             </Link>
-            <Link href="/pricing" passHref>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                <DollarSign className="mr-2 h-5 w-5" />
-                View Pricing
-              </Button>
-            </Link>
             <Link href="/installation-guide" passHref>
               <Button variant="outline" size="lg" className="w-full sm:w-auto">
                 <DownloadCloud className="mr-2 h-5 w-5" />
@@ -241,14 +234,14 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <p className="text-lg font-semibold text-primary mb-2">AgriFAAS Connect</p>
           <p className="text-sm text-muted-foreground mb-4">A flagship product of Cure Technologies</p>
-          
+
           <div className="space-y-1 text-sm text-muted-foreground mb-6">
             <p className="flex items-center justify-center">
               <Mail className="mr-2 h-4 w-4" /> Email: <a href="mailto:support@curetchnologies.org" className="hover:text-primary hover:underline ml-1">support@curetchnologies.org</a>
             </p>
             <p className="flex items-center justify-center">
-              <Phone className="mr-2 h-4 w-4" /> Contact: 
-              <a href="tel:+233249499338" className="hover:text-primary hover:underline ml-1">+233 24 949 9338</a> / 
+              <Phone className="mr-2 h-4 w-4" /> Contact:
+              <a href="tel:+233249499338" className="hover:text-primary hover:underline ml-1">+233 24 949 9338</a> /
               <a href="tel:+233277118442" className="hover:text-primary hover:underline ml-1">+233 27 711 8442</a>
             </p>
             <p className="flex items-center justify-center">
@@ -261,7 +254,7 @@ export default function LandingPage() {
               <LinkIcon className="mr-2 h-4 w-4" /> Website (Cure Technologies): <a href="https://www.curetechnologies.org" target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline ml-1">www.curetechnologies.org</a>
             </p>
           </div>
-          
+
           <p className="text-xs text-muted-foreground/80">
             Copyright ©2025 Cure Technologies Support Group (CTSG Ventures)
           </p>

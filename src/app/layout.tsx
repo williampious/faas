@@ -117,7 +117,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
-  const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features', '/pricing', '/installation-guide'].includes(pathname);
+  const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features', '/installation-guide'].includes(pathname);
 
   useEffect(() => {
     setIsClient(true);
@@ -254,3 +254,4 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     </html>
   );
 }
+
