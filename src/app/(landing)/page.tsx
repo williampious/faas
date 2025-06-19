@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin, Link as LinkIcon, DollarSign, Menu } from 'lucide-react'; 
+import { ArrowRight, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin, Link as LinkIcon, DollarSign, Menu, DownloadCloud } from 'lucide-react'; 
 import { useState } from 'react';
 
 export default function LandingPage() {
@@ -123,17 +123,6 @@ export default function LandingPage() {
 
       <div className="container mx-auto px-4 py-8 sm:py-12">
         <header className="mb-12 text-center pt-8"> {/* Added pt-8 to give space from sticky nav */}
-          {/* Logo is now in the top nav, can be removed or kept as secondary branding */}
-          {/* <Link href="/" className="inline-block mb-4">
-            <Image
-              src="/agrifaas-logo.png"
-              alt="AgriFAAS Connect Logo"
-              width={280}
-              height={93}
-              objectFit="contain"
-              priority
-            />
-          </Link> */}
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-primary font-headline">
             Welcome to AgriFAAS Connect
           </h1>
@@ -238,6 +227,12 @@ export default function LandingPage() {
                 View Pricing
               </Button>
             </Link>
+            <Link href="/installation-guide" passHref>
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                <DownloadCloud className="mr-2 h-5 w-5" />
+                Installation Guide
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -324,3 +319,4 @@ function StepCard({ stepNumber, icon: Icon, title, description }: StepCardProps)
     </Card>
   );
 }
+
