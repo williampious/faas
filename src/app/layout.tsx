@@ -136,8 +136,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
     if (!isClient || isLoading) return; 
 
     const isAuthPage = pathname.startsWith('/auth/');
-    // isPublicUnauthenticatedArea is defined above and will be fresh for each render
-
+    
     if (user) { // User is authenticated
       if (isAuthPage) { 
         router.replace('/dashboard'); 
@@ -148,7 +147,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
         router.replace('/auth/signin');
       }
     }
-  }, [user, isLoading, pathname, router, isClient, isPublicUnauthenticatedArea]); // Added isPublicUnauthenticatedArea to ensure effect reruns if it changes (though it's derived from pathname)
+  }, [user, isLoading, pathname, router, isClient, isPublicUnauthenticatedArea]);
 
   if (!isClient || isLoading) {
     return (
@@ -159,8 +158,6 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
     );
   }
   
-  // This block handles showing a full-page error if profile loading fails for a PROTECTED route.
-  // It should NOT show for public routes like /features, /pricing etc. if isPublicUnauthenticatedArea is working correctly.
   if (profileError && !pathname.startsWith('/auth/') && !isPublicUnauthenticatedArea) {
     const performSignOutFromErrorPage = async () => {
       if (!auth) {
