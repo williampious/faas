@@ -12,16 +12,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'; 
-import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { AgriFAASUserProfile, UserRole, AccountStatus } from '@/types/user';
 import { db, isFirebaseClientConfigured } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, doc, updateDoc, serverTimestamp, setDoc, deleteDoc } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
-import { useUserProfile } from '@/contexts/user-profile-context'; 
+import { useUserProfile } from '@/contexts/user-profile-context';
 import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid'; 
+import { v4 as uuidv4 } from 'uuid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 
@@ -31,7 +32,7 @@ const usersCollectionName = 'users';
 const inviteUserFormSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }),
-  roles: z.array(z.string()).min(1, { message: "At least one role must be selected."}).optional(), 
+  roles: z.array(z.string()).min(1, { message: "At least one role must be selected."}).optional(),
 });
 type InviteUserFormValues = z.infer<typeof inviteUserFormSchema>;
 
@@ -53,7 +54,11 @@ export default function AdminUsersPage() {
   const [isInvitingUser, setIsInvitingUser] = useState(false);
   const [inviteUserError, setInviteUserError] = useState<string | null>(null);
   const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
-  
+
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<AgriFAASUserProfile | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+
 
   const availableRoles: UserRole[] = ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Investor', 'Farm Staff', 'Agric Extension Officer'];
 
@@ -62,7 +67,7 @@ export default function AdminUsersPage() {
     defaultValues: {
       fullName: '',
       email: '',
-      roles: ['Farmer'], 
+      roles: ['Farmer'],
     },
   });
 
@@ -74,7 +79,7 @@ export default function AdminUsersPage() {
          setIsLoading(false);
          return;
       }
-      if (isAuthLoading) return; 
+      if (isAuthLoading) return;
 
       setIsLoading(true);
       setError(null);
@@ -95,7 +100,7 @@ export default function AdminUsersPage() {
         const querySnapshot = await getDocs(usersQuery);
         const fetchedUsers = querySnapshot.docs.map(docSnapshot => ({
           ...docSnapshot.data(),
-          userId: docSnapshot.id, 
+          userId: docSnapshot.id,
         })) as AgriFAASUserProfile[];
         setUsers(fetchedUsers);
       } catch (err) {
@@ -113,16 +118,16 @@ export default function AdminUsersPage() {
     setEditingUser(userToEdit);
     setSelectedRoles(userToEdit.role || []);
     setSelectedStatus(userToEdit.accountStatus || 'Active');
-    setGeneratedInviteLink(null); 
+    setGeneratedInviteLink(null);
     setIsEditModalOpen(true);
   };
 
   const handleRoleChange = (role: UserRole, formType: 'edit' | 'invite') => {
     if (formType === 'edit') {
-        setSelectedRoles(prev => 
+        setSelectedRoles(prev =>
           prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
         );
-    } else { 
+    } else {
         const currentRoles = inviteUserForm.getValues('roles') || [];
         const newRoles = currentRoles.includes(role)
             ? currentRoles.filter(r => r !== role)
@@ -150,9 +155,9 @@ export default function AdminUsersPage() {
         await updateDoc(userDocRef, {
             role: selectedRoles,
             accountStatus: selectedStatus,
-            updatedAt: serverTimestamp() 
+            updatedAt: serverTimestamp()
         });
-        
+
         setUsers(users.map(u => u.userId === editingUser.userId ? {...u, role: selectedRoles, accountStatus: selectedStatus, updatedAt: new Date().toISOString() } : u));
         setIsEditModalOpen(false);
         setEditingUser(null);
@@ -186,14 +191,14 @@ export default function AdminUsersPage() {
     }
 
     const invitationToken = uuidv4();
-    const temporaryUserId = uuidv4(); 
+    const temporaryUserId = uuidv4();
 
     try {
         const newUserProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt' | 'firebaseUid'> & { createdAt: any, updatedAt: any } = {
-            userId: temporaryUserId, 
+            userId: temporaryUserId,
             fullName: data.fullName,
             emailAddress: data.email,
-            role: (data.roles as UserRole[]) || ['Farmer'], 
+            role: (data.roles as UserRole[]) || ['Farmer'],
             accountStatus: 'Invited',
             registrationDate: new Date().toISOString(),
             invitationToken: invitationToken,
@@ -206,15 +211,15 @@ export default function AdminUsersPage() {
 
         const inviteLink = `${window.location.origin}/auth/complete-registration?token=${invitationToken}`;
         setGeneratedInviteLink(inviteLink);
-        
+
         const displayProfile: AgriFAASUserProfile = {
             ...newUserProfile,
-            userId: temporaryUserId, 
-            createdAt: new Date().toISOString(), 
+            userId: temporaryUserId,
+            createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
         setUsers(prevUsers => [...prevUsers, displayProfile].sort((a,b) => (a.fullName || '').localeCompare(b.fullName || '')));
-        
+
         toast({title: "User Invited", description: `${data.fullName} has been invited. Share the link below with them.`});
 
     } catch (err: any) {
@@ -233,8 +238,34 @@ export default function AdminUsersPage() {
     });
   };
 
+  const handleOpenDeleteConfirm = (user: AgriFAASUserProfile) => {
+    setUserToDelete(user);
+    setIsDeleteConfirmOpen(true);
+  };
 
-  if (isAuthLoading || (isLoading && !users.length && !error)) { 
+  const handleConfirmDelete = async () => {
+    if (!userToDelete || !db) {
+      toast({ title: "Error", description: "No user selected for deletion or database unavailable.", variant: "destructive" });
+      setIsDeleteConfirmOpen(false);
+      return;
+    }
+    setIsDeletingUser(true);
+    try {
+      await deleteDoc(doc(db, usersCollectionName, userToDelete.userId));
+      setUsers(users.filter(u => u.userId !== userToDelete.userId));
+      toast({ title: "User Profile Deleted", description: `${userToDelete.fullName}'s profile has been removed from Firestore.` });
+    } catch (err: any) {
+      console.error("Error deleting user profile:", err);
+      toast({ title: "Deletion Failed", description: `Could not delete profile: ${err.message}`, variant: "destructive" });
+    } finally {
+      setIsDeletingUser(false);
+      setIsDeleteConfirmOpen(false);
+      setUserToDelete(null);
+    }
+  };
+
+
+  if (isAuthLoading || (isLoading && !users.length && !error)) {
     return (
       <div className="flex justify-center items-center py-10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -242,8 +273,8 @@ export default function AdminUsersPage() {
       </div>
     );
   }
-  
-  if (error && (!isLoading || users.length === 0) ) {  
+
+  if (error && (!isLoading || users.length === 0) ) {
      return (
         <div className="container mx-auto py-10">
          <Alert variant="destructive" className="mb-6 max-w-lg mx-auto">
@@ -254,7 +285,7 @@ export default function AdminUsersPage() {
         </div>
      );
   }
-  
+
   if (!currentUserIsAdmin && !isAuthLoading){
       return (
            <div className="container mx-auto py-10">
@@ -273,16 +304,16 @@ export default function AdminUsersPage() {
       <PageHeader
         title="User Management"
         icon={UsersRound}
-        description="View, manage roles, and invite new users to AgriFAAS Connect."
+        description="View, manage roles, invite new users, and manage user profiles in AgriFAAS Connect."
         action={
-          <Button onClick={() => { inviteUserForm.reset({roles: ['Farmer']}); setInviteUserError(null); setGeneratedInviteLink(null); setIsInviteUserModalOpen(true); }}> 
+          <Button onClick={() => { inviteUserForm.reset({roles: ['Farmer']}); setInviteUserError(null); setGeneratedInviteLink(null); setIsInviteUserModalOpen(true); }}>
             <UserPlus className="mr-2 h-4 w-4" /> Invite New User
           </Button>
         }
       />
 
       <Dialog open={isInviteUserModalOpen} onOpenChange={(isOpen) => {
-          if (isInvitingUser && !isOpen) return; 
+          if (isInvitingUser && !isOpen) return;
           setIsInviteUserModalOpen(isOpen);
           if (!isOpen) { inviteUserForm.reset({roles: ['Farmer']}); setInviteUserError(null); setGeneratedInviteLink(null); }
       }}>
@@ -321,7 +352,7 @@ export default function AdminUsersPage() {
                             <FormField control={inviteUserForm.control} name="email" render={({ field }) => (
                                 <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="user@example.com" {...field} disabled={isInvitingUser} /></FormControl><FormMessage /></FormItem>
                             )} />
-                            
+
                             <div>
                                 <Label className="font-semibold">Assign Roles</Label>
                                 <FormDescription className="text-xs mb-1">Select initial roles for the invited user. 'Farmer' is common.</FormDescription>
@@ -388,7 +419,7 @@ export default function AdminUsersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            {error && isSubmittingEdit && ( 
+            {error && isSubmittingEdit && (
                  <Alert variant="destructive" className="mb-4">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertTitle>Update Error</AlertTitle>
@@ -401,9 +432,9 @@ export default function AdminUsersPage() {
                 <div className="mt-2 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto border p-2 rounded-md">
                     {availableRoles.map(role => (
                         <div key={role} className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded-md">
-                            <Checkbox 
-                                id={`edit-role-${role}`} 
-                                value={role} 
+                            <Checkbox
+                                id={`edit-role-${role}`}
+                                value={role}
                                 checked={selectedRoles.includes(role)}
                                 onCheckedChange={() => handleRoleChange(role, 'edit')}
                                 className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
@@ -443,6 +474,29 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm User Profile Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the Firestore profile for <strong>{userToDelete?.fullName}</strong> ({userToDelete?.emailAddress})?
+              <br />
+              <span className="font-semibold text-destructive mt-2 block">
+                Important: This action only removes the user's data from the application database (Firestore). It does NOT delete their authentication account from Firebase Auth. The user might still be able to log in if their auth account exists.
+              </span>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUserToDelete(null)} disabled={isDeletingUser}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeletingUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isDeletingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeletingUser ? 'Deleting...' : 'Delete Profile Data'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <Card className="shadow-lg">
         <CardContent className="pt-6">
@@ -470,25 +524,28 @@ export default function AdminUsersPage() {
                   </TableCell>
                   <TableCell>
                      <Badge variant={
-                        user.accountStatus === 'Active' ? 'default' : 
+                        user.accountStatus === 'Active' ? 'default' :
                         user.accountStatus === 'Invited' ? 'outline' :
                         (user.accountStatus === 'Suspended' || user.accountStatus === 'Deactivated' ? 'destructive' : 'secondary')
                       }>
                         {user.accountStatus}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => handleOpenEditModal(user)}>
+                  <TableCell className="text-right space-x-1">
+                    <Button variant="outline" size="sm" onClick={() => handleOpenEditModal(user)} className="h-8 px-2">
                       <Edit2 className="h-3.5 w-3.5 mr-1" /> Manage
                     </Button>
                     {user.accountStatus === 'Invited' && user.invitationToken && (
                        <Button variant="link" size="sm" onClick={() => {
                          const link = `${window.location.origin}/auth/complete-registration?token=${user.invitationToken}`;
                          copyToClipboard(link);
-                       }}>
+                       }} className="h-8 px-2">
                         <LinkIcon className="h-3.5 w-3.5 mr-1" /> Copy Invite
                       </Button>
                     )}
+                    <Button variant="destructive" size="sm" onClick={() => handleOpenDeleteConfirm(user)} className="h-8 px-2" disabled={user.accountStatus === 'Invited'}>
+                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Profile
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -504,12 +561,12 @@ export default function AdminUsersPage() {
             <p>&bull; Use "Invite New User" to add users. An invitation link will be generated for you to share with them.</p>
             <p>&bull; Invited users will have an 'Invited' status until they complete registration using the link. They will set their own password.</p>
             <p>&bull; You can manage roles and account status for existing 'Active', 'Suspended', or 'Deactivated' users using the 'Manage' button.</p>
-            <p>&bull; For users with 'Invited' status, you can copy their invitation link again if needed. Their roles/status cannot be edited until they complete registration.</p>
-            <p>&bull; The general registration page (`/auth/register`) allows self-sign up and currently grants 'Admin' role by default (for initial setup).</p>
+            <p>&bull; For users with 'Invited' status, you can copy their invitation link again if needed. Their roles/status cannot be edited until they complete registration. Deleting an 'Invited' user profile is disabled (as no significant data exists).</p>
+            <p>&bull; <strong>Profile Deletion:</strong> The "Delete Profile" button removes the user's data from Firestore only. It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. For complete user deletion, a backend process using the Firebase Admin SDK is required. This feature is for development/data cleanup purposes.</p>
+            <p>&bull; The general registration page (`/auth/register`) allows self-sign up and currently grants 'Admin' role by default to all new users.</p>
         </CardContent>
       </Card>
     </div>
   );
 }
-
     
