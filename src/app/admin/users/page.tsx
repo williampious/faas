@@ -13,27 +13,27 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'; 
-import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus } from 'lucide-react';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'; 
+import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import type { AgriFAASUserProfile, UserRole } from '@/types/user';
-import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase'; // Added auth
-import { createUserWithEmailAndPassword } from 'firebase/auth'; // Added for user creation
+import type { AgriFAASUserProfile, UserRole, AccountStatus } from '@/types/user';
+import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import { useUserProfile } from '@/contexts/user-profile-context'; 
 import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid'; // For generating invitation tokens
 
 
 const usersCollectionName = 'users';
 
-const addUserFormSchema = z.object({
+const inviteUserFormSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  roles: z.array(z.string()).optional(), // Assuming roles are string identifiers
+  // Password field removed for invite flow
+  roles: z.array(z.string()).min(1, { message: "At least one role must be selected."}).optional(), 
 });
-type AddUserFormValues = z.infer<typeof addUserFormSchema>;
+type InviteUserFormValues = z.infer<typeof inviteUserFormSchema>;
 
 
 export default function AdminUsersPage() {
@@ -46,23 +46,23 @@ export default function AdminUsersPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AgriFAASUserProfile | null>(null);
   const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
-  const [selectedStatus, setSelectedStatus] = useState<AgriFAASUserProfile['accountStatus']>('Active');
+  const [selectedStatus, setSelectedStatus] = useState<AccountStatus>('Active');
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [isAddingUser, setIsAddingUser] = useState(false);
-  const [addUserError, setAddUserError] = useState<string | null>(null);
+  const [isInviteUserModalOpen, setIsInviteUserModalOpen] = useState(false);
+  const [isInvitingUser, setIsInvitingUser] = useState(false);
+  const [inviteUserError, setInviteUserError] = useState<string | null>(null);
+  const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
   
 
   const availableRoles: UserRole[] = ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Investor', 'Farm Staff', 'Agric Extension Officer'];
 
-  const addUserForm = useForm<AddUserFormValues>({
-    resolver: zodResolver(addUserFormSchema),
+  const inviteUserForm = useForm<InviteUserFormValues>({
+    resolver: zodResolver(inviteUserFormSchema),
     defaultValues: {
       fullName: '',
       email: '',
-      password: '',
-      roles: [],
+      roles: ['Farmer'], // Default to 'Farmer' for new invites
     },
   });
 
@@ -113,20 +113,21 @@ export default function AdminUsersPage() {
     setEditingUser(userToEdit);
     setSelectedRoles(userToEdit.role || []);
     setSelectedStatus(userToEdit.accountStatus || 'Active');
+    setGeneratedInviteLink(null); // Clear any previous invite link
     setIsEditModalOpen(true);
   };
 
-  const handleRoleChange = (role: UserRole, formType: 'edit' | 'add') => {
+  const handleRoleChange = (role: UserRole, formType: 'edit' | 'invite') => {
     if (formType === 'edit') {
         setSelectedRoles(prev => 
           prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
         );
-    } else { // 'add'
-        const currentRoles = addUserForm.getValues('roles') || [];
+    } else { // 'invite'
+        const currentRoles = inviteUserForm.getValues('roles') || [];
         const newRoles = currentRoles.includes(role)
             ? currentRoles.filter(r => r !== role)
             : [...currentRoles, role];
-        addUserForm.setValue('roles', newRoles as UserRole[]);
+        inviteUserForm.setValue('roles', newRoles as UserRole[]);
     }
   };
 
@@ -165,67 +166,77 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleAddUserSubmit: SubmitHandler<AddUserFormValues> = async (data) => {
-    if (!isFirebaseClientConfigured || !auth || !db) {
-        setAddUserError("Firebase is not configured correctly. Cannot add user.");
+  const handleInviteUserSubmit: SubmitHandler<InviteUserFormValues> = async (data) => {
+    if (!isFirebaseClientConfigured || !db) {
+        setInviteUserError("Firebase is not configured correctly. Cannot invite user.");
         return;
     }
-    setIsAddingUser(true);
-    setAddUserError(null);
+    setIsInvitingUser(true);
+    setInviteUserError(null);
+    setGeneratedInviteLink(null);
 
-    let createdFirebaseUserUid: string | null = null;
+    // Check if email already exists in users collection (even if invited)
+    const usersRef = collection(db, usersCollectionName);
+    const q = query(usersRef, where("emailAddress", "==", data.email));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+        setInviteUserError("This email address is already associated with an account or an existing invitation.");
+        setIsInvitingUser(false);
+        return;
+    }
+
+    const invitationToken = uuidv4();
+    // Use a temporary ID for the document, will be a new UUID
+    const temporaryUserId = uuidv4(); 
 
     try {
-        // 1. Create user in Firebase Authentication
-        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-        createdFirebaseUserUid = userCredential.user.uid;
-
-        // 2. Create user profile in Firestore
-        const newUserProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
-            userId: createdFirebaseUserUid,
-            firebaseUid: createdFirebaseUserUid,
+        const newUserProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt' | 'firebaseUid'> & { createdAt: any, updatedAt: any } = {
+            userId: temporaryUserId, 
             fullName: data.fullName,
             emailAddress: data.email,
-            role: (data.roles as UserRole[]) || [],
-            accountStatus: 'Active', // Or 'PendingVerification' if you have such a flow
+            role: (data.roles as UserRole[]) || ['Farmer'], // Default to Farmer if not set
+            accountStatus: 'Invited',
             registrationDate: new Date().toISOString(),
+            invitationToken: invitationToken,
             avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         };
 
-        await setDoc(doc(db, usersCollectionName, createdFirebaseUserUid), newUserProfile);
+        // Create the document in Firestore with the temporary userId
+        await setDoc(doc(db, usersCollectionName, temporaryUserId), newUserProfile);
 
-        // 3. Update local state and close modal
-        // Add the user to the local list for immediate UI update
-        // Note: Firestore serverTimestamp won't be resolved locally immediately, so we use ISO string for now.
+        const inviteLink = `${window.location.origin}/auth/complete-registration?token=${invitationToken}`;
+        setGeneratedInviteLink(inviteLink);
+        
+        // Update local state with the invited user
         const displayProfile: AgriFAASUserProfile = {
             ...newUserProfile,
-            createdAt: new Date().toISOString(), // Approximate for local display
-            updatedAt: new Date().toISOString(), // Approximate for local display
+            userId: temporaryUserId, // ensure this is set
+            createdAt: new Date().toISOString(), 
+            updatedAt: new Date().toISOString(),
         };
         setUsers(prevUsers => [...prevUsers, displayProfile].sort((a,b) => (a.fullName || '').localeCompare(b.fullName || '')));
         
-        setIsAddUserModalOpen(false);
-        addUserForm.reset();
-        toast({title: "User Created", description: `${data.fullName} has been successfully added.`});
+        toast({title: "User Invited", description: `${data.fullName} has been invited. Share the link below with them.`});
+        // Keep modal open to show the link
+        // inviteUserForm.reset(); // Don't reset form yet
 
     } catch (err: any) {
-        console.error("Error adding new user:", err);
-        if (err.code === 'auth/email-already-in-use') {
-            setAddUserError("This email address is already in use. Please use a different email.");
-        } else if (err.code && err.code.startsWith('auth/')) {
-            setAddUserError(`Authentication error: ${err.message}`);
-        } else if (createdFirebaseUserUid) {
-            // Auth user was created, but Firestore failed
-            setAddUserError(`User authentication account for ${data.email} was created, but saving the profile to the database failed: ${err.message}. Please resolve this manually in Firebase console or try deleting the auth user and retrying.`);
-             // Ideally, try to delete the auth user here if Admin SDK was available via backend
-        } else {
-            setAddUserError(`Failed to add user: ${err.message || "An unknown error occurred."}`);
-        }
+        console.error("Error inviting new user:", err);
+        setInviteUserError(`Failed to invite user: ${err.message || "An unknown error occurred."}`);
     } finally {
-        setIsAddingUser(false);
+        setIsInvitingUser(false);
     }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: "Copied!", description: "Invitation link copied to clipboard." });
+    }).catch(err => {
+      toast({ title: "Copy Failed", description: "Could not copy link.", variant: "destructive" });
+    });
   };
 
 
@@ -268,77 +279,102 @@ export default function AdminUsersPage() {
       <PageHeader
         title="User Management"
         icon={UsersRound}
-        description="View, manage, and assign roles to AgriFAAS Connect users."
+        description="View, manage roles, and invite new users to AgriFAAS Connect."
         action={
-          <Button onClick={() => { addUserForm.reset(); setAddUserError(null); setIsAddUserModalOpen(true); }}> 
-            <UserPlus className="mr-2 h-4 w-4" /> Add New User
+          <Button onClick={() => { inviteUserForm.reset({roles: ['Farmer']}); setInviteUserError(null); setGeneratedInviteLink(null); setIsInviteUserModalOpen(true); }}> 
+            <UserPlus className="mr-2 h-4 w-4" /> Invite New User
           </Button>
         }
       />
 
-      {/* Add User Dialog */}
-      <Dialog open={isAddUserModalOpen} onOpenChange={(isOpen) => {
-          if (isAddingUser && !isOpen) return; // Prevent closing while submitting
-          setIsAddUserModalOpen(isOpen);
-          if (!isOpen) { addUserForm.reset(); setAddUserError(null); }
+      {/* Invite User Dialog */}
+      <Dialog open={isInviteUserModalOpen} onOpenChange={(isOpen) => {
+          if (isInvitingUser && !isOpen) return; 
+          setIsInviteUserModalOpen(isOpen);
+          if (!isOpen) { inviteUserForm.reset({roles: ['Farmer']}); setInviteUserError(null); setGeneratedInviteLink(null); }
       }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
             <DialogHeader>
-                <DialogTitle className="flex items-center"><UserPlus className="mr-2 h-5 w-5" />Add New User</DialogTitle>
-                <DialogDescription>Create a new user account. They will need to be informed of their initial password.</DialogDescription>
+                <DialogTitle className="flex items-center"><UserPlus className="mr-2 h-5 w-5" />Invite New User</DialogTitle>
+                <DialogDescription>Enter the user's details to send them an invitation link. They will set their own password.</DialogDescription>
             </DialogHeader>
             <div className="flex-grow overflow-y-auto pr-2 py-4">
-                <Form {...addUserForm}>
-                    <form id="add-user-form" onSubmit={addUserForm.handleSubmit(handleAddUserSubmit)} className="space-y-4">
-                        {addUserError && (
+                <Form {...inviteUserForm}>
+                    <form id="invite-user-form" onSubmit={inviteUserForm.handleSubmit(handleInviteUserSubmit)} className="space-y-4">
+                        {inviteUserError && (
                             <Alert variant="destructive" className="mb-4">
                                 <AlertTriangle className="h-4 w-4" />
-                                <AlertTitle>Error Adding User</AlertTitle>
-                                <ShadcnAlertDescription>{addUserError}</ShadcnAlertDescription>
+                                <AlertTitle>Error Inviting User</AlertTitle>
+                                <ShadcnAlertDescription>{inviteUserError}</ShadcnAlertDescription>
                             </Alert>
                         )}
-                        <FormField control={addUserForm.control} name="fullName" render={({ field }) => (
-                            <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} disabled={isAddingUser} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={addUserForm.control} name="email" render={({ field }) => (
-                            <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="user@example.com" {...field} disabled={isAddingUser} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={addUserForm.control} name="password" render={({ field }) => (
-                            <FormItem><FormLabel>Initial Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} disabled={isAddingUser} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        
-                        <div>
-                            <Label className="font-semibold">Roles</Label>
-                            <p className="text-xs text-muted-foreground mb-2">Assign initial roles to the user.</p>
-                            <div className="mt-2 grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border p-2 rounded-md">
-                                {availableRoles.map(role => {
-                                    const currentSelectedRoles = addUserForm.watch('roles') || [];
-                                    return (
-                                        <div key={role} className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded-md">
-                                            <input 
-                                                type="checkbox" 
-                                                id={`add-role-${role}`} 
-                                                value={role} 
-                                                checked={currentSelectedRoles.includes(role)}
-                                                onChange={() => handleRoleChange(role, 'add')}
-                                                className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
-                                                disabled={isAddingUser}
-                                            />
-                                            <Label htmlFor={`add-role-${role}`} className="text-sm font-normal cursor-pointer">{role}</Label>
-                                        </div>
-                                    );
-                                })}
+                        {generatedInviteLink ? (
+                          <div className="space-y-3 p-4 border rounded-md bg-green-50 dark:bg-green-900/20">
+                            <p className="text-sm font-medium text-green-700 dark:text-green-300">Invitation Link Generated!</p>
+                            <p className="text-xs text-muted-foreground">Share this link with the user to complete their registration:</p>
+                            <div className="flex items-center gap-2">
+                              <Input type="text" readOnly value={generatedInviteLink} className="text-xs" />
+                              <Button type="button" size="icon" variant="ghost" onClick={() => copyToClipboard(generatedInviteLink)}>
+                                <Copy className="h-4 w-4" />
+                              </Button>
                             </div>
-                        </div>
+                             <Button type="button" variant="outline" size="sm" onClick={() => { inviteUserForm.reset({roles: ['Farmer']}); setInviteUserError(null); setGeneratedInviteLink(null); }}>Invite Another User</Button>
+                          </div>
+                        ) : (
+                          <>
+                            <FormField control={inviteUserForm.control} name="fullName" render={({ field }) => (
+                                <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="John Doe" {...field} disabled={isInvitingUser} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={inviteUserForm.control} name="email" render={({ field }) => (
+                                <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="user@example.com" {...field} disabled={isInvitingUser} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            
+                            <div>
+                                <Label className="font-semibold">Assign Roles</Label>
+                                <FormDescription className="text-xs mb-1">Select initial roles for the invited user. 'Farmer' is common.</FormDescription>
+                                <FormField control={inviteUserForm.control} name="roles" render={({ field }) => (
+                                  <FormItem>
+                                    <div className="mt-2 grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border p-2 rounded-md">
+                                        {availableRoles.map(role => {
+                                            const currentSelectedRoles = inviteUserForm.watch('roles') || [];
+                                            return (
+                                                <div key={role} className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded-md">
+                                                    <Checkbox
+                                                        id={`invite-role-${role}`}
+                                                        value={role}
+                                                        checked={currentSelectedRoles.includes(role)}
+                                                        onCheckedChange={(checked) => {
+                                                          const currentVal = field.value || [];
+                                                          if (checked) {
+                                                            field.onChange([...currentVal, role]);
+                                                          } else {
+                                                            field.onChange(currentVal.filter(r => r !== role));
+                                                          }
+                                                        }}
+                                                        disabled={isInvitingUser}
+                                                    />
+                                                    <Label htmlFor={`invite-role-${role}`} className="text-sm font-normal cursor-pointer">{role}</Label>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                            </div>
+                          </>
+                        )}
                     </form>
                 </Form>
             </div>
             <DialogFooter className="py-4 px-6 border-t">
-                <DialogClose asChild><Button variant="outline" disabled={isAddingUser}>Cancel</Button></DialogClose>
-                <Button type="submit" form="add-user-form" disabled={isAddingUser}>
-                    {isAddingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isAddingUser ? 'Adding User...' : 'Add User'}
-                </Button>
+                <DialogClose asChild><Button variant="outline" disabled={isInvitingUser} onClick={() => setGeneratedInviteLink(null)}>Close</Button></DialogClose>
+                {!generatedInviteLink && (
+                  <Button type="submit" form="invite-user-form" disabled={isInvitingUser}>
+                      {isInvitingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {isInvitingUser ? 'Inviting User...' : 'Generate Invitation Link'}
+                  </Button>
+                )}
             </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -380,7 +416,7 @@ export default function AdminUsersPage() {
                                 checked={selectedRoles.includes(role)}
                                 onChange={() => handleRoleChange(role, 'edit')}
                                 className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
-                                disabled={isSubmittingEdit}
+                                disabled={isSubmittingEdit || editingUser?.accountStatus === 'Invited'}
                             />
                             <Label htmlFor={`edit-role-${role}`} className="text-sm font-normal cursor-pointer">{role}</Label>
                         </div>
@@ -389,24 +425,26 @@ export default function AdminUsersPage() {
             </div>
              <div>
                 <Label htmlFor="accountStatus" className="font-semibold">Account Status</Label>
-                <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as AgriFAASUserProfile['accountStatus'])} disabled={isSubmittingEdit}>
+                <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as AccountStatus)} disabled={isSubmittingEdit || editingUser?.accountStatus === 'Invited'}>
                     <SelectTrigger id="accountStatus" className="mt-1">
                         <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Invited" disabled>Invited (Managed via invite link)</SelectItem>
                         <SelectItem value="Suspended">Suspended</SelectItem>
                         <SelectItem value="PendingVerification">Pending Verification</SelectItem>
                         <SelectItem value="Deactivated">Deactivated</SelectItem>
                     </SelectContent>
                 </Select>
+                {editingUser?.accountStatus === 'Invited' && <p className="text-xs text-destructive mt-1">User must complete registration via invite link to change status from 'Invited'.</p>}
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline" disabled={isSubmittingEdit}>Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSaveChanges} disabled={isSubmittingEdit}>
+            <Button onClick={handleSaveChanges} disabled={isSubmittingEdit || editingUser?.accountStatus === 'Invited'}>
               {isSubmittingEdit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isSubmittingEdit ? 'Saving...' : 'Save Changes'}
             </Button>
@@ -418,7 +456,7 @@ export default function AdminUsersPage() {
       <Card className="shadow-lg">
         <CardContent className="pt-6">
           <Table>
-            {users.length === 0 && !isLoading && <TableCaption>No users found. New users will appear here after registration or creation.</TableCaption>}
+            {users.length === 0 && !isLoading && <TableCaption>No users found. Invited users will appear here once the invitation is generated.</TableCaption>}
             <TableHeader>
               <TableRow>
                 <TableHead>Full Name</TableHead>
@@ -440,14 +478,26 @@ export default function AdminUsersPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                     <Badge variant={user.accountStatus === 'Active' ? 'default' : (user.accountStatus === 'Suspended' || user.accountStatus === 'Deactivated' ? 'destructive' : 'outline')}>
+                     <Badge variant={
+                        user.accountStatus === 'Active' ? 'default' : 
+                        user.accountStatus === 'Invited' ? 'outline' :
+                        (user.accountStatus === 'Suspended' || user.accountStatus === 'Deactivated' ? 'destructive' : 'secondary')
+                      }>
                         {user.accountStatus}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="outline" size="sm" onClick={() => handleOpenEditModal(user)}>
-                      <Edit2 className="h-3.5 w-3.5 mr-1" /> Edit
+                      <Edit2 className="h-3.5 w-3.5 mr-1" /> Manage
                     </Button>
+                    {user.accountStatus === 'Invited' && user.invitationToken && (
+                       <Button variant="link" size="sm" onClick={() => {
+                         const link = `${window.location.origin}/auth/complete-registration?token=${user.invitationToken}`;
+                         copyToClipboard(link);
+                       }}>
+                        <LinkIcon className="h-3.5 w-3.5 mr-1" /> Copy Invite
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -460,11 +510,11 @@ export default function AdminUsersPage() {
             <CardTitle className="text-base font-semibold text-muted-foreground">Admin User Management Notes</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This page allows Admins to view all registered users, modify their roles and account status, and create new users (via the "Add New User" button).</p>
-            <p>&bull; When adding a new user directly, you will set their initial password. Please communicate this securely to the user and advise them to change it upon first login.</p>
-            <p>&bull; The first user to register with the application automatically becomes an 'Admin'. Subsequent users register with no roles by default (unless created directly by an Admin with roles).</p>
-            <p>&bull; For users to register themselves: direct them to the standard registration page (typically found at your app's URL followed by /auth/register). Once registered, they will appear in this list, and you can then assign them appropriate roles using the 'Edit' button.</p>
-            <p>&bull; A more advanced 'Invite New User' system (e.g., via email link with pre-assigned roles) is planned for future development.</p>
+            <p>&bull; Use "Invite New User" to add users. An invitation link will be generated for you to share with them.</p>
+            <p>&bull; Invited users will have an 'Invited' status until they complete registration using the link. They will set their own password.</p>
+            <p>&bull; You can manage roles and account status for existing 'Active', 'Suspended', or 'Deactivated' users using the 'Manage' button.</p>
+            <p>&bull; For users with 'Invited' status, you can copy their invitation link again if needed. Their roles/status cannot be edited until they complete registration.</p>
+            <p>&bull; The general registration page (`/auth/register`) allows self-sign up and currently grants 'Admin' role by default (for initial setup).</p>
         </CardContent>
       </Card>
     </div>

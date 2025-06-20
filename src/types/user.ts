@@ -148,9 +148,12 @@ export interface AlertToggles {
   pestAlerts?: boolean;
 }
 
+export type AccountStatus = 'Active' | 'PendingVerification' | 'Suspended' | 'Deactivated' | 'Invited';
+
+
 export interface AgriFAASUserProfile {
   // 1. Basic Information
-  userId: string; // Auto-generated UUID, primary key
+  userId: string; // Auto-generated UUID for Firestore doc ID, primary key
   fullName: string;
   role: UserRole[]; // Can have multiple roles
   gender?: Gender;
@@ -161,7 +164,7 @@ export interface AgriFAASUserProfile {
 
   // 2. Contact & Login Info
   phoneNumber?: string;
-  emailAddress?: string;
+  emailAddress?: string; // This will be the primary email for auth as well
   address?: {
     street?: string;
     city?: string;
@@ -195,7 +198,7 @@ export interface AgriFAASUserProfile {
   employmentDetails?: EmploymentDetails;
 
   // 6. System & Permissions
-  firebaseUid: string;
+  firebaseUid?: string; // UID from Firebase Authentication, linked after registration completion
   rbacTags?: string[];
   appAccess?: AppAccessType[];
   loginHistory?: LoginHistoryEntry[];
@@ -203,8 +206,9 @@ export interface AgriFAASUserProfile {
   lastLoginTimestamp?: string;
   deviceId?: string;
   deviceType?: string;
-  accountStatus: 'Active' | 'PendingVerification' | 'Suspended' | 'Deactivated';
-  registrationDate: string;
+  accountStatus: AccountStatus;
+  registrationDate: string; // ISO string of initial profile creation/invitation
+  invitationToken?: string; // Unique token for completing registration
 
   // 7. Notifications & Preferences
   notificationPreferences?: NotificationPreferences;
