@@ -11,18 +11,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'; 
 import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { AgriFAASUserProfile, UserRole, AccountStatus } from '@/types/user';
-import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { db, isFirebaseClientConfigured } from '@/lib/firebase'; // Removed unused 'auth' import
+import { collection, getDocs, query, where, orderBy, doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import { useUserProfile } from '@/contexts/user-profile-context'; 
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid'; // For generating invitation tokens
+import { Checkbox } from '@/components/ui/checkbox'; // Added missing Checkbox import
 
 
 const usersCollectionName = 'users';
@@ -30,7 +30,6 @@ const usersCollectionName = 'users';
 const inviteUserFormSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }),
-  // Password field removed for invite flow
   roles: z.array(z.string()).min(1, { message: "At least one role must be selected."}).optional(), 
 });
 type InviteUserFormValues = z.infer<typeof inviteUserFormSchema>;
@@ -62,7 +61,7 @@ export default function AdminUsersPage() {
     defaultValues: {
       fullName: '',
       email: '',
-      roles: ['Farmer'], // Default to 'Farmer' for new invites
+      roles: ['Farmer'], 
     },
   });
 
@@ -113,7 +112,7 @@ export default function AdminUsersPage() {
     setEditingUser(userToEdit);
     setSelectedRoles(userToEdit.role || []);
     setSelectedStatus(userToEdit.accountStatus || 'Active');
-    setGeneratedInviteLink(null); // Clear any previous invite link
+    setGeneratedInviteLink(null); 
     setIsEditModalOpen(true);
   };
 
@@ -122,7 +121,7 @@ export default function AdminUsersPage() {
         setSelectedRoles(prev => 
           prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
         );
-    } else { // 'invite'
+    } else { 
         const currentRoles = inviteUserForm.getValues('roles') || [];
         const newRoles = currentRoles.includes(role)
             ? currentRoles.filter(r => r !== role)
@@ -160,7 +159,7 @@ export default function AdminUsersPage() {
     } catch (err) {
         console.error("Error updating user:", err);
         setError(err instanceof Error ? `Failed to update user: ${err.message}` : "An unknown error occurred while updating user.");
-        toast({title: "Update Failed", description: error, variant: "destructive"});
+        toast({title: "Update Failed", description: error || "Update failed", variant: "destructive"});
     } finally {
         setIsSubmittingEdit(false);
     }
@@ -175,7 +174,6 @@ export default function AdminUsersPage() {
     setInviteUserError(null);
     setGeneratedInviteLink(null);
 
-    // Check if email already exists in users collection (even if invited)
     const usersRef = collection(db, usersCollectionName);
     const q = query(usersRef, where("emailAddress", "==", data.email));
     const querySnapshot = await getDocs(q);
@@ -187,7 +185,6 @@ export default function AdminUsersPage() {
     }
 
     const invitationToken = uuidv4();
-    // Use a temporary ID for the document, will be a new UUID
     const temporaryUserId = uuidv4(); 
 
     try {
@@ -195,7 +192,7 @@ export default function AdminUsersPage() {
             userId: temporaryUserId, 
             fullName: data.fullName,
             emailAddress: data.email,
-            role: (data.roles as UserRole[]) || ['Farmer'], // Default to Farmer if not set
+            role: (data.roles as UserRole[]) || ['Farmer'], 
             accountStatus: 'Invited',
             registrationDate: new Date().toISOString(),
             invitationToken: invitationToken,
@@ -204,24 +201,20 @@ export default function AdminUsersPage() {
             updatedAt: serverTimestamp(),
         };
 
-        // Create the document in Firestore with the temporary userId
         await setDoc(doc(db, usersCollectionName, temporaryUserId), newUserProfile);
 
         const inviteLink = `${window.location.origin}/auth/complete-registration?token=${invitationToken}`;
         setGeneratedInviteLink(inviteLink);
         
-        // Update local state with the invited user
         const displayProfile: AgriFAASUserProfile = {
             ...newUserProfile,
-            userId: temporaryUserId, // ensure this is set
+            userId: temporaryUserId, 
             createdAt: new Date().toISOString(), 
             updatedAt: new Date().toISOString(),
         };
         setUsers(prevUsers => [...prevUsers, displayProfile].sort((a,b) => (a.fullName || '').localeCompare(b.fullName || '')));
         
         toast({title: "User Invited", description: `${data.fullName} has been invited. Share the link below with them.`});
-        // Keep modal open to show the link
-        // inviteUserForm.reset(); // Don't reset form yet
 
     } catch (err: any) {
         console.error("Error inviting new user:", err);
@@ -287,7 +280,6 @@ export default function AdminUsersPage() {
         }
       />
 
-      {/* Invite User Dialog */}
       <Dialog open={isInviteUserModalOpen} onOpenChange={(isOpen) => {
           if (isInvitingUser && !isOpen) return; 
           setIsInviteUserModalOpen(isOpen);
@@ -380,7 +372,6 @@ export default function AdminUsersPage() {
       </Dialog>
 
 
-      {/* Edit User Dialog */}
       <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => {
           if (isSubmittingEdit && !isOpen) return;
           setIsEditModalOpen(isOpen);
@@ -409,12 +400,11 @@ export default function AdminUsersPage() {
                 <div className="mt-2 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto border p-2 rounded-md">
                     {availableRoles.map(role => (
                         <div key={role} className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded-md">
-                            <input 
-                                type="checkbox" 
+                            <Checkbox 
                                 id={`edit-role-${role}`} 
                                 value={role} 
                                 checked={selectedRoles.includes(role)}
-                                onChange={() => handleRoleChange(role, 'edit')}
+                                onCheckedChange={() => handleRoleChange(role, 'edit')}
                                 className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
                                 disabled={isSubmittingEdit || editingUser?.accountStatus === 'Invited'}
                             />
@@ -521,3 +511,4 @@ export default function AdminUsersPage() {
   );
 }
 
+    
