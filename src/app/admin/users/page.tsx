@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -306,7 +306,12 @@ export default function AdminUsersPage() {
         icon={UsersRound}
         description="View, manage roles, invite new users, and manage user profiles in AgriFAAS Connect."
         action={
-          <Button onClick={() => { inviteUserForm.reset({roles: ['Farmer']}); setInviteUserError(null); setGeneratedInviteLink(null); setIsInviteUserModalOpen(true); }}>
+          <Button onClick={() => { 
+            inviteUserForm.reset({ fullName: '', email: '', roles: ['Farmer'] }); 
+            setInviteUserError(null); 
+            setGeneratedInviteLink(null); 
+            setIsInviteUserModalOpen(true); 
+          }}>
             <UserPlus className="mr-2 h-4 w-4" /> Invite New User
           </Button>
         }
@@ -315,7 +320,11 @@ export default function AdminUsersPage() {
       <Dialog open={isInviteUserModalOpen} onOpenChange={(isOpen) => {
           if (isInvitingUser && !isOpen) return;
           setIsInviteUserModalOpen(isOpen);
-          if (!isOpen) { inviteUserForm.reset({roles: ['Farmer']}); setInviteUserError(null); setGeneratedInviteLink(null); }
+          if (!isOpen) { 
+            inviteUserForm.reset({ fullName: '', email: '', roles: ['Farmer'] }); 
+            setInviteUserError(null); 
+            setGeneratedInviteLink(null); 
+          }
       }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
             <DialogHeader>
@@ -342,7 +351,11 @@ export default function AdminUsersPage() {
                                 <Copy className="h-4 w-4" />
                               </Button>
                             </div>
-                             <Button type="button" variant="outline" size="sm" onClick={() => { inviteUserForm.reset({roles: ['Farmer']}); setInviteUserError(null); setGeneratedInviteLink(null); }}>Invite Another User</Button>
+                             <Button type="button" variant="outline" size="sm" onClick={() => { 
+                               inviteUserForm.reset({ fullName: '', email: '', roles: ['Farmer'] }); 
+                               setInviteUserError(null); 
+                               setGeneratedInviteLink(null); 
+                             }}>Invite Another User</Button>
                           </div>
                         ) : (
                           <>
