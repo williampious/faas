@@ -18,7 +18,7 @@ import { useUserProfile } from '@/contexts/user-profile-context';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea'; // Although not used for many fields, good to have
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -37,7 +37,7 @@ const profileFormSchema = z.object({
   fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
   phoneNumber: z.string().optional().or(z.literal('')),
   dateOfBirth: z.date().optional(),
-  gender: z.enum([...genderOptions, ""] as [string, ...string[]]).optional(), // Allow empty string for "not set"
+  gender: z.enum([...genderOptions, ""] as [string, ...string[]]).optional(),
   address: z.object({
     street: z.string().optional(),
     city: z.string().optional(),
@@ -61,7 +61,6 @@ const profileFormSchema = z.object({
   }).optional(),
   receiveAgriculturalTips: z.boolean().optional(),
   receiveWeatherUpdates: z.boolean().optional(),
-  // AEO specific fields
   assignedRegion: z.string().optional(),
   assignedDistrict: z.string().optional(),
 });
@@ -116,7 +115,7 @@ export default function UserProfilePage() {
         assignedDistrict: userProfile.assignedDistrict || '',
       });
     }
-  }, [userProfile, form, isEditMode]); // Reset form when userProfile changes or edit mode is toggled
+  }, [userProfile, form, isEditMode]);
 
   const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
     if (!user || !userProfile) {
@@ -128,20 +127,19 @@ export default function UserProfilePage() {
     try {
       const profileDataToUpdate: Partial<AgriFAASUserProfile> = {
         ...data,
-        dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, 'yyyy-MM-dd') : undefined, // Store as ISO string
-        updatedAt: serverTimestamp() as any, // Firestore will convert this
+        dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, 'yyyy-MM-dd') : undefined,
+        updatedAt: serverTimestamp() as any,
       };
       
       if (profileDataToUpdate.phoneNumber === '') delete profileDataToUpdate.phoneNumber;
       if (profileDataToUpdate.gender === '') delete profileDataToUpdate.gender;
-      if (!isAEO) { // Non-AEOs should not be ableto update these fields
+      if (!isAEO) {
         delete profileDataToUpdate.assignedRegion;
         delete profileDataToUpdate.assignedDistrict;
       } else {
-        profileDataToUpdate.assignedRegion = data.assignedRegion || ''; // Keep as empty string if cleared by AEO
+        profileDataToUpdate.assignedRegion = data.assignedRegion || '';
         profileDataToUpdate.assignedDistrict = data.assignedDistrict || '';
       }
-
 
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, profileDataToUpdate);
@@ -155,7 +153,6 @@ export default function UserProfilePage() {
       setIsSubmitting(false);
     }
   };
-
 
   if (isProfileLoading) {
     return (
@@ -205,7 +202,30 @@ export default function UserProfilePage() {
     );
   }
 
-  const currentProfile = userProfile; // Use the loaded userProfile
+  const currentProfile = userProfile;
+
+  const formatTimestamp = (timestamp: any, dateFormat: string = 'PPpp'): string => {
+    if (!timestamp) return 'N/A';
+
+    if (typeof timestamp.toDate === 'function') { // Firestore Timestamp
+      const dateObj = timestamp.toDate();
+      return isValid(dateObj) ? format(dateObj, dateFormat) : 'Invalid Date';
+    }
+    if (timestamp instanceof Date) { // JavaScript Date Object
+      return isValid(timestamp) ? format(timestamp, dateFormat) : 'Invalid JS Date';
+    }
+    if (typeof timestamp === 'string') { // ISO String
+      const parsedDate = parseISO(timestamp);
+      return isValid(parsedDate) ? format(parsedDate, dateFormat) : 'Invalid Date String';
+    }
+    if (typeof timestamp === 'number') { // Number (milliseconds epoch)
+      const dateFromNum = new Date(timestamp);
+      return isValid(dateFromNum) ? format(dateFromNum, dateFormat) : 'Invalid Timestamp Number';
+    }
+    console.warn("UserProfilePage: Timestamp field is of an unexpected type:", timestamp);
+    return 'Invalid Date Format';
+  };
+
 
   return (
     <div>
@@ -304,7 +324,6 @@ export default function UserProfilePage() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select your gender" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            {/* <SelectItem value="">Prefer not to say</SelectItem> Removed this line */}
                             {genderOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -314,8 +333,7 @@ export default function UserProfilePage() {
                   />
                 </section>
 
-                 {/* AEO Specific Fields */}
-                {isAEO && (
+                 {isAEO && (
                   <section className="space-y-4 p-4 border rounded-lg">
                     <h3 className="text-lg font-semibold text-primary">AEO Assignment</h3>
                     <FormField
@@ -345,8 +363,6 @@ export default function UserProfilePage() {
                   </section>
                 )}
 
-
-                {/* Address Section */}
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Address</h3>
                   <FormField control={form.control} name="address.street" render={({ field }) => (<FormItem><FormLabel>Street</FormLabel><FormControl><Input placeholder="Street address" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -356,7 +372,6 @@ export default function UserProfilePage() {
                   <FormField control={form.control} name="address.postalCode" render={({ field }) => (<FormItem><FormLabel>Postal Code</FormLabel><FormControl><Input placeholder="Postal Code" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 </section>
 
-                {/* Preferences Section */}
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Preferences</h3>
                   <FormField control={form.control} name="primaryLanguage" render={({ field }) => (<FormItem><FormLabel>Primary Language</FormLabel><FormControl><Input placeholder="e.g., English, Twi" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -369,7 +384,6 @@ export default function UserProfilePage() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger><SelectValue placeholder="Select channel" /></SelectTrigger></FormControl>
                           <SelectContent>
-                             {/* <SelectItem value="">Not specified</SelectItem> Removed this line */}
                             {communicationChannelOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -468,18 +482,9 @@ export default function UserProfilePage() {
               </CardHeader>
               <CardContent className="text-sm space-y-2">
                 <InfoItem label="Status" value={<Badge variant={currentProfile.accountStatus === 'Active' ? 'default' : 'destructive'}>{currentProfile.accountStatus}</Badge>} />
-                <InfoItem label="Member Since" value={currentProfile.registrationDate && isValid(parseISO(currentProfile.registrationDate)) ? format(parseISO(currentProfile.registrationDate), 'MMMM d, yyyy') : 'N/A'} />
-                <InfoItem 
-                  label="Last Updated" 
-                  value={
-                    currentProfile.updatedAt && typeof currentProfile.updatedAt.toDate === 'function' 
-                      ? format(currentProfile.updatedAt.toDate(), 'PPpp') 
-                      : (typeof currentProfile.updatedAt === 'string' && isValid(parseISO(currentProfile.updatedAt)) 
-                          ? format(parseISO(currentProfile.updatedAt), 'PPpp') 
-                          : 'N/A')
-                  } 
-                />
-                 <InfoItem label="User ID" value={currentProfile.userId} className="text-xs break-all" />
+                <InfoItem label="Member Since" value={formatTimestamp(currentProfile.registrationDate, 'MMMM d, yyyy')} />
+                <InfoItem label="Last Updated" value={formatTimestamp(currentProfile.updatedAt)} />
+                <InfoItem label="User ID" value={currentProfile.userId} className="text-xs break-all" />
                 <InfoItem label="Firebase UID" value={currentProfile.firebaseUid} className="text-xs break-all" />
               </CardContent>
             </Card>
@@ -591,3 +596,4 @@ function InfoItem({ icon: Icon, label, value, className }: InfoItemProps) {
   );
 }
 
+    
