@@ -53,13 +53,13 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             setUserProfile(null);
             setIsAdmin(false);
             console.warn(`User profile not found in Firestore for UID: ${currentUser.uid}. This may occur if registration didn't complete, the profile was deleted, or if this is an old user account without a profile document.`);
-            setError(`User profile document not found in Firestore for your account (UID: ${currentUser.uid}). Please complete registration or contact support if you believe this is an error.`);
+            setError(`User profile document not found in Firestore for your account (UID: ${currentUser.uid}). This likely means the profile creation during registration failed or the document was deleted. Please try registering again or contact support if you believe this is an error.`);
           }
           setIsLoading(false);
         }, (firestoreError: any) => { 
           console.error("Error fetching user profile from Firestore:", firestoreError);
-          if (firestoreError.code === 'permission-denied') {
-            setError(`Firestore Permission Denied: Could not read your user profile (path: users/${currentUser.uid}). Please check your Firebase Firestore security rules. Ensure that an authenticated user has permission to read their own document in the 'users' collection (e.g., 'allow read: if request.auth.uid == userId;').`);
+          if (firestoreError.code === 'permission-denied' || firestoreError.message.toLowerCase().includes('permission denied')) {
+            setError(`CRITICAL PERMISSION ERROR: Firestore denied access to your profile at 'users/${currentUser.uid}'. YOUR FIRESTORE SECURITY RULES ARE BLOCKING THIS. You MUST update your Firestore Rules in the Firebase Console. A common rule needed is: 'match /users/{userId} { allow read, write: if request.auth.uid == userId; }'. Please review Firebase documentation on Security Rules and apply the necessary permissions for user profile access.`);
           } else {
             setError(`Failed to fetch user profile due to a database error (code: ${firestoreError.code || 'unknown'}). Some features might be unavailable. Please try again or contact support.`);
           }
