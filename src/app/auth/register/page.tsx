@@ -18,7 +18,6 @@ import { createUserWithEmailAndPassword, signOut, type User } from 'firebase/aut
 import { doc, setDoc, serverTimestamp, collection, getDocs, query, limit } from 'firebase/firestore';
 import type { AgriFAASUserProfile, UserRole } from '@/types/user';
 
-// Registration form no longer includes role selection, as roles are assigned by Admin
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -66,20 +65,9 @@ export default function RegisterPage() {
       firebaseUser = userCredential.user;
       console.log('User registered with Firebase Auth:', firebaseUser.uid);
 
-      let userRoles: UserRole[] = [];
-
-      // Determine roles: First user is Admin, subsequent users are Farmers.
-      // This query checks if any user document exists *before* we attempt to create the current one.
-      const usersQuery = query(collection(db, usersCollectionName), limit(1));
-      const existingUsersSnapshot = await getDocs(usersQuery);
-      
-      if (existingUsersSnapshot.empty) {
-        userRoles = ['Admin'];
-        console.log(`First user detected (UID: ${firebaseUser.uid}). Assigning 'Admin' role.`);
-      } else {
-        userRoles = ['Farmer']; // Default role for subsequent users
-        console.log(`Subsequent user detected (UID: ${firebaseUser.uid}). Assigning default 'Farmer' role.`);
-      }
+      // Assign 'Admin' role to all new users by default
+      const userRoles: UserRole[] = ['Admin'];
+      console.log(`Assigning default 'Admin' role to new user (UID: ${firebaseUser.uid}).`);
 
       const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
         userId: firebaseUser.uid,
@@ -95,13 +83,9 @@ export default function RegisterPage() {
         updatedAt: serverTimestamp(),
       };
       
-      // CRITICAL STEP: Ensure Firestore rules allow this operation.
-      // e.g., match /users/{userId} { allow create: if request.auth.uid == userId; }
       await setDoc(doc(db, usersCollectionName, firebaseUser.uid), profileForFirestore);
       console.log('User profile created in Firestore for user:', firebaseUser.uid, 'with roles:', userRoles);
 
-      // Successful registration and profile creation.
-      // UserProfileProvider will handle redirection to dashboard.
 
     } catch (registrationError: any) {
       console.error('Registration Process Error:', registrationError);
@@ -114,11 +98,11 @@ export default function RegisterPage() {
         displayError = 'The password is too weak. Please use a stronger password.';
       } else if (registrationError.code === 'permission-denied') {
         displayError = 'Firestore Permission Denied: Could not save your profile. Please ensure Firestore rules allow user profile creation during registration. Contact support if this persists.';
+        console.error("Detailed Firestore Permission Denied Error during registration:", registrationError.details || registrationError);
       }
       
       if (firebaseUser) {
-        // If auth user was created but Firestore profile failed or another error occurred
-        console.warn('Authentication succeeded but a subsequent step in registration failed. This often means Firestore setDoc failed (check Firestore rules). Attempting to sign out user:', firebaseUser.uid, 'Original error details:', registrationError);
+        console.warn('Authentication succeeded but a subsequent step in registration failed. Attempting to sign out user:', firebaseUser.uid, 'Original error details:', registrationError);
         try {
           await signOut(auth);
           console.log('User signed out due to incomplete registration process.');
@@ -143,7 +127,7 @@ export default function RegisterPage() {
           </Link>
           <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create Account</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Join AgriFAAS Connect! The first user becomes Admin. Others default to 'Farmer'.
+            Join AgriFAAS Connect. All new users will have full access.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8 grid gap-6">
