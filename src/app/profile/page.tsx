@@ -469,7 +469,16 @@ export default function UserProfilePage() {
               <CardContent className="text-sm space-y-2">
                 <InfoItem label="Status" value={<Badge variant={currentProfile.accountStatus === 'Active' ? 'default' : 'destructive'}>{currentProfile.accountStatus}</Badge>} />
                 <InfoItem label="Member Since" value={currentProfile.registrationDate && isValid(parseISO(currentProfile.registrationDate)) ? format(parseISO(currentProfile.registrationDate), 'MMMM d, yyyy') : 'N/A'} />
-                <InfoItem label="Last Updated" value={currentProfile.updatedAt && isValid(parseISO(currentProfile.updatedAt)) ? format(parseISO(currentProfile.updatedAt), 'PPpp') : 'N/A'} />
+                <InfoItem 
+                  label="Last Updated" 
+                  value={
+                    currentProfile.updatedAt && typeof currentProfile.updatedAt.toDate === 'function' 
+                      ? format(currentProfile.updatedAt.toDate(), 'PPpp') 
+                      : (typeof currentProfile.updatedAt === 'string' && isValid(parseISO(currentProfile.updatedAt)) 
+                          ? format(parseISO(currentProfile.updatedAt), 'PPpp') 
+                          : 'N/A')
+                  } 
+                />
                  <InfoItem label="User ID" value={currentProfile.userId} className="text-xs break-all" />
                 <InfoItem label="Firebase UID" value={currentProfile.firebaseUid} className="text-xs break-all" />
               </CardContent>
@@ -581,3 +590,4 @@ function InfoItem({ icon: Icon, label, value, className }: InfoItemProps) {
     </div>
   );
 }
+
