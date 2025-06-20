@@ -16,13 +16,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { AgriFAASUserProfile, UserRole, AccountStatus } from '@/types/user';
-import { db, isFirebaseClientConfigured } from '@/lib/firebase'; // Removed unused 'auth' import
+import { db, isFirebaseClientConfigured } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import { useUserProfile } from '@/contexts/user-profile-context'; 
 import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid'; // For generating invitation tokens
-import { Checkbox } from '@/components/ui/checkbox'; // Added missing Checkbox import
+import { v4 as uuidv4 } from 'uuid'; 
+import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 
 
 const usersCollectionName = 'users';
