@@ -220,7 +220,7 @@ export default function AdminUsersPage() {
         };
         setUsers(prevUsers => [...prevUsers, displayProfile].sort((a,b) => (a.fullName || '').localeCompare(b.fullName || '')));
 
-        toast({title: "User Invited", description: `${data.fullName} has been invited. Share the link below with them.`});
+        toast({title: "User Added", description: `${data.fullName} has been invited. Share the invitation link with them to complete registration.`});
 
     } catch (err: any) {
         console.error("Error inviting new user:", err);
@@ -304,7 +304,7 @@ export default function AdminUsersPage() {
       <PageHeader
         title="User Management"
         icon={UsersRound}
-        description="View, manage roles, invite new users, and manage user profiles in AgriFAAS Connect."
+        description="View, manage roles, add new users via invitation, and manage user profiles in AgriFAAS Connect."
         action={
           <Button onClick={() => { 
             inviteUserForm.reset({ fullName: '', email: '', roles: ['Farmer'] }); 
@@ -312,7 +312,7 @@ export default function AdminUsersPage() {
             setGeneratedInviteLink(null); 
             setIsInviteUserModalOpen(true); 
           }}>
-            <UserPlus className="mr-2 h-4 w-4" /> Invite New User
+            <UserPlus className="mr-2 h-4 w-4" /> Add New User
           </Button>
         }
       />
@@ -328,7 +328,7 @@ export default function AdminUsersPage() {
       }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
             <DialogHeader>
-                <DialogTitle className="flex items-center"><UserPlus className="mr-2 h-5 w-5" />Invite New User</DialogTitle>
+                <DialogTitle className="flex items-center"><UserPlus className="mr-2 h-5 w-5" />Add New User</DialogTitle>
                 <DialogDescription>Enter the user's details to send them an invitation link. They will set their own password.</DialogDescription>
             </DialogHeader>
             <div className="flex-grow overflow-y-auto pr-2 py-4">
@@ -574,7 +574,7 @@ export default function AdminUsersPage() {
             <CardTitle className="text-base font-semibold text-muted-foreground">Admin User Management Notes</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; Use "Invite New User" to add users. An invitation link will be generated for you to share with them.</p>
+            <p>&bull; Use "Add New User" to invite users. An invitation link will be generated for you to share with them.</p>
             <p>&bull; Invited users will have an 'Invited' status until they complete registration using the link. They will set their own password.</p>
             <p>&bull; You can manage roles and account status for existing 'Active', 'Suspended', or 'Deactivated' users using the 'Manage' button.</p>
             <p>&bull; For users with 'Invited' status, you can copy their invitation link again if needed. Their roles/status cannot be edited until they complete registration. Deleting an 'Invited' user profile is disabled (as no significant data exists).</p>
