@@ -351,6 +351,9 @@ export default function AdminUsersPage() {
                                 <Copy className="h-4 w-4" />
                               </Button>
                             </div>
+                             <p className="text-xs text-muted-foreground mt-2">
+                                <strong>Note:</strong> This link points to your current development server. To test it, open it in a different browser or an incognito window. It may not be accessible from other devices without access to this development environment.
+                             </p>
                              <Button type="button" variant="outline" size="sm" onClick={() => { 
                                inviteUserForm.reset({ fullName: '', email: '', roles: ['Farmer'] }); 
                                setInviteUserError(null); 
@@ -582,4 +585,6 @@ export default function AdminUsersPage() {
     </div>
   );
 }
+    
+
     
