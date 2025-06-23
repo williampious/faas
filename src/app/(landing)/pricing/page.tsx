@@ -101,7 +101,7 @@ const pricingTiers: PricingTier[] = [
     ],
     buttonText: 'Contact Sales',
     buttonVariant: 'outline',
-    href: '/contact-sales?plan=pro', // Or a mailto link
+    href: '/#contact-us', 
   },
 ];
 
@@ -165,7 +165,7 @@ export default function PricingPage() {
         
         <div className="text-center mt-12">
           <p className="text-muted-foreground mb-4">
-            Need a custom solution or have questions? <Link href="/contact" className="text-primary hover:underline">Contact us</Link>.
+            Need a custom solution or have questions? <Link href="/#contact-us" className="text-primary hover:underline">Contact us</Link>.
           </p>
           <Link href="/" passHref>
             <Button variant="outline" size="lg">

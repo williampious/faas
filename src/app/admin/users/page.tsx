@@ -495,19 +495,32 @@ export default function AdminUsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm User Profile Deletion</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the Firestore profile for <strong>{userToDelete?.fullName}</strong> ({userToDelete?.emailAddress})?
-              <br />
-              <span className="font-semibold text-destructive mt-2 block">
-                Important: This action only removes the user's data from the application database (Firestore). It does NOT delete their authentication account from Firebase Auth. The user might still be able to log in if their auth account exists.
-              </span>
-              This action cannot be undone.
+              {userToDelete?.accountStatus === 'Invited' ? (
+                <>
+                  Are you sure you want to revoke this invitation and delete the pending profile for <strong>{userToDelete?.fullName}</strong> ({userToDelete?.emailAddress})?
+                  <br />
+                  <span className="font-semibold text-destructive mt-2 block">
+                    This will make the invitation link invalid. The user will not be able to complete their registration unless you invite them again.
+                  </span>
+                  This action cannot be undone.
+                </>
+              ) : (
+                <>
+                  Are you sure you want to delete the Firestore profile for <strong>{userToDelete?.fullName}</strong> ({userToDelete?.emailAddress})?
+                  <br />
+                  <span className="font-semibold text-destructive mt-2 block">
+                    Important: This action only removes the user's data from the application database (Firestore). It does NOT delete their authentication account from Firebase Auth. The user might still be able to log in if their auth account exists.
+                  </span>
+                  This action cannot be undone.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setUserToDelete(null)} disabled={isDeletingUser}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeletingUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {isDeletingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isDeletingUser ? 'Deleting...' : 'Delete Profile Data'}
+              {isDeletingUser ? 'Deleting...' : userToDelete?.accountStatus === 'Invited' ? 'Revoke & Delete' : 'Delete Profile Data'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -559,8 +572,8 @@ export default function AdminUsersPage() {
                         <LinkIcon className="h-3.5 w-3.5 mr-1" /> Copy Invite
                       </Button>
                     )}
-                    <Button variant="destructive" size="sm" onClick={() => handleOpenDeleteConfirm(user)} className="h-8 px-2" disabled={user.accountStatus === 'Invited'}>
-                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Profile
+                    <Button variant="destructive" size="sm" onClick={() => handleOpenDeleteConfirm(user)} className="h-8 px-2">
+                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -577,8 +590,8 @@ export default function AdminUsersPage() {
             <p>&bull; Use "Add New User" to invite users. An invitation link will be generated for you to share with them.</p>
             <p>&bull; Invited users will have an 'Invited' status until they complete registration using the link. They will set their own password.</p>
             <p>&bull; You can manage roles and account status for existing 'Active', 'Suspended', or 'Deactivated' users using the 'Manage' button.</p>
-            <p>&bull; For users with 'Invited' status, you can copy their invitation link again if needed. Their roles/status cannot be edited until they complete registration. Deleting an 'Invited' user profile is disabled (as no significant data exists).</p>
-            <p>&bull; <strong>Profile Deletion:</strong> The "Delete Profile" button removes the user's data from Firestore only. It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. For complete user deletion, a backend process using the Firebase Admin SDK is required. This feature is for development/data cleanup purposes.</p>
+            <p>&bull; For users with 'Invited' status, you can copy their invitation link again if needed, or delete their profile to revoke the invitation. Their roles/status cannot be edited until they complete registration.</p>
+            <p>&bull; <strong>Profile Deletion:</strong> The "Delete" button removes the user's data from Firestore only. It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. For complete user deletion, a backend process using the Firebase Admin SDK is required. This feature is for development/data cleanup purposes.</p>
             <p>&bull; The general registration page (`/auth/register`) allows self-sign up and currently grants 'Admin' role by default to all new users.</p>
         </CardContent>
       </Card>
