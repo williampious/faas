@@ -1,12 +1,25 @@
 
 /**
- * @fileOverview TypeScript type definitions for Farm Management features,
- * specifically for Plots/Fields.
+ * @fileOverview TypeScript type definitions for Farm and Plot data structures.
  */
 
 export interface GPSCoordinates {
   latitude?: number;
   longitude?: number;
+}
+
+export interface Farm {
+  id: string; // Firestore document ID
+  name: string;
+  description?: string;
+  country?: string;
+  region?: string;
+  city?: string;
+  farmEmail?: string;
+  farmPhone?: string;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
+  ownerId: string; // The userId of the user who created the farm
 }
 
 export interface PlotField {

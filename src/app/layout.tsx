@@ -113,7 +113,7 @@ function AppShell({ children }: { children: ReactNode }) {
 function RootLayoutContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isLoading, error: profileError } = useUserProfile();
+  const { user, userProfile, isLoading, error: profileError } = useUserProfile();
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
@@ -136,20 +136,26 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
     if (!isClient || isLoading) return; 
 
     const isAuthPage = pathname.startsWith('/auth/');
-    
+    const isSetupPage = pathname.startsWith('/setup');
+
     if (user) { // User is authenticated
-      if (isAuthPage) { 
-        // This is where the redirect happens after successful registration (and profile load)
-        // User is on /auth/register, user object is now available, isLoading is false.
-        router.replace('/dashboard'); 
+      // After profile is loaded, check for farm setup
+      if (userProfile && !userProfile.farmId && !isSetupPage) {
+        router.replace('/setup');
+        return; // Redirect to setup and stop further processing
       }
-      // No redirection if user is authenticated and on isPublicUnauthenticatedArea or other app pages
+      
+      // If user is set up and tries to go to an auth page, redirect to dashboard
+      if (isAuthPage) {
+        router.replace('/dashboard');
+      }
     } else { // User is NOT authenticated
+      // If user is not logged in, they can only access public landing and auth pages
       if (!isAuthPage && !isPublicUnauthenticatedArea) {
         router.replace('/auth/signin');
       }
     }
-  }, [user, isLoading, pathname, router, isClient, isPublicUnauthenticatedArea]);
+  }, [user, userProfile, isLoading, pathname, router, isClient, isPublicUnauthenticatedArea]);
 
   if (!isClient || isLoading) {
     return (
@@ -223,11 +229,13 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   }
 
   const isAuthPage = pathname.startsWith('/auth/');
-  const showAppShell = user && !isAuthPage;
+  const isSetupPage = pathname.startsWith('/setup');
+  const showAppShell = user && userProfile?.farmId && !isAuthPage && !isSetupPage;
 
   if (showAppShell) {
     return <AppShell>{children}</AppShell>;
   } else {
+    // This will render the setup pages, auth pages, or public pages without the main app shell
     return <>{children}</>;
   }
 }
