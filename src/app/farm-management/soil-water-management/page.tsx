@@ -13,9 +13,9 @@ export default function SoilWaterManagementPage() {
   return (
     <div>
       <PageHeader
-        title="Advanced Soil & Water Management"
+        title="Soil & Water Management"
         icon={Layers}
-        description="Track soil test results, plan amendments, manage water sources, and optimize irrigation strategies."
+        description="This module is planned for tracking soil test results, planning amendments, and optimizing irrigation."
         action={
           <Button variant="outline" onClick={() => router.push('/farm-management')}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Farm Management
@@ -25,13 +25,13 @@ export default function SoilWaterManagementPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Soil & Water Insights</CardTitle>
+          <CardTitle>Feature Under Development</CardTitle>
           <CardDescription>This section will provide tools for managing soil health and water usage effectively.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-10">
             <Layers className="mx-auto h-12 w-12 text-muted-foreground" />
-            <p className="mt-4 text-muted-foreground">Soil & Water Management features are under development.</p>
+            <p className="mt-4 text-muted-foreground">Soil & Water Management features are coming soon.</p>
             <p className="text-sm text-muted-foreground">
               Future capabilities will include:
             </p>

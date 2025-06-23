@@ -20,6 +20,8 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
+import type { PaymentSource, CostCategory, OperationalTransaction } from '@/types/finance';
+import { paymentSources, costCategories } from '@/types/finance';
 
 const maintenanceActivityTypes = [
   'Irrigation', 
@@ -34,13 +36,12 @@ const maintenanceActivityTypes = [
 ] as const;
 type CropMaintenanceActivityType = typeof maintenanceActivityTypes[number];
 
-const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Other'] as const;
-type CostCategory = typeof costCategories[number];
 
 const costItemSchema = z.object({
   id: z.string().optional(),
   description: z.string().min(1, "Description is required.").max(100),
   category: z.enum(costCategories, { required_error: "Category is required."}),
+  paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
   quantity: z.preprocess(
     (val) => parseFloat(String(val)),
@@ -70,6 +71,8 @@ interface CropMaintenanceActivity {
   notes?: string;
   costItems: CostItem[];
   totalActivityCost: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const activityFormSchema = z.object({
@@ -84,7 +87,8 @@ const activityFormSchema = z.object({
 
 type ActivityFormValues = z.infer<typeof activityFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'cropMaintenanceActivities_v2';
+const LOCAL_STORAGE_KEY_ACTIVITIES = 'cropMaintenanceActivities_v1';
+const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
 const ACTIVITY_FORM_ID = 'crop-maintenance-form';
 
 export default function CropMaintenancePage() {
@@ -98,44 +102,26 @@ export default function CropMaintenancePage() {
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
     defaultValues: {
-      activityType: undefined,
-      date: '',
-      cropsAffected: '',
-      areaAffected: '',
-      activityDetails: '',
-      notes: '',
-      costItems: [],
+      activityType: undefined, date: '', cropsAffected: '', areaAffected: '',
+      activityDetails: '', notes: '', costItems: [],
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "costItems",
-  });
-
+  const { fields, append, remove } = useFieldArray({ control: form.control, name: "costItems" });
   const watchedCostItems = form.watch("costItems");
-
   const calculateTotalCost = (items: CostItemFormValues[] | undefined) => {
     if (!items) return 0;
-    return items.reduce((acc, item) => {
-      const quantity = Number(item.quantity) || 0;
-      const unitPrice = Number(item.unitPrice) || 0;
-      return acc + (quantity * unitPrice);
-    }, 0);
+    return items.reduce((acc, item) => (acc + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)), 0);
   };
 
   useEffect(() => {
     setIsMounted(true);
-    const storedActivities = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (storedActivities) {
-      setActivities(JSON.parse(storedActivities));
-    }
+    const storedActivities = localStorage.getItem(LOCAL_STORAGE_KEY_ACTIVITIES);
+    if (storedActivities) setActivities(JSON.parse(storedActivities));
   }, []);
 
   useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(activities));
-    }
+    if (isMounted) localStorage.setItem(LOCAL_STORAGE_KEY_ACTIVITIES, JSON.stringify(activities));
   }, [activities, isMounted]);
 
   const handleOpenModal = (activityToEdit?: CropMaintenanceActivity) => {
@@ -143,56 +129,51 @@ export default function CropMaintenancePage() {
       setEditingActivity(activityToEdit);
       form.reset({
         ...activityToEdit,
-        activityDetails: activityToEdit.activityDetails || '',
-        notes: activityToEdit.notes || '',
-        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID(), category: ci.category || costCategories[0] })) || [],
+        activityDetails: activityToEdit.activityDetails || '', notes: activityToEdit.notes || '',
+        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID()})) || [],
       });
     } else {
       setEditingActivity(null);
-      form.reset({
-        activityType: undefined,
-        date: '',
-        cropsAffected: '',
-        areaAffected: '',
-        activityDetails: '',
-        notes: '',
-        costItems: [],
-      });
+      form.reset({ activityType: undefined, date: '', cropsAffected: '', areaAffected: '', activityDetails: '', notes: '', costItems: [] });
     }
     setIsModalOpen(true);
   };
 
   const onSubmit: SubmitHandler<ActivityFormValues> = (data) => {
+    const now = new Date().toISOString();
+    const activityId = editingActivity ? editingActivity.id : crypto.randomUUID();
     const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
-      ...ci,
-      id: ci.id || crypto.randomUUID(),
-      category: ci.category || costCategories[0],
-      quantity: Number(ci.quantity),
-      unitPrice: Number(ci.unitPrice),
+      ...ci, id: ci.id || crypto.randomUUID(), category: ci.category, paymentSource: ci.paymentSource,
+      quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice),
       total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
     }));
-
     const totalActivityCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
 
+    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
+    let allTransactions: OperationalTransaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
+    allTransactions = allTransactions.filter(t => t.linkedActivityId !== activityId);
+    
+    const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
+      id: crypto.randomUUID(), date: data.date, description: item.description, amount: item.total, type: 'Expense' as const,
+      category: item.category, paymentSource: item.paymentSource, linkedModule: 'Crop Maintenance' as const,
+      linkedActivityId: activityId, linkedItemId: item.id,
+    }));
+    allTransactions.push(...newTransactions);
+    localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
+
     if (editingActivity) {
-      setActivities(
-        activities.map((act) =>
-          act.id === editingActivity.id ? { ...editingActivity, ...data, costItems: processedCostItems, totalActivityCost } : act
-        )
-      );
+      const updatedActivity = { ...editingActivity, ...data, costItems: processedCostItems, totalActivityCost, updatedAt: now };
+      setActivities(activities.map((act) => act.id === activityId ? updatedActivity : act));
       toast({ title: "Activity Updated", description: `${data.activityType} activity has been updated.` });
     } else {
       const newActivity: CropMaintenanceActivity = {
-        id: crypto.randomUUID(),
-        ...data,
-        activityDetails: data.activityDetails || undefined,
-        notes: data.notes || undefined,
-        costItems: processedCostItems,
-        totalActivityCost,
+        ...data, id: activityId, activityDetails: data.activityDetails || undefined, notes: data.notes || undefined,
+        costItems: processedCostItems, totalActivityCost, createdAt: now, updatedAt: now,
       };
       setActivities(prev => [...prev, newActivity]);
       toast({ title: "Activity Logged", description: `${data.activityType} activity has been successfully logged.` });
     }
+    
     setIsModalOpen(false);
     setEditingActivity(null);
     form.reset();
@@ -200,12 +181,17 @@ export default function CropMaintenancePage() {
 
   const handleDeleteActivity = (id: string) => {
     setActivities(activities.filter((act) => act.id !== id));
-    toast({ title: "Activity Deleted", description: "The maintenance activity has been removed.", variant: "destructive" });
+    
+    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
+    if(storedTransactions) {
+        let allTransactions: OperationalTransaction[] = JSON.parse(storedTransactions);
+        allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
+        localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
+    }
+    toast({ title: "Activity Deleted", description: "The maintenance activity and its financial transactions have been removed.", variant: "destructive" });
   };
   
-  if (!isMounted) {
-    return null; 
-  }
+  if (!isMounted) return null;
 
   return (
     <div>
@@ -227,17 +213,12 @@ export default function CropMaintenancePage() {
 
       <Dialog open={isModalOpen} onOpenChange={(isOpen) => {
         setIsModalOpen(isOpen);
-        if (!isOpen) {
-          form.reset();
-          setEditingActivity(null);
-        }
+        if (!isOpen) { form.reset(); setEditingActivity(null); }
       }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingActivity ? 'Edit Maintenance Activity' : 'Log New Maintenance Activity'}</DialogTitle>
-            <DialogDescription>
-              {editingActivity ? 'Update the details and costs of this maintenance activity.' : 'Enter details and costs for the new maintenance activity.'}
-            </DialogDescription>
+            <DialogDescription>{editingActivity ? 'Update the details and costs of this maintenance activity.' : 'Enter details and costs for the new maintenance activity.'}</DialogDescription>
           </DialogHeader>
           <div className="flex-grow overflow-y-auto pr-2 py-4">
             <Form {...form}>
@@ -245,124 +226,48 @@ export default function CropMaintenancePage() {
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Activity Details</h3>
                   <FormField control={form.control} name="activityType" render={({ field }) => (
-                    <FormItem><FormLabel>Activity Type*</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select activity type" /></SelectTrigger></FormControl>
-                        <SelectContent>{maintenanceActivityTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
-                      </Select><FormMessage />
-                    </FormItem>)}
+                    <FormItem><FormLabel>Activity Type*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select activity type" /></SelectTrigger></FormControl><SelectContent>{maintenanceActivityTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}
                   />
-                  <FormField control={form.control} name="date" render={({ field }) => (
-                    <FormItem><FormLabel>Date*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)}
-                  />
-                  <FormField control={form.control} name="cropsAffected" render={({ field }) => (
-                    <FormItem><FormLabel>Crop(s) Affected*</FormLabel><FormControl><Input placeholder="e.g., Tomatoes, Maize Plot A" {...field} /></FormControl><FormMessage /></FormItem>)}
-                  />
-                  <FormField control={form.control} name="areaAffected" render={({ field }) => (
-                    <FormItem><FormLabel>Area Affected*</FormLabel><FormControl><Input placeholder="e.g., North Field - 5 acres, Row 1-5" {...field} /></FormControl><FormMessage /></FormItem>)}
-                  />
-                   <FormField control={form.control} name="activityDetails" render={({ field }) => (
-                    <FormItem><FormLabel>Specific Activity Details (Optional)</FormLabel><FormControl><Textarea placeholder="e.g., Applied 2 bags of NPK 15-15-15, Sprayed Neem oil solution for aphid control, Irrigated for 2 hours." {...field} /></FormControl><FormMessage /></FormItem>)}
-                  />
-                  <FormField control={form.control} name="notes" render={({ field }) => (
-                    <FormItem><FormLabel>General Notes (Optional)</FormLabel><FormControl><Textarea placeholder="Any additional observations or comments" {...field} /></FormControl><FormMessage /></FormItem>)}
-                  />
+                  <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Date*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="cropsAffected" render={({ field }) => (<FormItem><FormLabel>Crop(s) Affected*</FormLabel><FormControl><Input placeholder="e.g., Tomatoes, Maize Plot A" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="areaAffected" render={({ field }) => (<FormItem><FormLabel>Area Affected*</FormLabel><FormControl><Input placeholder="e.g., North Field - 5 acres, Row 1-5" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="activityDetails" render={({ field }) => (<FormItem><FormLabel>Specific Activity Details (Optional)</FormLabel><FormControl><Textarea placeholder="e.g., Applied 2 bags of NPK 15-15-15, Sprayed Neem oil solution for aphid control, Irrigated for 2 hours." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="notes" render={({ field }) => (<FormItem><FormLabel>General Notes (Optional)</FormLabel><FormControl><Textarea placeholder="Any additional observations or comments" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 </section>
-
                 <section className="space-y-4 p-4 border rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-primary">Cost Items</h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], unit: '', quantity: 1, unitPrice: 0 })}>
-                      <PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item
-                    </Button>
-                  </div>
-                  {fields.map((field, index) => {
-                    const quantity = form.watch(`costItems.${index}.quantity`) || 0;
-                    const unitPrice = form.watch(`costItems.${index}.unitPrice`) || 0;
-                    const itemTotal = Number(quantity) * Number(unitPrice);
-                    return (
-                      <div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <FormField control={form.control} name={`costItems.${index}.category`} render={({ field: f }) => (
-                            <FormItem><FormLabel>Category*</FormLabel>
-                              <Select onValueChange={f.onChange} defaultValue={f.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
-                                <SelectContent>{costCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
-                              </Select><FormMessage />
-                            </FormItem>)}
-                          />
-                          <FormField control={form.control} name={`costItems.${index}.description`} render={({ field: f }) => (
-                            <FormItem><FormLabel>Description*</FormLabel><FormControl><Input placeholder="e.g., NPK Fertilizer, Labor for weeding" {...f} /></FormControl><FormMessage /></FormItem>)}
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-                          <FormField control={form.control} name={`costItems.${index}.unit`} render={({ field: f }) => (
-                            <FormItem><FormLabel>Unit*</FormLabel><FormControl><Input placeholder="e.g., Bag, Hour, Liter" {...f} /></FormControl><FormMessage /></FormItem>)}
-                          />
-                          <FormField control={form.control} name={`costItems.${index}.quantity`} render={({ field: f }) => (
-                            <FormItem><FormLabel>Quantity*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`costItems.${index}.total`, parseFloat(e.target.value) * (form.getValues(`costItems.${index}.unitPrice`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)}
-                          />
-                           <FormField control={form.control} name={`costItems.${index}.unitPrice`} render={({ field: f }) => (
-                            <FormItem><FormLabel>Unit Price*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`costItems.${index}.total`, parseFloat(e.target.value) * (form.getValues(`costItems.${index}.quantity`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)}
-                          />
-                          <div>
-                            <Label>Item Total</Label>
-                            <Input value={itemTotal.toFixed(2)} readOnly disabled className="font-semibold bg-input" />
-                          </div>
-                        </div>
-                        <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 text-destructive hover:bg-destructive/10" onClick={() => remove(index)}>
-                          <Trash2 className="h-4 w-4" /><span className="sr-only">Remove Item</span>
-                        </Button>
+                  <div className="flex justify-between items-center"><h3 className="text-lg font-semibold text-primary">Cost Items</h3><Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], paymentSource: paymentSources[0], unit: '', quantity: 1, unitPrice: 0 })}><PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item</Button></div>
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                         <FormField control={form.control} name={`costItems.${index}.category`} render={({ field: f }) => (<FormItem><FormLabel>Category*</FormLabel><Select onValueChange={f.onChange} defaultValue={f.value}><FormControl><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger></FormControl><SelectContent>{costCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                         <FormField control={form.control} name={`costItems.${index}.description`} render={({ field: f }) => (<FormItem><FormLabel>Description*</FormLabel><FormControl><Input placeholder="e.g., NPK Fertilizer, Labor for weeding" {...f} /></FormControl><FormMessage /></FormItem>)} />
                       </div>
-                    );
-                  })}
-                  {fields.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No cost items added yet.</p>}
-                   <Separator className="my-4" />
-                   <div className="flex justify-end items-center space-x-3">
-                      <Label className="text-md font-semibold">Total Activity Cost:</Label>
-                      <Input
-                        value={calculateTotalCost(watchedCostItems).toFixed(2)}
-                        readOnly
-                        disabled
-                        className="w-32 font-bold text-lg text-right bg-input"
-                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+                        <FormField control={form.control} name={`costItems.${index}.paymentSource`} render={({ field: f }) => (<FormItem><FormLabel>Source*</FormLabel><Select onValueChange={f.onChange} defaultValue={f.value}><FormControl><SelectTrigger><SelectValue placeholder="Paid from..." /></SelectTrigger></FormControl><SelectContent>{paymentSources.map(src => <SelectItem key={src} value={src}>{src}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name={`costItems.${index}.unit`} render={({ field: f }) => (<FormItem><FormLabel>Unit*</FormLabel><FormControl><Input placeholder="e.g., Bag, Hour, Liter" {...f} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name={`costItems.${index}.quantity`} render={({ field: f }) => (<FormItem><FormLabel>Quantity*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`costItems.${index}.total`, parseFloat(e.target.value) * (form.getValues(`costItems.${index}.unitPrice`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={form.control} name={`costItems.${index}.unitPrice`} render={({ field: f }) => (<FormItem><FormLabel>Unit Price*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`costItems.${index}.total`, parseFloat(e.target.value) * (form.getValues(`costItems.${index}.quantity`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)} />
+                        <div><Label>Item Total</Label><Input value={((form.watch(`costItems.${index}.quantity`) || 0) * (form.watch(`costItems.${index}.unitPrice`) || 0)).toFixed(2)} readOnly disabled className="font-semibold bg-input" /></div>
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 text-destructive hover:bg-destructive/10" onClick={() => remove(index)}><Trash2 className="h-4 w-4" /><span className="sr-only">Remove Item</span></Button>
                     </div>
+                  ))}
+                  {fields.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No cost items added yet.</p>}
+                  <Separator className="my-4" />
+                  <div className="flex justify-end items-center space-x-3"><Label className="text-md font-semibold">Total Activity Cost:</Label><Input value={calculateTotalCost(watchedCostItems).toFixed(2)} readOnly disabled className="w-32 font-bold text-lg text-right bg-input" /></div>
                 </section>
               </form>
             </Form>
           </div>
-          <DialogFooter className="py-4 px-6 border-t">
-            <DialogClose asChild>
-              <Button type="button" variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button type="submit" form={ACTIVITY_FORM_ID}>
-              {editingActivity ? 'Save Changes' : 'Log Activity'}
-            </Button>
-          </DialogFooter>
+          <DialogFooter className="py-4 px-6 border-t"><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose><Button type="submit" form={ACTIVITY_FORM_ID}>{editingActivity ? 'Save Changes' : 'Log Activity'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
-
       <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Logged Crop Maintenance Activities</CardTitle>
-          <CardDescription>
-            View all recorded maintenance activities and their total costs. Edit or delete as needed.
-          </CardDescription>
-        </CardHeader>
+        <CardHeader><CardTitle>Logged Crop Maintenance Activities</CardTitle><CardDescription>View all recorded maintenance activities and their total costs. Edit or delete as needed.</CardDescription></CardHeader>
         <CardContent>
           {activities.length > 0 ? (
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Activity Type</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Crop(s) Affected</TableHead>
-                  <TableHead>Area</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead className="text-right">Total Cost</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+              <TableHeader><TableRow><TableHead>Activity Type</TableHead><TableHead>Date</TableHead><TableHead>Crop(s) Affected</TableHead><TableHead>Area</TableHead><TableHead className="text-right">Total Cost</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {activities.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()).map((activity) => (
                   <TableRow key={activity.id}>
@@ -370,50 +275,28 @@ export default function CropMaintenancePage() {
                     <TableCell>{isValid(parseISO(activity.date)) ? format(parseISO(activity.date), 'PP') : 'Invalid Date'}</TableCell>
                     <TableCell>{activity.cropsAffected}</TableCell>
                     <TableCell>{activity.areaAffected}</TableCell>
-                    <TableCell className="max-w-xs truncate">{activity.activityDetails || 'N/A'}</TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {activity.totalActivityCost.toFixed(2)}
-                    </TableCell>
+                    <TableCell className="text-right font-semibold">{activity.totalActivityCost.toFixed(2)}</TableCell>
                     <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="icon" onClick={() => handleOpenModal(activity)} className="h-8 w-8">
-                        <Edit2 className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button variant="destructive" size="icon" onClick={() => handleDeleteActivity(activity.id)} className="h-8 w-8">
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
+                      <Button variant="outline" size="icon" onClick={() => handleOpenModal(activity)} className="h-8 w-8"><Edit2 className="h-4 w-4" /><span className="sr-only">Edit</span></Button>
+                      <Button variant="destructive" size="icon" onClick={() => handleDeleteActivity(activity.id)} className="h-8 w-8"><Trash2 className="h-4 w-4" /><span className="sr-only">Delete</span></Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          ) : (
-             <div className="text-center py-10">
-                <ShieldAlert className="mx-auto h-12 w-12 text-muted-foreground" />
-                <p className="mt-4 text-muted-foreground">No crop maintenance activities logged yet.</p>
-                <p className="text-sm text-muted-foreground">Click "Log New Maintenance Activity" to get started.</p>
-            </div>
-          )}
+          ) : ( <div className="text-center py-10"><ShieldAlert className="mx-auto h-12 w-12 text-muted-foreground" /><p className="mt-4 text-muted-foreground">No crop maintenance activities logged yet.</p><p className="text-sm text-muted-foreground">Click "Log New Maintenance Activity" to get started.</p></div> )}
         </CardContent>
       </Card>
       <Card className="mt-6 bg-muted/30 p-4">
-        <CardHeader className="p-0 pb-2">
-            <CardTitle className="text-base font-semibold text-muted-foreground">About Crop Maintenance Costing</CardTitle>
-        </CardHeader>
+        <CardHeader className="p-0 pb-2"><CardTitle className="text-base font-semibold text-muted-foreground">About Crop Maintenance Costing</CardTitle></CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
             <p>&bull; This section helps track diverse ongoing crop care tasks and their associated costs.</p>
-            <p>&bull; Log activities such as irrigation, fertilization, pest/disease control, weeding, pruning, etc. by category.</p>
+            <p>&bull; Log activities such as irrigation, fertilization, pest/disease control, weeding, etc. by category.</p>
             <p>&bull; Itemize costs for inputs (fertilizers, pesticides), labor, water usage, equipment rental, and more.</p>
-            <p>&bull; The total cost for each maintenance activity is automatically calculated.</p>
+            <p>&bull; The total cost for each maintenance activity is automatically calculated and logged in the central financial ledger.</p>
             <p>&bull; Consistent logging here is vital for understanding operational expenses throughout the crop cycle.</p>
         </CardContent>
       </Card>
     </div>
   );
 }
-    
-
-    
-
-    

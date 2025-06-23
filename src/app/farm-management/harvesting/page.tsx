@@ -89,6 +89,8 @@ interface HarvestingRecord {
   totalHarvestCost: number;
   salesDetails?: SaleItem[];
   totalSalesIncome: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const harvestRecordFormSchema = z.object({
@@ -111,7 +113,7 @@ const harvestRecordFormSchema = z.object({
 
 type HarvestRecordFormValues = z.infer<typeof harvestRecordFormSchema>;
 
-const LOCAL_STORAGE_KEY_RECORDS = 'harvestingRecords_v4';
+const LOCAL_STORAGE_KEY_RECORDS = 'harvestingRecords_v1';
 const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
 const ACTIVITY_FORM_ID = 'harvesting-record-form';
 
@@ -126,56 +128,33 @@ export default function HarvestingPage() {
   const form = useForm<HarvestRecordFormValues>({
     resolver: zodResolver(harvestRecordFormSchema),
     defaultValues: {
-      cropType: '',
-      variety: '',
-      dateHarvested: '',
-      areaHarvested: '',
-      yieldQuantity: undefined,
-      yieldUnit: undefined,
-      qualityGrade: '',
-      postHarvestActivities: '',
-      storageLocation: '',
-      notes: '',
-      costItems: [],
-      salesDetails: [],
+      cropType: '', variety: '', dateHarvested: '', areaHarvested: '', yieldQuantity: undefined,
+      yieldUnit: undefined, qualityGrade: '', postHarvestActivities: '', storageLocation: '', notes: '', costItems: [], salesDetails: [],
     },
   });
 
-  const { fields: costFields, append: appendCost, remove: removeCost } = useFieldArray({
-    control: form.control,
-    name: "costItems",
-  });
+  const { fields: costFields, append: appendCost, remove: removeCost } = useFieldArray({ control: form.control, name: "costItems" });
   const watchedCostItems = form.watch("costItems");
 
-  const { fields: saleFields, append: appendSale, remove: removeSale } = useFieldArray({
-    control: form.control,
-    name: "salesDetails",
-  });
+  const { fields: saleFields, append: appendSale, remove: removeSale } = useFieldArray({ control: form.control, name: "salesDetails" });
   const watchedSaleItems = form.watch("salesDetails");
 
   useEffect(() => {
     setIsMounted(true);
     const storedRecords = localStorage.getItem(LOCAL_STORAGE_KEY_RECORDS);
-    if (storedRecords) {
-      setRecords(JSON.parse(storedRecords));
-    }
+    if (storedRecords) setRecords(JSON.parse(storedRecords));
   }, []);
 
   useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem(LOCAL_STORAGE_KEY_RECORDS, JSON.stringify(records));
-    }
+    if (isMounted) localStorage.setItem(LOCAL_STORAGE_KEY_RECORDS, JSON.stringify(records));
   }, [records, isMounted]);
 
   const handleOpenModal = (recordToEdit?: HarvestingRecord) => {
     if (recordToEdit) {
       setEditingRecord(recordToEdit);
       form.reset({
-        ...recordToEdit,
-        notes: recordToEdit.notes || '',
-        variety: recordToEdit.variety || '',
-        qualityGrade: recordToEdit.qualityGrade || '',
-        postHarvestActivities: recordToEdit.postHarvestActivities || '',
+        ...recordToEdit, notes: recordToEdit.notes || '', variety: recordToEdit.variety || '',
+        qualityGrade: recordToEdit.qualityGrade || '', postHarvestActivities: recordToEdit.postHarvestActivities || '',
         storageLocation: recordToEdit.storageLocation || '',
         costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID()})) || [],
         salesDetails: recordToEdit.salesDetails?.map(si => ({...si, id: si.id || crypto.randomUUID()})) || [],
@@ -191,6 +170,7 @@ export default function HarvestingPage() {
   };
 
   const onSubmit: SubmitHandler<HarvestRecordFormValues> = (data) => {
+    const now = new Date().toISOString();
     const activityId = editingRecord ? editingRecord.id : crypto.randomUUID();
 
     const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
@@ -217,7 +197,7 @@ export default function HarvestingPage() {
         })),
         ...processedSaleItems.map(item => ({
             id: crypto.randomUUID(), date: item.saleDate, description: `Sale of ${data.cropType} to ${item.buyer}`,
-            amount: item.totalSaleAmount, type: 'Income' as const, category: 'Crop Sales' as any,
+            amount: item.totalSaleAmount, type: 'Income' as const, category: 'Crop Sales' as any, paymentSource: 'Cash',
             linkedModule: 'Harvesting' as const, linkedActivityId: activityId, linkedItemId: item.id,
         }))
     ];
@@ -225,13 +205,15 @@ export default function HarvestingPage() {
     localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
 
     if (editingRecord) {
-      setRecords(records.map(rec => rec.id === activityId ? { ...editingRecord, ...data, id: activityId, costItems: processedCostItems, totalHarvestCost, salesDetails: processedSaleItems, totalSalesIncome } : rec));
+      const updatedRecord = { ...editingRecord, ...data, costItems: processedCostItems, totalHarvestCost, salesDetails: processedSaleItems, totalSalesIncome, updatedAt: now };
+      setRecords(records.map(rec => rec.id === activityId ? updatedRecord : rec));
       toast({ title: "Harvest Record Updated", description: `Record for ${data.cropType} has been updated.` });
     } else {
       const newRecord: HarvestingRecord = {
         ...data, id: activityId, variety: data.variety || undefined, qualityGrade: data.qualityGrade || undefined,
         postHarvestActivities: data.postHarvestActivities || undefined, storageLocation: data.storageLocation || undefined,
         notes: data.notes || undefined, costItems: processedCostItems, totalHarvestCost, salesDetails: processedSaleItems, totalSalesIncome,
+        createdAt: now, updatedAt: now,
       };
       setRecords(prev => [...prev, newRecord]);
       toast({ title: "Harvest Record Logged", description: `Record for ${data.cropType} has been successfully logged.` });

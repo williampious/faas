@@ -58,6 +58,7 @@ export default function FarmManagementPage() {
           icon={Layers}
           href="/farm-management/soil-water-management"
           cta="Manage Soil & Water"
+          disabled={true}
         />
       </div>
 
@@ -70,10 +71,10 @@ export default function FarmManagementPage() {
         </CardHeader>
         <CardContent>
           <ul className="list-disc list-inside text-muted-foreground space-y-1">
-            <li>Detailed activity logging for each stage.</li>
-            <li>Integration with resource inventory for supplies.</li>
-            <li>Advanced analytics on stage performance and costs.</li>
+            <li>Deeper integration between inventory, tasks, and operational activities.</li>
+            <li>Advanced analytics on stage performance and costs per plot.</li>
             <li>Photo and sensor data integration for monitoring.</li>
+            <li>Full build-out of Soil & Water management features.</li>
           </ul>
         </CardContent>
       </Card>
@@ -91,8 +92,8 @@ interface FeatureCardProps {
 }
 
 function FeatureCard({ title, description, icon: Icon, href, cta, disabled }: FeatureCardProps) {
-  return (
-    <Card className={`shadow-md hover:shadow-lg transition-shadow flex flex-col ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+  const cardContent = (
+    <Card className={`shadow-md hover:shadow-lg transition-shadow flex flex-col ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-primary'}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">{title}</CardTitle>
@@ -101,12 +102,16 @@ function FeatureCard({ title, description, icon: Icon, href, cta, disabled }: Fe
       </CardHeader>
       <CardContent className="flex flex-col flex-grow">
         <p className="text-sm text-muted-foreground mb-4 flex-grow">{description}</p>
-        <Link href={disabled ? "#" : href}>
-          <Button className="w-full mt-auto" disabled={disabled}>
-            {cta}
-          </Button>
-        </Link>
+        <Button className="w-full mt-auto" disabled={disabled}>
+          {disabled ? 'Coming Soon' : cta}
+        </Button>
       </CardContent>
     </Card>
   );
+
+  if (disabled) {
+      return cardContent;
+  }
+  
+  return <Link href={href}>{cardContent}</Link>;
 }

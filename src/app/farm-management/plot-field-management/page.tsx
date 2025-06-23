@@ -57,12 +57,8 @@ export default function PlotFieldManagementPage() {
   const form = useForm<PlotFieldFormValues>({
     resolver: zodResolver(plotFieldFormSchema),
     defaultValues: {
-      name: '',
-      description: '',
-      sizeAcres: undefined,
-      locationNotes: '',
-      gpsCoordinates: { latitude: undefined, longitude: undefined },
-      soilType: '',
+      name: '', description: '', sizeAcres: undefined, locationNotes: '',
+      gpsCoordinates: { latitude: undefined, longitude: undefined }, soilType: '',
     },
   });
 
@@ -84,10 +80,8 @@ export default function PlotFieldManagementPage() {
     if (plotToEdit) {
       setEditingPlot(plotToEdit);
       form.reset({
-        name: plotToEdit.name,
-        description: plotToEdit.description || '',
-        sizeAcres: plotToEdit.sizeAcres,
-        locationNotes: plotToEdit.locationNotes || '',
+        name: plotToEdit.name, description: plotToEdit.description || '',
+        sizeAcres: plotToEdit.sizeAcres, locationNotes: plotToEdit.locationNotes || '',
         gpsCoordinates: {
           latitude: plotToEdit.gpsCoordinates?.latitude,
           longitude: plotToEdit.gpsCoordinates?.longitude,
@@ -96,7 +90,10 @@ export default function PlotFieldManagementPage() {
       });
     } else {
       setEditingPlot(null);
-      form.reset();
+      form.reset({
+        name: '', description: '', sizeAcres: undefined, locationNotes: '',
+        gpsCoordinates: { latitude: undefined, longitude: undefined }, soilType: '',
+      });
     }
     setIsModalOpen(true);
   };
@@ -105,7 +102,7 @@ export default function PlotFieldManagementPage() {
     const now = new Date().toISOString();
     const gpsCoords = 
       (data.gpsCoordinates?.latitude !== undefined && data.gpsCoordinates?.longitude !== undefined) ||
-      (data.gpsCoordinates?.latitude === 0 && data.gpsCoordinates?.longitude === 0) // Allow 0,0
+      (data.gpsCoordinates?.latitude === 0 && data.gpsCoordinates?.longitude === 0)
       ? { latitude: data.gpsCoordinates.latitude, longitude: data.gpsCoordinates.longitude } 
       : undefined;
 
@@ -121,12 +118,8 @@ export default function PlotFieldManagementPage() {
       toast({ title: "Plot Updated", description: `Plot "${data.name}" has been updated.` });
     } else {
       const newPlot: PlotField = {
-        id: crypto.randomUUID(),
-        ...data,
-        sizeAcres: data.sizeAcres,
-        gpsCoordinates: gpsCoords,
-        createdAt: now,
-        updatedAt: now,
+        id: crypto.randomUUID(), ...data, sizeAcres: data.sizeAcres,
+        gpsCoordinates: gpsCoords, createdAt: now, updatedAt: now,
       };
       setPlots((prev) => [...prev, newPlot]);
       toast({ title: "Plot Added", description: `Plot "${data.name}" has been added.` });
