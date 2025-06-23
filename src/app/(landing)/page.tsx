@@ -59,7 +59,6 @@ export default function LandingPage() {
       <nav className="container mx-auto px-4 py-4 border-b border-border/20">
         <div className="flex justify-center items-center gap-x-6 sm:gap-x-8 text-sm font-medium">
             <Link href="/features" className="text-muted-foreground hover:text-primary transition-colors">Features</Link>
-            <Link href="/pricing" className="text-muted-foreground hover:text-primary transition-colors">Pricing</Link>
             <Link href="/installation-guide" className="text-muted-foreground hover:text-primary transition-colors">Install</Link>
             <Link href="/help" className="text-muted-foreground hover:text-primary transition-colors">Help</Link>
             <Link href="/faq" className="text-muted-foreground hover:text-primary transition-colors">FAQ</Link>
