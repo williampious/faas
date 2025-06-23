@@ -168,6 +168,7 @@ export default function HealthCarePage() {
   };
 
   const handleDeleteRecord = (id: string) => {
+    const recordToDelete = records.find(r => r.id === id);
     setRecords(records.filter((rec) => rec.id !== id));
     
     const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
@@ -176,7 +177,7 @@ export default function HealthCarePage() {
         allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
         localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
     }
-    toast({ title: "Record Deleted", description: "The health record and its financial transactions have been removed.", variant: "destructive" });
+    toast({ title: "Record Deleted", description: `Health record "${recordToDelete?.activityType}" has been removed.`, variant: "destructive" });
   };
   
   if (!isMounted) return null;
@@ -265,14 +266,13 @@ export default function HealthCarePage() {
         <CardContent>
           {records.length > 0 ? (
             <Table>
-              <TableHeader><TableRow><TableHead>Activity Type</TableHead><TableHead>Date</TableHead><TableHead>Animals Affected</TableHead><TableHead>Medication/Treatment</TableHead><TableHead className="text-right">Total Cost</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Activity Type</TableHead><TableHead>Date</TableHead><TableHead>Animals Affected</TableHead><TableHead className="text-right">Total Cost</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {records.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()).map((record) => (
+                {records.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">{record.activityType}</TableCell>
                     <TableCell>{isValid(parseISO(record.date)) ? format(parseISO(record.date), 'PP') : 'Invalid Date'}</TableCell>
                     <TableCell>{record.animalsAffected}</TableCell>
-                    <TableCell>{record.medicationOrTreatment || 'N/A'}</TableCell>
                     <TableCell className="text-right font-semibold">{record.totalActivityCost.toFixed(2)}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="outline" size="icon" onClick={() => handleOpenModal(record)} className="h-8 w-8"><Edit2 className="h-4 w-4" /><span className="sr-only">Edit</span></Button>

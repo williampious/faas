@@ -26,7 +26,7 @@ export interface OperationalTransaction {
   amount: number;
   type: TransactionType;
   category: CostCategory;
-  paymentSource?: PaymentSource; // Optional for income, required for expense
+  paymentSource: PaymentSource; // Made mandatory for expenses
   linkedModule: LinkedModule;
   linkedActivityId: string; // ID of the parent activity (e.g., land prep record)
   linkedItemId: string; // ID of the specific cost/sale item

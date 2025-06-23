@@ -160,6 +160,7 @@ export default function PlantingPage() {
   };
 
   const handleDeleteRecord = (id: string) => {
+    const recordToDelete = records.find(r => r.id === id);
     setRecords(records.filter((rec) => rec.id !== id));
     
     const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
@@ -168,7 +169,7 @@ export default function PlantingPage() {
         allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
         localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
     }
-    toast({ title: "Record Deleted", description: "The planting record and its financial transactions have been removed.", variant: "destructive" });
+    toast({ title: "Record Deleted", description: `Planting record for "${recordToDelete?.cropType}" has been removed.`, variant: "destructive" });
   };
   
   if (!isMounted) return null;
@@ -245,7 +246,7 @@ export default function PlantingPage() {
             <Table>
               <TableHeader><TableRow><TableHead>Crop Type</TableHead><TableHead>Date Planted</TableHead><TableHead>Area Planted</TableHead><TableHead>Method</TableHead><TableHead className="text-right">Total Cost</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {records.sort((a,b) => parseISO(b.datePlanted).getTime() - parseISO(a.datePlanted).getTime()).map((record) => (
+                {records.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">{record.cropType}</TableCell>
                     <TableCell>{isValid(parseISO(record.datePlanted)) ? format(parseISO(record.datePlanted), 'PP') : 'Invalid Date'}</TableCell>

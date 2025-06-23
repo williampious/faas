@@ -58,6 +58,8 @@ interface LandPreparationActivity {
   notes?: string;
   costItems: CostItem[];
   totalActivityCost: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const activityFormSchema = z.object({
@@ -131,7 +133,7 @@ export default function LandPreparationPage() {
         date: activityToEdit.date,
         areaAffected: activityToEdit.areaAffected,
         notes: activityToEdit.notes || '',
-        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID(), category: ci.category || costCategories[0] })) || [],
+        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID()})) || [],
       });
     } else {
       setEditingActivity(null);
@@ -147,6 +149,7 @@ export default function LandPreparationPage() {
   };
 
   const onSubmit: SubmitHandler<ActivityFormValues> = (data) => {
+    const now = new Date().toISOString();
     const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
       ...ci,
       id: ci.id || crypto.randomUUID(),
@@ -158,63 +161,46 @@ export default function LandPreparationPage() {
     }));
 
     const totalActivityCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
+    const activityId = editingActivity ? editingActivity.id : crypto.randomUUID();
 
-    // --- Central Transaction Logging ---
     const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
     let allTransactions: OperationalTransaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
-    // ---
+    
+    allTransactions = allTransactions.filter(t => t.linkedActivityId !== activityId);
+    
+    const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
+      id: crypto.randomUUID(),
+      date: data.date,
+      description: item.description,
+      amount: item.total,
+      type: 'Expense',
+      category: item.category,
+      paymentSource: item.paymentSource,
+      linkedModule: 'Land Preparation',
+      linkedActivityId: activityId,
+      linkedItemId: item.id,
+    }));
+    allTransactions.push(...newTransactions);
+
+    localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
 
     if (editingActivity) {
-      const updatedActivity: LandPreparationActivity = { ...editingActivity, ...data, costItems: processedCostItems, totalActivityCost };
+      const updatedActivity: LandPreparationActivity = { ...editingActivity, ...data, costItems: processedCostItems, totalActivityCost, updatedAt: now };
       setActivities(activities.map((act) => (act.id === editingActivity.id ? updatedActivity : act)));
-      
-      // Remove old transactions for this activity and add the updated ones
-      allTransactions = allTransactions.filter(t => t.linkedActivityId !== editingActivity.id);
-      const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
-        id: crypto.randomUUID(),
-        date: data.date,
-        description: item.description,
-        amount: item.total,
-        type: 'Expense',
-        category: item.category,
-        paymentSource: item.paymentSource,
-        linkedModule: 'Land Preparation',
-        linkedActivityId: editingActivity.id,
-        linkedItemId: item.id,
-      }));
-      allTransactions.push(...newTransactions);
-      
       toast({ title: "Activity Updated", description: `${data.activityType} activity has been updated.` });
     } else {
       const newActivity: LandPreparationActivity = {
-        id: crypto.randomUUID(),
         ...data,
+        id: activityId,
         notes: data.notes || undefined,
         costItems: processedCostItems,
         totalActivityCost,
+        createdAt: now,
+        updatedAt: now,
       };
       setActivities(prev => [...prev, newActivity]);
-      
-      // Add new transactions for the new activity
-      const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
-        id: crypto.randomUUID(),
-        date: data.date,
-        description: item.description,
-        amount: item.total,
-        type: 'Expense',
-        category: item.category,
-        paymentSource: item.paymentSource,
-        linkedModule: 'Land Preparation',
-        linkedActivityId: newActivity.id,
-        linkedItemId: item.id,
-      }));
-      allTransactions.push(...newTransactions);
-
       toast({ title: "Activity Logged", description: `${data.activityType} activity has been successfully logged.` });
     }
-
-    // Save the updated central transaction ledger
-    localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
 
     setIsModalOpen(false);
     setEditingActivity(null);
@@ -225,10 +211,8 @@ export default function LandPreparationPage() {
     const activityToDelete = activities.find(a => a.id === id);
     if (!activityToDelete) return;
     
-    // Update activities state
     setActivities(activities.filter((act) => act.id !== id));
     
-    // Remove transactions associated with the deleted activity
     const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
     if(storedTransactions) {
         let allTransactions: OperationalTransaction[] = JSON.parse(storedTransactions);
@@ -276,7 +260,7 @@ export default function LandPreparationPage() {
               {editingActivity ? 'Update the details and costs of this activity.' : 'Enter details and costs for the new activity.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex-grow overflow-y-auto pr-2 py-4"> {/* Scrollable content area */}
+          <div className="flex-grow overflow-y-auto pr-2 py-4">
             <Form {...form}>
               <form id={ACTIVITY_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <section className="space-y-4 p-4 border rounded-lg">
@@ -313,7 +297,7 @@ export default function LandPreparationPage() {
                     const itemTotal = Number(quantity) * Number(unitPrice);
                     return (
                       <div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                            <FormField control={form.control} name={`costItems.${index}.category`} render={({ field: f }) => (
                             <FormItem><FormLabel>Category*</FormLabel>
                               <Select onValueChange={f.onChange} defaultValue={f.value}>
@@ -322,19 +306,12 @@ export default function LandPreparationPage() {
                               </Select><FormMessage />
                             </FormItem>)}
                           />
-                          <FormField control={form.control} name={`costItems.${index}.paymentSource`} render={({ field: f }) => (
-                            <FormItem><FormLabel>Payment Source*</FormLabel>
-                              <Select onValueChange={f.onChange} defaultValue={f.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger></FormControl>
-                                <SelectContent>{paymentSources.map(src => <SelectItem key={src} value={src}>{src}</SelectItem>)}</SelectContent>
-                              </Select><FormMessage />
-                            </FormItem>)}
-                          />
                           <FormField control={form.control} name={`costItems.${index}.description`} render={({ field: f }) => (
                             <FormItem><FormLabel>Description*</FormLabel><FormControl><Input placeholder="e.g., Glyphosate, Weeding labor" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+                           <FormField control={form.control} name={`costItems.${index}.paymentSource`} render={({ field: f }) => (<FormItem><FormLabel>Source*</FormLabel><Select onValueChange={f.onChange} defaultValue={f.value}><FormControl><SelectTrigger><SelectValue placeholder="Paid from..." /></SelectTrigger></FormControl><SelectContent>{paymentSources.map(src => <SelectItem key={src} value={src}>{src}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                           <FormField control={form.control} name={`costItems.${index}.unit`} render={({ field: f }) => (
                             <FormItem><FormLabel>Unit*</FormLabel><FormControl><Input placeholder="e.g., Liters, Days" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
@@ -396,18 +373,16 @@ export default function LandPreparationPage() {
                   <TableHead>Activity Type</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Area Affected</TableHead>
-                  <TableHead>Notes</TableHead>
                   <TableHead className="text-right">Total Cost</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {activities.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()).map((activity) => (
+                {activities.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((activity) => (
                   <TableRow key={activity.id}>
                     <TableCell className="font-medium">{activity.activityType}</TableCell>
                     <TableCell>{isValid(parseISO(activity.date)) ? format(parseISO(activity.date), 'MMMM d, yyyy') : 'Invalid Date'}</TableCell>
                     <TableCell>{activity.areaAffected}</TableCell>
-                    <TableCell className="max-w-xs truncate">{activity.notes || 'N/A'}</TableCell>
                     <TableCell className="text-right font-semibold">
                       {activity.totalActivityCost.toFixed(2)}
                     </TableCell>
@@ -442,7 +417,7 @@ export default function LandPreparationPage() {
             <p>&bull; This section helps you track crucial groundwork and associated costs before planting.</p>
             <p>&bull; Log activities and itemize costs by category (Material/Input, Labor, Equipment, etc.). Select a "Payment Source" for each cost to enable cash flow tracking.</p>
             <p>&bull; Record the date, specific area affected, and any relevant notes for each activity.</p>
-            <p>&bull; The total cost for each activity is automatically calculated and displayed.</p>
+            <p>&bull; The total cost for each activity is automatically calculated and logged in the central financial ledger.</p>
         </CardContent>
       </Card>
     </div>

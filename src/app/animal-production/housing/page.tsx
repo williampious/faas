@@ -20,11 +20,11 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
-import type { HousingRecord, CostItem } from '@/types/livestock'; // Adjusted import
-import { housingTypes } from '@/types/livestock'; // Adjusted import
+import type { HousingRecord, CostItem } from '@/types/livestock';
+import { housingTypes } from '@/types/livestock';
 import { costCategories, paymentSources } from '@/types/finance';
+import type { OperationalTransaction } from '@/types/finance';
 
-// CostItem schema, can be shared or defined here
 const costItemSchema = z.object({
   id: z.string().optional(),
   description: z.string().min(1, "Description is required.").max(100),
@@ -62,6 +62,7 @@ const housingRecordFormSchema = z.object({
 type HousingRecordFormValues = z.infer<typeof housingRecordFormSchema>;
 
 const LOCAL_STORAGE_KEY = 'animalHousingRecords_v1';
+const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
 const ACTIVITY_FORM_ID = 'housing-record-form';
 
 export default function HousingInfrastructurePage() {
@@ -125,14 +126,13 @@ export default function HousingInfrastructurePage() {
       setEditingRecord(recordToEdit);
       form.reset({
         ...recordToEdit,
-        // Ensure optional fields are reset properly if they were undefined
         ventilationDetails: recordToEdit.ventilationDetails || '',
         lightingDetails: recordToEdit.lightingDetails || '',
         shelterDetails: recordToEdit.shelterDetails || '',
         biosecurityMeasures: recordToEdit.biosecurityMeasures || '',
         predatorProtection: recordToEdit.predatorProtection || '',
         notes: recordToEdit.notes || '',
-        costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID(), category: ci.category || costCategories[0] })) || [],
+        costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID()})) || [],
       });
     } else {
       setEditingRecord(null);
@@ -156,10 +156,12 @@ export default function HousingInfrastructurePage() {
 
   const onSubmit: SubmitHandler<HousingRecordFormValues> = (data) => {
     const now = new Date().toISOString();
+    const activityId = editingRecord ? editingRecord.id : crypto.randomUUID();
+
     const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
       ...ci,
       id: ci.id || crypto.randomUUID(),
-      category: ci.category || costCategories[0],
+      category: ci.category,
       paymentSource: ci.paymentSource,
       quantity: Number(ci.quantity),
       unitPrice: Number(ci.unitPrice),
@@ -167,6 +169,18 @@ export default function HousingInfrastructurePage() {
     }));
 
     const totalHousingCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
+
+    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
+    let allTransactions: OperationalTransaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
+    allTransactions = allTransactions.filter(t => t.linkedActivityId !== activityId);
+    
+    const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
+      id: crypto.randomUUID(), date: data.dateEstablished, description: item.description, amount: item.total, type: 'Expense' as const,
+      category: item.category, paymentSource: item.paymentSource, linkedModule: 'Animal Housing' as const,
+      linkedActivityId: activityId, linkedItemId: item.id,
+    }));
+    allTransactions.push(...newTransactions);
+    localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
 
     if (editingRecord) {
       setRecords(
@@ -177,9 +191,8 @@ export default function HousingInfrastructurePage() {
       toast({ title: "Housing Record Updated", description: `Record for ${data.name} has been updated.` });
     } else {
       const newRecord: HousingRecord = {
-        id: crypto.randomUUID(),
+        id: activityId,
         ...data,
-        // Ensure optional text fields become undefined if empty, not empty string
         ventilationDetails: data.ventilationDetails || undefined,
         lightingDetails: data.lightingDetails || undefined,
         shelterDetails: data.shelterDetails || undefined,
@@ -202,6 +215,13 @@ export default function HousingInfrastructurePage() {
   const handleDeleteRecord = (id: string) => {
     const recordToDelete = records.find(r => r.id === id);
     setRecords(records.filter((rec) => rec.id !== id));
+    
+    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
+    if(storedTransactions) {
+        let allTransactions: OperationalTransaction[] = JSON.parse(storedTransactions);
+        allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
+        localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
+    }
     toast({ title: "Record Deleted", description: `Housing record "${recordToDelete?.name}" has been removed.`, variant: "destructive" });
   };
   
@@ -249,7 +269,6 @@ export default function HousingInfrastructurePage() {
           <div className="flex-grow overflow-y-auto pr-2 py-4">
             <Form {...form}>
               <form id={ACTIVITY_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Housing Details Section */}
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Housing Unit Details</h3>
                   <FormField control={form.control} name="name" render={({ field }) => (
@@ -294,7 +313,6 @@ export default function HousingInfrastructurePage() {
                   />
                 </section>
 
-                {/* Cost Items Section */}
                 <section className="space-y-4 p-4 border rounded-lg">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-primary">Cost Items</h3>
@@ -417,4 +435,3 @@ export default function HousingInfrastructurePage() {
     </div>
   );
 }
-    

@@ -63,6 +63,7 @@ const saleItemSchema = z.object({
     z.number().min(0.01, "Price per unit must be greater than 0.")
   ),
   saleDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid sale date is required." }),
+  paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   totalSaleAmount: z.number().optional(),
 });
 
@@ -197,7 +198,7 @@ export default function HarvestingPage() {
         })),
         ...processedSaleItems.map(item => ({
             id: crypto.randomUUID(), date: item.saleDate, description: `Sale of ${data.cropType} to ${item.buyer}`,
-            amount: item.totalSaleAmount, type: 'Income' as const, category: 'Crop Sales' as any, paymentSource: 'Cash',
+            amount: item.totalSaleAmount, type: 'Income' as const, category: 'Crop Sales' as any, paymentSource: item.paymentSource,
             linkedModule: 'Harvesting' as const, linkedActivityId: activityId, linkedItemId: item.id,
         }))
     ];
@@ -225,6 +226,7 @@ export default function HarvestingPage() {
   };
 
   const handleDeleteRecord = (id: string) => {
+    const recordToDelete = records.find(r => r.id === id);
     setRecords(records.filter((rec) => rec.id !== id));
     
     const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
@@ -233,7 +235,7 @@ export default function HarvestingPage() {
         allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
         localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
     }
-    toast({ title: "Record Deleted", description: "The harvest record and its financial transactions have been removed.", variant: "destructive" });
+    toast({ title: "Record Deleted", description: `Harvest record for "${recordToDelete?.cropType}" has been removed.`, variant: "destructive" });
   };
   
   if (!isMounted) return null;
@@ -304,16 +306,17 @@ export default function HarvestingPage() {
                   <div className="flex justify-end items-center space-x-3"><Label className="text-md font-semibold">Total Harvest Cost:</Label><Input value={watchedCostItems.reduce((acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0).toFixed(2)} readOnly disabled className="w-32 font-bold text-lg text-right bg-input" /></div>
                 </section>
                 <section className="space-y-4 p-4 border rounded-lg">
-                  <div className="flex justify-between items-center"><h3 className="text-lg font-semibold text-primary">Sales Details</h3><Button type="button" size="sm" variant="outline" onClick={() => appendSale({ buyer: '', quantitySold: 1, unitOfSale: '', pricePerUnit: 0, saleDate: format(new Date(), 'yyyy-MM-dd') })}><DollarSign className="mr-2 h-4 w-4" /> Add Sale</Button></div>
+                  <div className="flex justify-between items-center"><h3 className="text-lg font-semibold text-primary">Sales Details</h3><Button type="button" size="sm" variant="outline" onClick={() => appendSale({ buyer: '', quantitySold: 1, unitOfSale: '', pricePerUnit: 0, saleDate: format(new Date(), 'yyyy-MM-dd'), paymentSource: 'Cash' })}><DollarSign className="mr-2 h-4 w-4" /> Add Sale</Button></div>
                   {saleFields.map((field, index) => (<div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <FormField control={form.control} name={`salesDetails.${index}.buyer`} render={({ field: f }) => (<FormItem><FormLabel>Buyer*</FormLabel><FormControl><Input placeholder="e.g., Market Trader A" {...f} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name={`salesDetails.${index}.saleDate`} render={({ field: f }) => (<FormItem><FormLabel>Sale Date*</FormLabel><FormControl><Input type="date" {...f} /></FormControl><FormMessage /></FormItem>)} />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
                       <FormField control={form.control} name={`salesDetails.${index}.quantitySold`} render={({ field: f }) => (<FormItem><FormLabel>Quantity Sold*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name={`salesDetails.${index}.unitOfSale`} render={({ field: f }) => (<FormItem><FormLabel>Unit of Sale*</FormLabel><FormControl><Input placeholder="e.g., kg, crate, bag" {...f} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name={`salesDetails.${index}.pricePerUnit`} render={({ field: f }) => (<FormItem><FormLabel>Price Per Unit*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={form.control} name={`salesDetails.${index}.paymentSource`} render={({ field: f }) => (<FormItem><FormLabel>Payment Via*</FormLabel><Select onValueChange={f.onChange} defaultValue={f.value}><FormControl><SelectTrigger><SelectValue placeholder="Received via..." /></SelectTrigger></FormControl><SelectContent>{paymentSources.map(src => <SelectItem key={src} value={src}>{src}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                       <div><Label>Sale Total</Label><Input value={((form.watch(`salesDetails.${index}.quantitySold`) || 0) * (form.watch(`salesDetails.${index}.pricePerUnit`) || 0)).toFixed(2)} readOnly disabled className="font-semibold bg-input" /></div>
                     </div>
                     <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 text-destructive hover:bg-destructive/10" onClick={() => removeSale(index)}><Trash2 className="h-4 w-4" /><span className="sr-only">Remove Sale Item</span></Button>
@@ -335,7 +338,7 @@ export default function HarvestingPage() {
             <Table>
               <TableHeader><TableRow><TableHead>Crop Type</TableHead><TableHead>Date</TableHead><TableHead>Yield</TableHead><TableHead className="text-right">Total Cost</TableHead><TableHead className="text-right">Total Income</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {records.sort((a,b) => parseISO(b.dateHarvested).getTime() - parseISO(a.dateHarvested).getTime()).map((record) => (
+                {records.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">{record.cropType} {record.variety && `(${record.variety})`}</TableCell>
                     <TableCell>{isValid(parseISO(record.dateHarvested)) ? format(parseISO(record.dateHarvested), 'PP') : 'Invalid Date'}</TableCell>

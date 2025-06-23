@@ -180,6 +180,7 @@ export default function CropMaintenancePage() {
   };
 
   const handleDeleteActivity = (id: string) => {
+    const activityToDelete = activities.find(a => a.id === id);
     setActivities(activities.filter((act) => act.id !== id));
     
     const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
@@ -188,7 +189,7 @@ export default function CropMaintenancePage() {
         allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
         localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
     }
-    toast({ title: "Activity Deleted", description: "The maintenance activity and its financial transactions have been removed.", variant: "destructive" });
+    toast({ title: "Activity Deleted", description: `Activity "${activityToDelete?.activityType}" has been removed.`, variant: "destructive" });
   };
   
   if (!isMounted) return null;
@@ -267,14 +268,13 @@ export default function CropMaintenancePage() {
         <CardContent>
           {activities.length > 0 ? (
             <Table>
-              <TableHeader><TableRow><TableHead>Activity Type</TableHead><TableHead>Date</TableHead><TableHead>Crop(s) Affected</TableHead><TableHead>Area</TableHead><TableHead className="text-right">Total Cost</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Activity Type</TableHead><TableHead>Date</TableHead><TableHead>Crop(s) Affected</TableHead><TableHead className="text-right">Total Cost</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {activities.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()).map((activity) => (
+                {activities.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((activity) => (
                   <TableRow key={activity.id}>
                     <TableCell className="font-medium">{activity.activityType}</TableCell>
                     <TableCell>{isValid(parseISO(activity.date)) ? format(parseISO(activity.date), 'PP') : 'Invalid Date'}</TableCell>
                     <TableCell>{activity.cropsAffected}</TableCell>
-                    <TableCell>{activity.areaAffected}</TableCell>
                     <TableCell className="text-right font-semibold">{activity.totalActivityCost.toFixed(2)}</TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="outline" size="icon" onClick={() => handleOpenModal(activity)} className="h-8 w-8"><Edit2 className="h-4 w-4" /><span className="sr-only">Edit</span></Button>
