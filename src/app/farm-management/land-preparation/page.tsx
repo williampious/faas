@@ -27,10 +27,14 @@ type LandPreparationActivityType = typeof activityTypes[number];
 const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Other'] as const;
 type CostCategory = typeof costCategories[number];
 
+const paymentSources = ['Cash', 'Bank', 'Mobile Money', 'Credit (Payable)'] as const;
+type PaymentSource = typeof paymentSources[number];
+
 const costItemSchema = z.object({
   id: z.string().optional(),
   description: z.string().min(1, "Description is required.").max(100),
   category: z.enum(costCategories, { required_error: "Category is required."}),
+  paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
   quantity: z.preprocess(
     (val) => parseFloat(String(val)),
@@ -70,7 +74,7 @@ const activityFormSchema = z.object({
 
 type ActivityFormValues = z.infer<typeof activityFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'landPreparationActivities_v3';
+const LOCAL_STORAGE_KEY = 'landPreparationActivities_v4'; // version up for paymentSource
 const ACTIVITY_FORM_ID = 'land-prep-activity-form';
 
 export default function LandPreparationPage() {
@@ -150,6 +154,7 @@ export default function LandPreparationPage() {
       ...ci,
       id: ci.id || crypto.randomUUID(),
       category: ci.category || costCategories[0], 
+      paymentSource: ci.paymentSource || paymentSources[0],
       quantity: Number(ci.quantity),
       unitPrice: Number(ci.unitPrice),
       total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
@@ -214,7 +219,7 @@ export default function LandPreparationPage() {
           setEditingActivity(null);
         }
       }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingActivity ? 'Edit Activity' : 'Log New Land Preparation Activity'}</DialogTitle>
             <DialogDescription>
@@ -248,7 +253,7 @@ export default function LandPreparationPage() {
                 <section className="space-y-4 p-4 border rounded-lg">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-primary">Cost Items</h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], unit: '', quantity: 1, unitPrice: 0 })}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], paymentSource: paymentSources[0], unit: '', quantity: 1, unitPrice: 0 })}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item
                     </Button>
                   </div>
@@ -258,12 +263,20 @@ export default function LandPreparationPage() {
                     const itemTotal = Number(quantity) * Number(unitPrice);
                     return (
                       <div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                            <FormField control={form.control} name={`costItems.${index}.category`} render={({ field: f }) => (
                             <FormItem><FormLabel>Category*</FormLabel>
                               <Select onValueChange={f.onChange} defaultValue={f.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger></FormControl>
                                 <SelectContent>{costCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                              </Select><FormMessage />
+                            </FormItem>)}
+                          />
+                          <FormField control={form.control} name={`costItems.${index}.paymentSource`} render={({ field: f }) => (
+                            <FormItem><FormLabel>Payment Source*</FormLabel>
+                              <Select onValueChange={f.onChange} defaultValue={f.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger></FormControl>
+                                <SelectContent>{paymentSources.map(src => <SelectItem key={src} value={src}>{src}</SelectItem>)}</SelectContent>
                               </Select><FormMessage />
                             </FormItem>)}
                           />
@@ -377,7 +390,7 @@ export default function LandPreparationPage() {
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
             <p>&bull; This section helps you track crucial groundwork and associated costs before planting.</p>
-            <p>&bull; Log activities and itemize costs by category (Material/Input, Labor, Equipment, etc.).</p>
+            <p>&bull; Log activities and itemize costs by category (Material/Input, Labor, Equipment, etc.). Select a "Payment Source" for each cost to enable cash flow tracking.</p>
             <p>&bull; Record the date, specific area affected, and any relevant notes for each activity.</p>
             <p>&bull; The total cost for each activity is automatically calculated and displayed.</p>
         </CardContent>
@@ -390,3 +403,4 @@ export default function LandPreparationPage() {
     
 
     
+
