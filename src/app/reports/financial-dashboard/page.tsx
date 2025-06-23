@@ -21,12 +21,18 @@ interface MonthlyData {
   expense: number;
 }
 
+interface CategoryData {
+  name: string;
+  total: number;
+}
+
 export default function FinancialDashboardPage() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [netProfitLoss, setNetProfitLoss] = useState(0);
   const [profitMargin, setProfitMargin] = useState(0);
   const [monthlyChartData, setMonthlyChartData] = useState<MonthlyData[]>([]);
+  const [expenseBreakdownData, setExpenseBreakdownData] = useState<CategoryData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
@@ -44,6 +50,7 @@ export default function FinancialDashboardPage() {
     let currentTotalIncome = 0;
     let currentTotalExpenses = 0;
     const monthlyAggregates: { [key: string]: { income: number; expense: number } } = {};
+    const expenseByCategory: { [key: string]: number } = {};
 
     if (storedTransactions) {
       const transactions: OperationalTransaction[] = JSON.parse(storedTransactions);
@@ -53,10 +60,16 @@ export default function FinancialDashboardPage() {
         if (!monthlyAggregates[monthKey]) {
           monthlyAggregates[monthKey] = { income: 0, expense: 0 };
         }
+
         if (t.type === 'Income') {
           monthlyAggregates[monthKey].income += t.amount || 0;
         } else {
           monthlyAggregates[monthKey].expense += t.amount || 0;
+          
+          if (!expenseByCategory[t.category]) {
+            expenseByCategory[t.category] = 0;
+          }
+          expenseByCategory[t.category] += t.amount || 0;
         }
       });
       
@@ -72,15 +85,20 @@ export default function FinancialDashboardPage() {
     setNetProfitLoss(currentNetProfitLoss);
     setProfitMargin(currentProfitMargin);
     
-    const chartData = Object.entries(monthlyAggregates)
+    const monthlyData = Object.entries(monthlyAggregates)
       .map(([key, value]) => ({
         month: format(parseISO(`${key}-01`), 'MMM yy'),
         income: value.income,
         expense: value.expense,
       }))
       .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+      
+    const categoryData = Object.entries(expenseByCategory)
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total); // Sort by most expensive first
     
-    setMonthlyChartData(chartData);
+    setMonthlyChartData(monthlyData);
+    setExpenseBreakdownData(categoryData);
     
     setIsLoading(false);
 
@@ -90,9 +108,13 @@ export default function FinancialDashboardPage() {
     return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
   };
   
-  const chartConfig = {
+  const monthlyChartConfig = {
       income: { label: "Income", color: "hsl(var(--chart-2))" },
       expense: { label: "Expense", color: "hsl(var(--chart-1))" },
+  };
+  
+  const breakdownChartConfig = {
+      total: { label: "Total Spent", color: "hsl(var(--chart-4))" },
   };
 
   if (!isMounted || isLoading) {
@@ -170,38 +192,69 @@ export default function FinancialDashboardPage() {
       
       <Separator className="my-8" />
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly Income vs. Expense Trends</CardTitle>
-          <CardDescription>A visual summary of your cash flow over recent months.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {monthlyChartData.length > 0 ? (
-            <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-              <BarChart data={monthlyChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} />
-                <YAxis tickFormatter={(value) => formatCurrency(value as number).replace('GHS','')} tickLine={false} axisLine={false} tickMargin={10} />
-                <Tooltip 
-                  cursor={{ fill: 'hsl(var(--muted)/0.5)' }}
-                  content={<ChartTooltipContent 
-                    formatter={(value) => formatCurrency(value as number)} 
-                    indicator="dot"
-                  />} 
-                />
-                <Legend />
-                <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-          ) : (
-            <div className="text-center py-10">
-              <BarChart2 className="mx-auto h-12 w-12 text-muted-foreground" />
-              <p className="mt-4 text-muted-foreground">No financial data available to display chart.</p>
-              <p className="text-sm text-muted-foreground">Log costs and sales in the Farm Management modules to see trends here.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid lg:grid-cols-2 gap-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Income vs. Expense</CardTitle>
+            <CardDescription>A visual summary of your cash flow over recent months.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {monthlyChartData.length > 0 ? (
+              <ChartContainer config={monthlyChartConfig} className="min-h-[250px] w-full">
+                <BarChart data={monthlyChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} />
+                  <YAxis tickFormatter={(value) => formatCurrency(value as number).replace('GHS','')} tickLine={false} axisLine={false} tickMargin={10} />
+                  <Tooltip 
+                    cursor={{ fill: 'hsl(var(--muted)/0.5)' }}
+                    content={<ChartTooltipContent 
+                      formatter={(value) => formatCurrency(value as number)} 
+                      indicator="dot"
+                    />} 
+                  />
+                  <Legend />
+                  <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <div className="text-center py-10">
+                <BarChart2 className="mx-auto h-12 w-12 text-muted-foreground" />
+                <p className="mt-4 text-muted-foreground">No financial data available for monthly trends.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle>Expense Breakdown by Category</CardTitle>
+                <CardDescription>See where your money is going across different operational categories.</CardDescription>
+            </CardHeader>
+            <CardContent>
+            {expenseBreakdownData.length > 0 ? (
+                <ChartContainer config={breakdownChartConfig} className="min-h-[250px] w-full">
+                <BarChart data={expenseBreakdownData} layout="vertical" margin={{ right: 20, left: 10, bottom: 5 }}>
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={10} width={100} />
+                    <Tooltip 
+                    cursor={{ fill: 'hsl(var(--muted)/0.5)' }}
+                    content={<ChartTooltipContent 
+                        formatter={(value) => formatCurrency(value as number)} 
+                        indicator="dot"
+                    />} 
+                    />
+                    <Bar dataKey="total" fill="var(--color-total)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+                </ChartContainer>
+            ) : (
+                <div className="text-center py-10">
+                <BarChart2 className="mx-auto h-12 w-12 text-muted-foreground" />
+                <p className="mt-4 text-muted-foreground">No expense data available to display breakdown.</p>
+                </div>
+            )}
+            </CardContent>
+        </Card>
+      </div>
 
 
        <Card className="mt-6 bg-muted/30 p-4">
