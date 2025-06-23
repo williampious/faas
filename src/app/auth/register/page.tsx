@@ -127,7 +127,7 @@ export default function RegisterPage() {
           </Link>
           <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create Account</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Join AgriFAAS Connect. All new users will have full access.
+            New users registering on this public page are automatically assigned an 'Admin' role with full access.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8 grid gap-6">

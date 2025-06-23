@@ -329,7 +329,7 @@ export default function AdminUsersPage() {
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
             <DialogHeader>
                 <DialogTitle className="flex items-center"><UserPlus className="mr-2 h-5 w-5" />Add New User</DialogTitle>
-                <DialogDescription>Enter the user's details to send them an invitation link. They will set their own password.</DialogDescription>
+                <DialogDescription>Enter the user's details to generate an invitation link. They will use this link to set their own password.</DialogDescription>
             </DialogHeader>
             <div className="flex-grow overflow-y-auto pr-2 py-4">
                 <Form {...inviteUserForm}>
@@ -337,7 +337,7 @@ export default function AdminUsersPage() {
                         {inviteUserError && (
                             <Alert variant="destructive" className="mb-4">
                                 <AlertTriangle className="h-4 w-4" />
-                                <AlertTitle>Error Inviting User</AlertTitle>
+                                <AlertTitle>Error Adding User</AlertTitle>
                                 <ShadcnAlertDescription>{inviteUserError}</ShadcnAlertDescription>
                             </Alert>
                         )}
@@ -358,7 +358,7 @@ export default function AdminUsersPage() {
                                inviteUserForm.reset({ fullName: '', email: '', roles: ['Farmer'] }); 
                                setInviteUserError(null); 
                                setGeneratedInviteLink(null); 
-                             }}>Invite Another User</Button>
+                             }}>Add Another User</Button>
                           </div>
                         ) : (
                           <>
@@ -412,7 +412,7 @@ export default function AdminUsersPage() {
                 {!generatedInviteLink && (
                   <Button type="submit" form="invite-user-form" disabled={isInvitingUser}>
                       {isInvitingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {isInvitingUser ? 'Inviting User...' : 'Generate Invitation Link'}
+                      {isInvitingUser ? 'Processing...' : 'Generate Invitation Link'}
                   </Button>
                 )}
             </DialogFooter>
