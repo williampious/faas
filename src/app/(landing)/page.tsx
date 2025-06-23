@@ -56,15 +56,6 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50">
-      <nav className="container mx-auto px-4 py-4 border-b border-border/20">
-        <div className="flex justify-center items-center gap-x-6 sm:gap-x-8 text-sm font-medium">
-            <Link href="/features" className="text-muted-foreground hover:text-primary transition-colors">Features</Link>
-            <Link href="/installation-guide" className="text-muted-foreground hover:text-primary transition-colors">Install</Link>
-            <Link href="/help" className="text-muted-foreground hover:text-primary transition-colors">Help</Link>
-            <Link href="/faq" className="text-muted-foreground hover:text-primary transition-colors">FAQ</Link>
-        </div>
-      </nav>
-
       <div className="container mx-auto px-4 py-8 sm:py-12 flex flex-col items-center">
         <header className="mb-12 text-center pt-8">
             <Link href="/" className="inline-block mb-4">
@@ -147,6 +138,27 @@ export default function LandingPage() {
                 description={step.description}
               />
             ))}
+          </div>
+        </div>
+
+        <div className="text-center max-w-5xl mx-auto mb-16">
+          <h2 className="text-3xl font-semibold text-foreground/90 mb-10 font-headline">Information & Support</h2>
+          <p className="mt-3 text-lg sm:text-xl text-foreground/80 max-w-2xl mx-auto mb-8">
+            Find out more about our features, how to install the app, and get support.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link href="/features" passHref>
+              <Button variant="secondary" size="lg">Explore Features</Button>
+            </Link>
+            <Link href="/installation-guide" passHref>
+              <Button variant="secondary" size="lg">Installation Guide</Button>
+            </Link>
+            <Link href="/help" passHref>
+              <Button variant="secondary" size="lg">Help Center</Button>
+            </Link>
+            <Link href="/faq" passHref>
+              <Button variant="secondary" size="lg">View FAQ</Button>
+            </Link>
           </div>
         </div>
       </div>
