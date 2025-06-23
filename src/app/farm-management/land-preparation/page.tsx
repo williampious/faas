@@ -20,15 +20,11 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
+import type { PaymentSource, CostCategory, OperationalTransaction } from '@/types/finance';
+import { paymentSources, costCategories } from '@/types/finance';
 
 const activityTypes = ['Field Clearing', 'Weeding', 'Ploughing', 'Harrowing', 'Levelling', 'Manure Spreading', 'Herbicide Application'] as const;
 type LandPreparationActivityType = typeof activityTypes[number];
-
-const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Other'] as const;
-type CostCategory = typeof costCategories[number];
-
-const paymentSources = ['Cash', 'Bank', 'Mobile Money', 'Credit (Payable)'] as const;
-type PaymentSource = typeof paymentSources[number];
 
 const costItemSchema = z.object({
   id: z.string().optional(),
@@ -74,7 +70,8 @@ const activityFormSchema = z.object({
 
 type ActivityFormValues = z.infer<typeof activityFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'landPreparationActivities_v4'; // version up for paymentSource
+const LOCAL_STORAGE_KEY_ACTIVITIES = 'landPreparationActivities_v4';
+const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
 const ACTIVITY_FORM_ID = 'land-prep-activity-form';
 
 export default function LandPreparationPage() {
@@ -114,7 +111,7 @@ export default function LandPreparationPage() {
 
   useEffect(() => {
     setIsMounted(true);
-    const storedActivities = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const storedActivities = localStorage.getItem(LOCAL_STORAGE_KEY_ACTIVITIES);
     if (storedActivities) {
       setActivities(JSON.parse(storedActivities));
     }
@@ -122,7 +119,7 @@ export default function LandPreparationPage() {
 
   useEffect(() => {
     if (isMounted) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(activities));
+      localStorage.setItem(LOCAL_STORAGE_KEY_ACTIVITIES, JSON.stringify(activities));
     }
   }, [activities, isMounted]);
 
@@ -153,8 +150,8 @@ export default function LandPreparationPage() {
     const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
       ...ci,
       id: ci.id || crypto.randomUUID(),
-      category: ci.category || costCategories[0], 
-      paymentSource: ci.paymentSource || paymentSources[0],
+      category: ci.category,
+      paymentSource: ci.paymentSource,
       quantity: Number(ci.quantity),
       unitPrice: Number(ci.unitPrice),
       total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
@@ -162,12 +159,31 @@ export default function LandPreparationPage() {
 
     const totalActivityCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
 
+    // --- Central Transaction Logging ---
+    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
+    let allTransactions: OperationalTransaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
+    // ---
+
     if (editingActivity) {
-      setActivities(
-        activities.map((act) =>
-          act.id === editingActivity.id ? { ...act, ...data, costItems: processedCostItems, totalActivityCost } : act
-        )
-      );
+      const updatedActivity: LandPreparationActivity = { ...editingActivity, ...data, costItems: processedCostItems, totalActivityCost };
+      setActivities(activities.map((act) => (act.id === editingActivity.id ? updatedActivity : act)));
+      
+      // Remove old transactions for this activity and add the updated ones
+      allTransactions = allTransactions.filter(t => t.linkedActivityId !== editingActivity.id);
+      const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
+        id: crypto.randomUUID(),
+        date: data.date,
+        description: item.description,
+        amount: item.total,
+        type: 'Expense',
+        category: item.category,
+        paymentSource: item.paymentSource,
+        linkedModule: 'Land Preparation',
+        linkedActivityId: editingActivity.id,
+        linkedItemId: item.id,
+      }));
+      allTransactions.push(...newTransactions);
+      
       toast({ title: "Activity Updated", description: `${data.activityType} activity has been updated.` });
     } else {
       const newActivity: LandPreparationActivity = {
@@ -178,17 +194,51 @@ export default function LandPreparationPage() {
         totalActivityCost,
       };
       setActivities(prev => [...prev, newActivity]);
+      
+      // Add new transactions for the new activity
+      const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
+        id: crypto.randomUUID(),
+        date: data.date,
+        description: item.description,
+        amount: item.total,
+        type: 'Expense',
+        category: item.category,
+        paymentSource: item.paymentSource,
+        linkedModule: 'Land Preparation',
+        linkedActivityId: newActivity.id,
+        linkedItemId: item.id,
+      }));
+      allTransactions.push(...newTransactions);
+
       toast({ title: "Activity Logged", description: `${data.activityType} activity has been successfully logged.` });
     }
+
+    // Save the updated central transaction ledger
+    localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
+
     setIsModalOpen(false);
     setEditingActivity(null);
     form.reset();
   };
 
   const handleDeleteActivity = (id: string) => {
+    const activityToDelete = activities.find(a => a.id === id);
+    if (!activityToDelete) return;
+    
+    // Update activities state
     setActivities(activities.filter((act) => act.id !== id));
-    toast({ title: "Activity Deleted", description: "The activity has been removed.", variant: "destructive" });
+    
+    // Remove transactions associated with the deleted activity
+    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
+    if(storedTransactions) {
+        let allTransactions: OperationalTransaction[] = JSON.parse(storedTransactions);
+        allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
+        localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
+    }
+
+    toast({ title: "Activity Deleted", description: `Activity "${activityToDelete.activityType}" has been removed.`, variant: "destructive" });
   };
+
 
   if (!isMounted) {
     return null; 
@@ -398,9 +448,3 @@ export default function LandPreparationPage() {
     </div>
   );
 }
-    
-
-    
-
-    
-
