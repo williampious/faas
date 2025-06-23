@@ -56,6 +56,16 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50">
+      <nav className="container mx-auto px-4 py-4 border-b border-border/20">
+        <div className="flex justify-center items-center gap-x-6 sm:gap-x-8 text-sm font-medium">
+            <Link href="/features" className="text-muted-foreground hover:text-primary transition-colors">Features</Link>
+            <Link href="/pricing" className="text-muted-foreground hover:text-primary transition-colors">Pricing</Link>
+            <Link href="/installation-guide" className="text-muted-foreground hover:text-primary transition-colors">Install</Link>
+            <Link href="/help" className="text-muted-foreground hover:text-primary transition-colors">Help</Link>
+            <Link href="/faq" className="text-muted-foreground hover:text-primary transition-colors">FAQ</Link>
+        </div>
+      </nav>
+
       <div className="container mx-auto px-4 py-8 sm:py-12 flex flex-col items-center">
         <header className="mb-12 text-center pt-8">
             <Link href="/" className="inline-block mb-4">
