@@ -5,12 +5,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, HelpCircle, MessageCircleQuestion, LayoutList, Mail, Phone, MapPin, Link as LinkIcon, Menu, DownloadCloud } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowRight, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon } from 'lucide-react';
 
 export default function LandingPage() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   const whyAgriFAASPoints = [
     {
       icon: Lightbulb,
@@ -57,72 +54,20 @@ export default function LandingPage() {
     },
   ];
 
-  const navLinks = [
-    { href: "/features", label: "Features" },
-    { href: "/installation-guide", label: "Installation Guide" },
-    { href: "#contact-us", label: "Contact" },
-  ];
-
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50">
-      {/* Top Navigation Bar */}
-      <nav className="sticky top-0 z-50 bg-background/80 dark:bg-slate-900/80 backdrop-blur-md shadow-sm">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-20">
-            <Link href="/" className="flex-shrink-0">
+      <div className="container mx-auto px-4 py-8 sm:py-12 flex flex-col items-center">
+        <header className="mb-12 text-center pt-8">
+            <Link href="/" className="inline-block mb-4">
               <Image
                 src="/agrifaas-logo.png"
                 alt="AgriFAAS Connect Logo"
-                width={180}
-                height={60}
+                width={200}
+                height={67}
                 objectFit="contain"
                 priority
               />
             </Link>
-            {/* Desktop Menu */}
-            <div className="hidden md:flex items-center space-x-6">
-              {navLinks.map((link) => (
-                <Link key={link.label} href={link.href} passHref>
-                  <Button variant="link" className="text-foreground/80 hover:text-primary dark:text-foreground/70 dark:hover:text-primary text-base">
-                    {link.label}
-                  </Button>
-                </Link>
-              ))}
-            </div>
-            {/* Mobile Menu Button */}
-            <div className="md:hidden">
-              <Button
-                variant="ghost"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                aria-label="Toggle menu"
-              >
-                <Menu className="h-6 w-6" />
-              </Button>
-            </div>
-          </div>
-        </div>
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden absolute top-20 left-0 right-0 bg-background dark:bg-slate-900 shadow-lg py-2 z-40">
-            <div className="container mx-auto px-4 flex flex-col space-y-2">
-              {navLinks.map((link) => (
-                <Link key={link.label} href={link.href} passHref>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-foreground/80 hover:text-primary dark:text-foreground/70 dark:hover:text-primary text-base py-3"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {link.label}
-                  </Button>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-      </nav>
-
-      <div className="container mx-auto px-4 py-8 sm:py-12">
-        <header className="mb-12 text-center pt-8"> {/* Added pt-8 to give space from sticky nav */}
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-primary font-headline">
             Welcome to AgriFAAS Connect
           </h1>
@@ -193,40 +138,6 @@ export default function LandingPage() {
                 description={step.description}
               />
             ))}
-          </div>
-        </div>
-
-        {/* Help and FAQ Section */}
-        <div className="text-center max-w-4xl mx-auto mb-16 py-8 border-t border-border/50">
-          <h2 className="text-2xl font-semibold text-foreground/90 mb-6 font-headline">Need Help?</h2>
-          <p className="text-muted-foreground mb-6">
-            Find answers to common questions or learn more about how to use AgriFAAS Connect.
-          </p>
-          <div className="flex flex-wrap justify-center items-center gap-4">
-            <Link href="/help" passHref>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                <HelpCircle className="mr-2 h-5 w-5" />
-                Visit Help Center
-              </Button>
-            </Link>
-            <Link href="/faq" passHref>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                <MessageCircleQuestion className="mr-2 h-5 w-5" />
-                View FAQs
-              </Button>
-            </Link>
-            <Link href="/features" passHref>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                <LayoutList className="mr-2 h-5 w-5" />
-                View Features
-              </Button>
-            </Link>
-            <Link href="/installation-guide" passHref>
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                <DownloadCloud className="mr-2 h-5 w-5" />
-                Installation Guide
-              </Button>
-            </Link>
           </div>
         </div>
       </div>
@@ -313,4 +224,3 @@ function StepCard({ stepNumber, icon: Icon, title, description }: StepCardProps)
     </Card>
   );
 }
-
