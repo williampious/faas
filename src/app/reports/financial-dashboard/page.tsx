@@ -9,14 +9,24 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import type { OperationalTransaction } from '@/types/finance';
 import { useRouter } from 'next/navigation';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { format, parseISO } from 'date-fns';
 
 const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
+
+interface MonthlyData {
+  month: string;
+  income: number;
+  expense: number;
+}
 
 export default function FinancialDashboardPage() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [netProfitLoss, setNetProfitLoss] = useState(0);
   const [profitMargin, setProfitMargin] = useState(0);
+  const [monthlyChartData, setMonthlyChartData] = useState<MonthlyData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
@@ -33,17 +43,25 @@ export default function FinancialDashboardPage() {
     const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
     let currentTotalIncome = 0;
     let currentTotalExpenses = 0;
+    const monthlyAggregates: { [key: string]: { income: number; expense: number } } = {};
 
     if (storedTransactions) {
       const transactions: OperationalTransaction[] = JSON.parse(storedTransactions);
       
-      currentTotalIncome = transactions
-        .filter(t => t.type === 'Income')
-        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      transactions.forEach(t => {
+        const monthKey = format(parseISO(t.date), 'yyyy-MM');
+        if (!monthlyAggregates[monthKey]) {
+          monthlyAggregates[monthKey] = { income: 0, expense: 0 };
+        }
+        if (t.type === 'Income') {
+          monthlyAggregates[monthKey].income += t.amount || 0;
+        } else {
+          monthlyAggregates[monthKey].expense += t.amount || 0;
+        }
+      });
       
-      currentTotalExpenses = transactions
-        .filter(t => t.type === 'Expense')
-        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      currentTotalIncome = Object.values(monthlyAggregates).reduce((sum, m) => sum + m.income, 0);
+      currentTotalExpenses = Object.values(monthlyAggregates).reduce((sum, m) => sum + m.expense, 0);
     }
     
     const currentNetProfitLoss = currentTotalIncome - currentTotalExpenses;
@@ -54,12 +72,27 @@ export default function FinancialDashboardPage() {
     setNetProfitLoss(currentNetProfitLoss);
     setProfitMargin(currentProfitMargin);
     
+    const chartData = Object.entries(monthlyAggregates)
+      .map(([key, value]) => ({
+        month: format(parseISO(`${key}-01`), 'MMM yy'),
+        income: value.income,
+        expense: value.expense,
+      }))
+      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+    
+    setMonthlyChartData(chartData);
+    
     setIsLoading(false);
 
   }, [isMounted]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
+  };
+  
+  const chartConfig = {
+      income: { label: "Income", color: "hsl(var(--chart-2))" },
+      expense: { label: "Expense", color: "hsl(var(--chart-1))" },
   };
 
   if (!isMounted || isLoading) {
@@ -136,23 +169,40 @@ export default function FinancialDashboardPage() {
       </div>
       
       <Separator className="my-8" />
-
-      <Card className="shadow-lg">
+      
+      <Card>
         <CardHeader>
-            <CardTitle className="font-headline">Future Reporting Features</CardTitle>
-            <CardDescription>We plan to expand this dashboard with more detailed reports and ratios.</CardDescription>
+          <CardTitle>Monthly Income vs. Expense Trends</CardTitle>
+          <CardDescription>A visual summary of your cash flow over recent months.</CardDescription>
         </CardHeader>
         <CardContent>
-            <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                <li>Detailed breakdown of expenses by category (Material, Labor, etc.).</li>
-                <li>Cost and income analysis per crop or per field/plot.</li>
-                <li>Comparison of budgeted vs. actual expenses and income.</li>
-                <li>Visual charts and graphs for trends over time.</li>
-                <li>Liquidity ratios (like Current Ratio) once asset and liability tracking is added.</li>
-                <li>Exportable reports (e.g., CSV, PDF).</li>
-            </ul>
+          {monthlyChartData.length > 0 ? (
+            <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
+              <BarChart data={monthlyChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} />
+                <YAxis tickFormatter={(value) => formatCurrency(value as number).replace('GHS','')} tickLine={false} axisLine={false} tickMargin={10} />
+                <Tooltip 
+                  cursor={{ fill: 'hsl(var(--muted)/0.5)' }}
+                  content={<ChartTooltipContent 
+                    formatter={(value) => formatCurrency(value as number)} 
+                    indicator="dot"
+                  />} 
+                />
+                <Legend />
+                <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          ) : (
+            <div className="text-center py-10">
+              <BarChart2 className="mx-auto h-12 w-12 text-muted-foreground" />
+              <p className="mt-4 text-muted-foreground">No financial data available to display chart.</p>
+              <p className="text-sm text-muted-foreground">Log costs and sales in the Farm Management modules to see trends here.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
+
 
        <Card className="mt-6 bg-muted/30 p-4">
         <CardHeader className="p-0 pb-2">
