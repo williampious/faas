@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon } from 'lucide-react';
+import { ArrowRight, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon, LayoutList, DownloadCloud, LifeBuoy, HelpCircle } from 'lucide-react';
 
 export default function LandingPage() {
   const whyAgriFAASPoints = [
@@ -148,16 +148,28 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link href="/features" passHref>
-              <Button variant="secondary" size="lg">Explore Features</Button>
+              <Button variant="secondary" size="lg">
+                <LayoutList className="mr-2 h-4 w-4" />
+                Explore Features
+              </Button>
             </Link>
             <Link href="/installation-guide" passHref>
-              <Button variant="secondary" size="lg">Installation Guide</Button>
+              <Button variant="secondary" size="lg">
+                <DownloadCloud className="mr-2 h-4 w-4" />
+                Installation Guide
+              </Button>
             </Link>
             <Link href="/help" passHref>
-              <Button variant="secondary" size="lg">Help Center</Button>
+              <Button variant="secondary" size="lg">
+                <LifeBuoy className="mr-2 h-4 w-4" />
+                Help Center
+              </Button>
             </Link>
             <Link href="/faq" passHref>
-              <Button variant="secondary" size="lg">View FAQ</Button>
+              <Button variant="secondary" size="lg">
+                <HelpCircle className="mr-2 h-4 w-4" />
+                View FAQ
+              </Button>
             </Link>
           </div>
         </div>
