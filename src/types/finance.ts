@@ -5,7 +5,7 @@
 export const paymentSources = ['Cash', 'Bank', 'Mobile Money', 'Credit (Payable)'] as const;
 export type PaymentSource = typeof paymentSources[number];
 
-export const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Other'] as const;
+export const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Vet Services', 'Medication', 'Other'] as const;
 export type CostCategory = typeof costCategories[number];
 
 export type TransactionType = 'Income' | 'Expense';

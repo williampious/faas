@@ -20,14 +20,16 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
-import type { HousingRecord, HousingType, CostItem } from '@/types/livestock'; // Adjusted import
-import { housingTypes, costCategories } from '@/types/livestock'; // Adjusted import
+import type { HousingRecord, CostItem } from '@/types/livestock'; // Adjusted import
+import { housingTypes } from '@/types/livestock'; // Adjusted import
+import { costCategories, paymentSources } from '@/types/finance';
 
 // CostItem schema, can be shared or defined here
 const costItemSchema = z.object({
   id: z.string().optional(),
   description: z.string().min(1, "Description is required.").max(100),
   category: z.enum(costCategories, { required_error: "Category is required."}),
+  paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
   quantity: z.preprocess(
     (val) => parseFloat(String(val)),
@@ -158,6 +160,7 @@ export default function HousingInfrastructurePage() {
       ...ci,
       id: ci.id || crypto.randomUUID(),
       category: ci.category || costCategories[0],
+      paymentSource: ci.paymentSource,
       quantity: Number(ci.quantity),
       unitPrice: Number(ci.unitPrice),
       total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
@@ -295,7 +298,7 @@ export default function HousingInfrastructurePage() {
                 <section className="space-y-4 p-4 border rounded-lg">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-primary">Cost Items</h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], unit: '', quantity: 1, unitPrice: 0 })}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], paymentSource: paymentSources[0], unit: '', quantity: 1, unitPrice: 0 })}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item
                     </Button>
                   </div>
@@ -318,7 +321,8 @@ export default function HousingInfrastructurePage() {
                             <FormItem><FormLabel>Description*</FormLabel><FormControl><Input placeholder="e.g., Cement, Roofing Sheets, Labor for construction" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+                           <FormField control={form.control} name={`costItems.${index}.paymentSource`} render={({ field: f }) => (<FormItem><FormLabel>Source*</FormLabel><Select onValueChange={f.onChange} defaultValue={f.value}><FormControl><SelectTrigger><SelectValue placeholder="Paid from..." /></SelectTrigger></FormControl><SelectContent>{paymentSources.map(src => <SelectItem key={src} value={src}>{src}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                           <FormField control={form.control} name={`costItems.${index}.unit`} render={({ field: f }) => (
                             <FormItem><FormLabel>Unit*</FormLabel><FormControl><Input placeholder="e.g., Bag, Piece, Hour" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
@@ -414,4 +418,3 @@ export default function HousingInfrastructurePage() {
   );
 }
     
-
