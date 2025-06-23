@@ -16,6 +16,7 @@ export interface BudgetCategory {
   name: string; // e.g., "Land Preparation", "Planting", "Labor", "Materials"
   budgetedAmount: number; // Sum of line items in this category, or direct entry for now
   actualAmount?: number; // Sum of actuals for line items in this category
+  variance?: number;
   lineItems: BudgetLineItem[]; // Will be used in a future step
 }
 
@@ -27,6 +28,7 @@ export interface Budget {
   categories: BudgetCategory[];
   totalBudgetedAmount: number; // Sum of all category budgeted amounts
   totalActualSpending?: number; // Sum of all category actual amounts
+  totalVariance?: number;
   notes?: string;
   createdAt: string; // ISO datetime string
   updatedAt: string; // ISO datetime string

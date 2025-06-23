@@ -15,9 +15,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Edit2, Trash2, Banknote, CalendarRange, ArrowLeft, Eye } from 'lucide-react';
-import { format, parseISO, isValid, isAfter, isEqual } from 'date-fns';
+import { format, parseISO, isValid, isAfter, isEqual, isWithinInterval } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Budget } from '@/types/budget';
+import type { OperationalTransaction } from '@/types/finance';
 import { useRouter } from 'next/navigation';
 
 const budgetFormSchema = z.object({
@@ -36,7 +37,8 @@ const budgetFormSchema = z.object({
 
 type BudgetFormValues = z.infer<typeof budgetFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'farmBudgets_v1';
+const LOCAL_STORAGE_KEY_BUDGETS = 'farmBudgets_v1';
+const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
 const BUDGET_FORM_ID = 'budget-form';
 
 export default function BudgetingPage() {
@@ -59,24 +61,42 @@ export default function BudgetingPage() {
 
   useEffect(() => {
     setIsMounted(true);
-    const storedBudgets = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const storedBudgets = localStorage.getItem(LOCAL_STORAGE_KEY_BUDGETS);
+    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
+    
     if (storedBudgets) {
-      const parsedBudgets = JSON.parse(storedBudgets) as Budget[];
-      const updatedBudgets = parsedBudgets.map(budget => ({
-        ...budget,
-        totalBudgetedAmount: budget.categories.reduce((sum, cat) => sum + (cat.budgetedAmount || 0), 0)
-      }));
+      const parsedBudgets: Budget[] = JSON.parse(storedBudgets);
+      const allTransactions: OperationalTransaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
+
+      const updatedBudgets = parsedBudgets.map(budget => {
+        const totalBudgetedAmount = budget.categories.reduce((sum, cat) => sum + (cat.budgetedAmount || 0), 0);
+        
+        const budgetInterval = { start: parseISO(budget.startDate), end: parseISO(budget.endDate) };
+        const relevantExpenses = allTransactions
+          .filter(t => 
+            t.type === 'Expense' && 
+            isWithinInterval(parseISO(t.date), budgetInterval)
+          );
+        const totalActualSpending = relevantExpenses.reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        return {
+          ...budget,
+          totalBudgetedAmount,
+          totalActualSpending,
+          totalVariance: totalBudgetedAmount - totalActualSpending,
+        };
+      });
       setBudgets(updatedBudgets);
     }
-  }, []);
+  }, [isMounted]);
 
   useEffect(() => {
     if (isMounted) {
-       const budgetsToStore = budgets.map(budget => ({
-        ...budget,
-        totalBudgetedAmount: budget.categories.reduce((sum, cat) => sum + (cat.budgetedAmount || 0), 0)
-      }));
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(budgetsToStore));
+      const budgetsToStore = budgets.map(budget => {
+         const { totalActualSpending, totalVariance, ...rest } = budget; // Don't store calculated fields
+         return rest;
+      });
+      localStorage.setItem(LOCAL_STORAGE_KEY_BUDGETS, JSON.stringify(budgetsToStore));
     }
   }, [budgets, isMounted]);
 
@@ -135,6 +155,8 @@ export default function BudgetingPage() {
     setBudgets(budgets.filter((b) => b.id !== id));
     toast({ title: "Budget Deleted", description: `Budget "${budgetToDelete?.name}" has been removed.`, variant: "destructive" });
   };
+  
+  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
 
   if (!isMounted) {
     return (
@@ -222,8 +244,9 @@ export default function BudgetingPage() {
                 <TableRow>
                   <TableHead>Budget Name</TableHead>
                   <TableHead>Period</TableHead>
-                  <TableHead>Total Budgeted</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>Budgeted</TableHead>
+                  <TableHead>Actual</TableHead>
+                  <TableHead>Variance</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -235,14 +258,17 @@ export default function BudgetingPage() {
                       {isValid(parseISO(budget.startDate)) ? format(parseISO(budget.startDate), 'PP') : 'N/A'} - 
                       {isValid(parseISO(budget.endDate)) ? format(parseISO(budget.endDate), 'PP') : 'N/A'}
                     </TableCell>
-                    <TableCell>GHS {budget.totalBudgetedAmount.toFixed(2)}</TableCell>
-                    <TableCell>{isValid(parseISO(budget.createdAt)) ? format(parseISO(budget.createdAt), 'PP') : 'N/A'}</TableCell>
+                    <TableCell>{formatCurrency(budget.totalBudgetedAmount)}</TableCell>
+                    <TableCell>{formatCurrency(budget.totalActualSpending || 0)}</TableCell>
+                    <TableCell className={(budget.totalVariance || 0) < 0 ? 'text-red-600' : 'text-green-600'}>
+                      {formatCurrency(budget.totalVariance || 0)}
+                    </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="outline" size="sm" onClick={() => router.push(`/reports/budgeting/${budget.id}`)}>
-                        <Eye className="h-3.5 w-3.5 mr-1" /> View/Manage Details
+                        <Eye className="h-3.5 w-3.5 mr-1" /> Details
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => handleOpenModal(budget)}>
-                        <CalendarRange className="h-3.5 w-3.5 mr-1" /> Edit Shell
+                        <CalendarRange className="h-3.5 w-3.5 mr-1" /> Edit
                       </Button>
                       <Button variant="destructive" size="sm" onClick={() => handleDeleteBudget(budget.id)}>
                         <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
@@ -267,9 +293,9 @@ export default function BudgetingPage() {
             <CardTitle className="text-lg font-semibold text-secondary-foreground">Budgeting Module - Next Steps</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-sm text-muted-foreground space-y-1">
-            <p>&bull; <strong>Detailed Budget Breakdown:</strong> Click "View/Manage Details" on a budget to add categories (e.g., Land Prep, Planting, Labor) and specific line items with budgeted amounts.</p>
-            <p>&bull; <strong>Budget vs. Actuals:</strong> Future enhancements will link these budgets to actual income and expenses logged in other modules for variance analysis.</p>
-            <p>&bull; <strong>Reporting:</strong> Generate reports to see how your spending aligns with your budget.</p>
+            <p>&bull; <strong>Detailed Budget Breakdown:</strong> Click "Details" on a budget to add categories (e.g., Land Prep, Planting, Labor) and specific line items with budgeted amounts.</p>
+            <p>&bull; <strong>Budget vs. Actuals:</strong> The dashboard now links budgets to actual income and expenses logged in other modules for variance analysis.</p>
+            <p>&bull; <strong>Reporting:</strong> The next step is to generate detailed visual reports to see how your spending aligns with your budget over time.</p>
         </CardContent>
       </Card>
     </div>
