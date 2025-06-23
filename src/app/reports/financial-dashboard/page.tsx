@@ -4,12 +4,12 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { DollarSign, TrendingUp, TrendingDown, FileText, BarChart2, Percent } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, FileText, BarChart2, Percent, PieChartIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import type { OperationalTransaction } from '@/types/finance';
 import { useRouter } from 'next/navigation';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { format, parseISO } from 'date-fns';
 
@@ -24,7 +24,20 @@ interface MonthlyData {
 interface CategoryData {
   name: string;
   total: number;
+  percentage: number;
+  fill: string;
 }
+
+const PIE_CHART_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-1) / 0.7)",
+  "hsl(var(--chart-2) / 0.7)",
+];
+
 
 export default function FinancialDashboardPage() {
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -36,10 +49,6 @@ export default function FinancialDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!isMounted) return;
@@ -94,8 +103,13 @@ export default function FinancialDashboardPage() {
       .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
       
     const categoryData = Object.entries(expenseByCategory)
-      .map(([name, total]) => ({ name, total }))
-      .sort((a, b) => b.total - a.total); // Sort by most expensive first
+      .map(([name, total], index) => ({ 
+        name, 
+        total,
+        percentage: currentTotalExpenses > 0 ? (total / currentTotalExpenses) * 100 : 0,
+        fill: PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
+      }))
+      .sort((a, b) => b.total - a.total);
     
     setMonthlyChartData(monthlyData);
     setExpenseBreakdownData(categoryData);
@@ -108,15 +122,6 @@ export default function FinancialDashboardPage() {
     return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
   };
   
-  const monthlyChartConfig = {
-      income: { label: "Income", color: "hsl(var(--chart-2))" },
-      expense: { label: "Expense", color: "hsl(var(--chart-1))" },
-  };
-  
-  const breakdownChartConfig = {
-      total: { label: "Total Spent", color: "hsl(var(--chart-4))" },
-  };
-
   if (!isMounted || isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
@@ -187,7 +192,6 @@ export default function FinancialDashboardPage() {
             </p>
           </CardContent>
         </Card>
-
       </div>
       
       <Separator className="my-8" />
@@ -195,27 +199,15 @@ export default function FinancialDashboardPage() {
       <div className="grid lg:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Income vs. Expense</CardTitle>
+            <CardTitle>Monthly Income vs. Expense (Coming Soon)</CardTitle>
             <CardDescription>A visual summary of your cash flow over recent months.</CardDescription>
           </CardHeader>
           <CardContent>
             {monthlyChartData.length > 0 ? (
-              <ChartContainer config={monthlyChartConfig} className="min-h-[250px] w-full">
-                <BarChart data={monthlyChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} />
-                  <YAxis tickFormatter={(value) => formatCurrency(value as number).replace('GHS','')} tickLine={false} axisLine={false} tickMargin={10} />
-                  <Tooltip 
-                    cursor={{ fill: 'hsl(var(--muted)/0.5)' }}
-                    content={<ChartTooltipContent 
-                      formatter={(value) => formatCurrency(value as number)} 
-                      indicator="dot"
-                    />} 
-                  />
-                  <Legend />
-                  <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ChartContainer>
+              <div className="text-center py-10 opacity-50">
+                <BarChart2 className="mx-auto h-12 w-12 text-muted-foreground" />
+                <p className="mt-4 text-muted-foreground">Monthly Trend Chart is under development.</p>
+              </div>
             ) : (
               <div className="text-center py-10">
                 <BarChart2 className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -232,30 +224,74 @@ export default function FinancialDashboardPage() {
             </CardHeader>
             <CardContent>
             {expenseBreakdownData.length > 0 ? (
-                <ChartContainer config={breakdownChartConfig} className="min-h-[250px] w-full">
-                <BarChart data={expenseBreakdownData} layout="vertical" margin={{ right: 20, left: 10, bottom: 5 }}>
-                    <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} tickMargin={10} width={100} />
-                    <Tooltip 
-                    cursor={{ fill: 'hsl(var(--muted)/0.5)' }}
-                    content={<ChartTooltipContent 
-                        formatter={(value) => formatCurrency(value as number)} 
-                        indicator="dot"
-                    />} 
-                    />
-                    <Bar dataKey="total" fill="var(--color-total)" radius={[0, 4, 4, 0]} />
-                </BarChart>
-                </ChartContainer>
+                <div className="w-full h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Tooltip
+                                content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                        const data = payload[0].payload as CategoryData;
+                                        return (
+                                        <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                                    Category
+                                                    </span>
+                                                    <span className="font-bold text-muted-foreground">
+                                                    {data.name}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                                    Amount
+                                                    </span>
+                                                    <span className="font-bold">
+                                                    {formatCurrency(data.total)}
+                                                    </span>
+                                                </div>
+                                                 <div className="flex flex-col">
+                                                    <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                                    Percentage
+                                                    </span>
+                                                    <span className="font-bold">
+                                                    {data.percentage.toFixed(1)}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        );
+                                    }
+                                    return null;
+                                }}
+                            />
+                            <Pie
+                                data={expenseBreakdownData}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                                outerRadius={100}
+                                dataKey="total"
+                                nameKey="name"
+                            >
+                                {expenseBreakdownData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                            </Pie>
+                            <Legend iconSize={12} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
             ) : (
                 <div className="text-center py-10">
-                <BarChart2 className="mx-auto h-12 w-12 text-muted-foreground" />
-                <p className="mt-4 text-muted-foreground">No expense data available to display breakdown.</p>
+                    <PieChartIcon className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <p className="mt-4 text-muted-foreground">No expense data available to display breakdown.</p>
                 </div>
             )}
             </CardContent>
         </Card>
       </div>
-
 
        <Card className="mt-6 bg-muted/30 p-4">
         <CardHeader className="p-0 pb-2">
