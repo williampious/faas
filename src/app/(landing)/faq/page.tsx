@@ -5,38 +5,42 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { ArrowLeft, HelpCircle, MessageCircleQuestion } from 'lucide-react';
+import { MessageCircleQuestion, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 
 export default function FaqPage() {
   const faqItems = [
     {
       question: "What is AgriFAAS Connect?",
-      answer: "AgriFAAS Connect is a comprehensive farm management platform designed to simplify agricultural operations, from planning and planting to harvesting and marketing. It leverages AI and data to help users make smarter decisions and boost productivity."
+      answer: "AgriFAAS Connect is a comprehensive farm management platform designed to simplify agricultural operations. It helps you log and manage everything from land preparation and planting to harvesting and sales. It also includes tools for task management, inventory, budgeting, AI-powered advice, and specialized features for Agric Extension Officers (AEOs)."
     },
     {
       question: "How do I register for an account?",
-      answer: "You can register by clicking the 'Register' button on the homepage and filling out the required information. The first user to register will automatically be assigned an 'Admin' role."
+      answer: "You can register by clicking the 'Register' button on the homepage. Any new user who registers through this public page is automatically assigned an 'Admin' role, giving them full access to all features, including User Management."
+    },
+    {
+      question: "How do I add my team members?",
+      answer: "Once you are registered as an Admin, you can navigate to the 'Admin' section and use the 'User Management' dashboard. Click the 'Add New User' button to invite team members via a secure link. This allows you to assign specific roles (like Manager, Farmer, or Farm Staff) to them before they complete their registration."
     },
     {
       question: "Can I use AgriFAAS Connect on my mobile device?",
-      answer: "Yes, AgriFAAS Connect is designed to be responsive and accessible on various devices, including smartphones and tablets. We also offer PWA (Progressive Web App) features for an app-like experience on mobile."
+      answer: "Yes, AgriFAAS Connect is designed as a Progressive Web App (PWA). It's fully responsive and can be 'installed' on your smartphone or tablet's home screen for an app-like experience with offline access to cached assets."
     },
     {
       question: "How is my data stored and secured?",
-      answer: "User profile data is stored securely in Firebase Firestore. Operational data logged within specific modules (like Land Prep, Planting, Tasks, Calendar) is currently stored in your browser's local storage for offline accessibility. We prioritize data security and use Firebase's robust infrastructure."
+      answer: "User profile data is stored securely in Firebase Firestore. Operational data logged within specific modules (like Land Prep, Planting, Tasks, Inventory) is currently stored in your browser's local storage. This allows for offline accessibility on the device you use to enter the data. We prioritize data security and use Firebase's robust infrastructure."
     },
     {
-      question: "What if I forget my password?",
-      answer: "You can use the 'Forgot your password?' link on the Sign In page to initiate a password reset process. Instructions will be sent to your registered email address."
+        question: "What if I forget my password?",
+        answer: "The 'Forgot your password?' link on the Sign In page is a placeholder for a planned feature. Full password reset functionality will be implemented in a future update."
+    },
+    {
+        question: "What do the AEO (Agric Extension Officer) tools do?",
+        answer: "The AEO module provides specialized tools for extension officers. It includes a dedicated dashboard, a Farmer Directory to manage and view profiles of farmers in their region, and detailed profile views to track farmer-specific information, challenges, and needs."
     },
     {
         question: "How do I get AI Planting Advice?",
-        answer: "Navigate to the 'AI Advice' section from your dashboard. You'll need to provide details about your farm's weather data, soil conditions, and the crop you intend to plant. The system will then generate tailored advice."
-    },
-    {
-        question: "Who can see my farm data?",
-        answer: "Your specific farm data is private to your account. If you are part of an organization or group within AgriFAAS Connect (a feature planned for the future), data sharing might be configured based on roles and permissions set by your administrator."
+        answer: "Navigate to the 'AI Advice' section from your dashboard. You'll need to provide details about your farm's weather data, soil conditions, and the crop you intend to plant. The system will then generate tailored advice using Genkit."
     }
   ];
 

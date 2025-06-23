@@ -20,24 +20,29 @@ export default function HelpPage() {
       link: "#farm-operations"
     },
     {
-      title: "Understanding AI Planting Advice",
-      description: "How to input data and interpret the AI-generated planting recommendations.",
-      link: "#ai-advice"
-    },
-    {
       title: "Using the Farm Calendar and Task Manager",
       description: "Tips for effectively planning your activities and managing tasks.",
       link: "#planning-tools"
     },
     {
+      title: "Financial Reporting & Budgeting",
+      description: "Understand the financial dashboard, track income/expenses, and create budgets.",
+      link: "#financials"
+    },
+    {
+      title: "Using AEO Tools",
+      description: "A guide for Agric Extension Officers on using the farmer directory and other specialized tools.",
+      link: "#aeo-tools"
+    },
+    {
+      title: "Understanding AI Planting Advice",
+      description: "How to input data and interpret the AI-generated planting recommendations.",
+      link: "#ai-advice"
+    },
+    {
       title: "Account & Profile Settings",
       description: "How to update your personal information, password, and notification preferences.",
       link: "#account-settings"
-    },
-    {
-      title: "Troubleshooting Common Issues",
-      description: "Solutions for frequent problems or error messages.",
-      link: "#troubleshooting"
     }
   ];
 
@@ -66,7 +71,7 @@ export default function HelpPage() {
           <CardHeader>
             <CardTitle className="text-2xl">Help Topics</CardTitle>
             <CardDescription>
-              Browse through our help topics to find the information you need.
+              Browse through our help topics to find the information you need. Detailed guides are coming soon.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
