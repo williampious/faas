@@ -19,13 +19,14 @@ export interface LivestockProductionFocus {
 }
 
 // --- Cost Item related types (can be shared or re-defined if specific adjustments are needed) ---
-export const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Other'] as const;
+export const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Vet Services', 'Medication', 'Other'] as const;
 export type CostCategory = typeof costCategories[number];
 
 export interface CostItem {
   id: string;
   description: string;
   category: CostCategory;
+  paymentSource: 'Cash' | 'Bank' | 'Mobile Money' | 'Credit (Payable)';
   unit: string;
   quantity: number;
   unitPrice: number;
@@ -55,9 +56,28 @@ export interface HousingRecord {
   updatedAt: string; // ISO datetime string
 }
 
+// --- Health Care & Biosecurity Types ---
+export const healthActivityTypes = ['Vaccination', 'Deworming', 'Treatment', 'Health Check', 'Biosecurity Measure', 'Other'] as const;
+export type HealthActivityType = typeof healthActivityTypes[number];
 
-// Future types for feeding, health etc. will go here
+export interface HealthRecord {
+  id: string;
+  activityType: HealthActivityType;
+  date: string; // ISO string "yyyy-MM-dd"
+  animalsAffected: string; // e.g., "Broiler Batch 1", "All Goats"
+  medicationOrTreatment?: string;
+  dosage?: string;
+  administeredBy?: string; // e.g., "Self", "Vet"
+  notes?: string;
+  costItems: CostItem[];
+  totalActivityCost: number;
+  createdAt: string; // ISO datetime string
+  updatedAt: string; // ISO datetime string
+}
+
+
+// Future types for feeding, etc. will go here
 // e.g.,
 // export interface FeedingSchedule { ... }
-// export interface HealthLogEntry { ... }
+
 

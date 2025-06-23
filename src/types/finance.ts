@@ -16,6 +16,7 @@ export type LinkedModule =
   | 'Crop Maintenance' 
   | 'Harvesting' 
   | 'Animal Housing'
+  | 'Animal Health'
   | 'Other';
 
 export interface OperationalTransaction {
