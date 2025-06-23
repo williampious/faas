@@ -36,6 +36,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
   SidebarGroupLabel,
+  SidebarMenuSkeleton
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/contexts/user-profile-context';
@@ -97,17 +98,14 @@ export function MainNav() {
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
-    if (href === '/dashboard' || href === '/admin/dashboard' || href === '/aeo/dashboard' || href === '/hr/dashboard') {
+    if (['/dashboard', '/admin/dashboard', '/aeo/dashboard', '/hr/dashboard', '/reports/financial-dashboard'].includes(href)) {
         return pathname === href;
     }
-    // For nested farm or animal production pages, make the parent active
-    if (href === '/farm-management' && pathname.startsWith('/farm-management/')) {
-        return true;
-    }
-    if (href === '/animal-production' && pathname.startsWith('/animal-production/')) {
-        return true;
-    }
-    return pathname.startsWith(href);
+    if (href === '/farm-management' && pathname.startsWith('/farm-management')) return true;
+    if (href === '/animal-production' && pathname.startsWith('/animal-production')) return true;
+    if (href === '/reports/budgeting' && pathname.startsWith('/reports/budgeting')) return true;
+    
+    return pathname.startsWith(href) && href.length > 1; // Avoids matching "/" for everything
   };
 
   const canViewItem = (item: NavItem): boolean => {
@@ -236,4 +234,3 @@ export function MainNav() {
     </SidebarMenu>
   );
 }
-

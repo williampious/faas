@@ -5,33 +5,12 @@ import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DollarSign, TrendingUp, TrendingDown, FileText, BarChart2 } from 'lucide-react';
-import { Button } from '@/components/ui/button'; // For future actions
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import type { OperationalTransaction } from '@/types/finance';
+import { useRouter } from 'next/navigation';
 
-// Define simplified structures for local storage data
-interface CostItem {
-  total: number;
-}
-interface LandPreparationActivity {
-  totalActivityCost: number;
-}
-interface PlantingRecord {
-  totalPlantingCost: number;
-}
-interface CropMaintenanceActivity {
-  totalActivityCost: number;
-}
-interface HarvestingRecord {
-  totalHarvestCost: number;
-  totalSalesIncome: number;
-}
-
-const LOCAL_STORAGE_KEYS = {
-  landPreparation: 'landPreparationActivities_v3',
-  planting: 'plantingRecords_v2', // Assuming v2 had costCategories, if not adjust
-  cropMaintenance: 'cropMaintenanceActivities_v2', // Assuming v2 had costCategories, if not adjust
-  harvesting: 'harvestingRecords_v3', // This one includes sales
-};
+const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
 
 export default function FinancialDashboardPage() {
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -39,6 +18,7 @@ export default function FinancialDashboardPage() {
   const [netProfitLoss, setNetProfitLoss] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setIsMounted(true);
@@ -48,47 +28,36 @@ export default function FinancialDashboardPage() {
     if (!isMounted) return;
 
     setIsLoading(true);
-    let currentTotalExpenses = 0;
-    let currentTotalIncome = 0;
+    
+    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
+    if (storedTransactions) {
+      const transactions: OperationalTransaction[] = JSON.parse(storedTransactions);
+      
+      const currentTotalIncome = transactions
+        .filter(t => t.type === 'Income')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      
+      const currentTotalExpenses = transactions
+        .filter(t => t.type === 'Expense')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-    // Land Preparation Costs
-    const landPrepData = localStorage.getItem(LOCAL_STORAGE_KEYS.landPreparation);
-    if (landPrepData) {
-      const activities: LandPreparationActivity[] = JSON.parse(landPrepData);
-      currentTotalExpenses += activities.reduce((sum, act) => sum + (act.totalActivityCost || 0), 0);
+      setTotalIncome(currentTotalIncome);
+      setTotalExpenses(currentTotalExpenses);
+      setNetProfitLoss(currentTotalIncome - currentTotalExpenses);
+    } else {
+      // If no transactions, reset all values to 0
+      setTotalIncome(0);
+      setTotalExpenses(0);
+      setNetProfitLoss(0);
     }
-
-    // Planting Costs
-    const plantingData = localStorage.getItem(LOCAL_STORAGE_KEYS.planting);
-    if (plantingData) {
-      const records: PlantingRecord[] = JSON.parse(plantingData);
-      currentTotalExpenses += records.reduce((sum, rec) => sum + (rec.totalPlantingCost || 0), 0);
-    }
-
-    // Crop Maintenance Costs
-    const cropMaintenanceData = localStorage.getItem(LOCAL_STORAGE_KEYS.cropMaintenance);
-    if (cropMaintenanceData) {
-      const activities: CropMaintenanceActivity[] = JSON.parse(cropMaintenanceData);
-      currentTotalExpenses += activities.reduce((sum, act) => sum + (act.totalActivityCost || 0), 0);
-    }
-
-    // Harvesting Costs & Income
-    const harvestingData = localStorage.getItem(LOCAL_STORAGE_KEYS.harvesting);
-    if (harvestingData) {
-      const records: HarvestingRecord[] = JSON.parse(harvestingData);
-      currentTotalExpenses += records.reduce((sum, rec) => sum + (rec.totalHarvestCost || 0), 0);
-      currentTotalIncome += records.reduce((sum, rec) => sum + (rec.totalSalesIncome || 0), 0);
-    }
-
-    setTotalExpenses(currentTotalExpenses);
-    setTotalIncome(currentTotalIncome);
-    setNetProfitLoss(currentTotalIncome - currentTotalExpenses);
+    
     setIsLoading(false);
 
   }, [isMounted]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'GHS' }).format(amount); // Assuming GHS, can be made dynamic
+    // Using GHS currency for Ghana, can be made dynamic later
+    return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
   };
 
   if (!isMounted || isLoading) {
@@ -106,6 +75,11 @@ export default function FinancialDashboardPage() {
         title="Financial Dashboard"
         icon={FileText}
         description="Overview of your farm's financial performance based on logged activities and sales."
+        action={
+            <Button onClick={() => router.push('/reports/budgeting')}>
+                Manage Budgets
+            </Button>
+        }
       />
 
       <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -156,7 +130,6 @@ export default function FinancialDashboardPage() {
             <ul className="list-disc list-inside text-muted-foreground space-y-2">
                 <li>Detailed breakdown of expenses by category (Material, Labor, etc.).</li>
                 <li>Cost and income analysis per crop or per field/plot.</li>
-                <li>Budgeting tools to plan for upcoming seasons.</li>
                 <li>Comparison of budgeted vs. actual expenses and income.</li>
                 <li>Visual charts and graphs for trends over time.</li>
                 <li>Exportable reports (e.g., CSV, PDF).</li>
@@ -171,7 +144,7 @@ export default function FinancialDashboardPage() {
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
             <p>&bull; This dashboard provides a high-level financial summary based on data logged in the Farm Management modules.</p>
             <p>&bull; All data is currently sourced from your browser's local storage. Ensure you use the same browser to maintain data continuity.</p>
-            <p>&bull; If cost categories in underlying modules (Planting, Crop Maintenance) were not updated to v2 yet, their costs might not be fully reflected here. Update their local storage keys if needed (e.g. `plantingRecords_v2`, `cropMaintenanceActivities_v2`).</p>
+            <p>&bull; To add more data, log costs and sales in the "Harvesting" module, or costs in the "Land Preparation" module. Other modules will be integrated soon.</p>
         </CardContent>
       </Card>
     </div>

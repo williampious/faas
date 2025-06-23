@@ -36,7 +36,7 @@ const budgetFormSchema = z.object({
 
 type BudgetFormValues = z.infer<typeof budgetFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'farmBudgets_v1'; // Keep v1 for now, structure of budget shell hasn't changed much
+const LOCAL_STORAGE_KEY = 'farmBudgets_v1';
 const BUDGET_FORM_ID = 'budget-form';
 
 export default function BudgetingPage() {
@@ -62,7 +62,6 @@ export default function BudgetingPage() {
     const storedBudgets = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (storedBudgets) {
       const parsedBudgets = JSON.parse(storedBudgets) as Budget[];
-      // Ensure totalBudgetedAmount is correctly calculated for display
       const updatedBudgets = parsedBudgets.map(budget => ({
         ...budget,
         totalBudgetedAmount: budget.categories.reduce((sum, cat) => sum + (cat.budgetedAmount || 0), 0)
@@ -106,7 +105,7 @@ export default function BudgetingPage() {
     const now = new Date().toISOString();
     if (editingBudget) {
       const updatedBudget: Budget = {
-        ...editingBudget, // Retain existing categories and totalBudgetedAmount (which might be 0 if no categories yet)
+        ...editingBudget,
         ...data,
         notes: data.notes || undefined,
         updatedAt: now,
@@ -276,4 +275,3 @@ export default function BudgetingPage() {
     </div>
   );
 }
-
