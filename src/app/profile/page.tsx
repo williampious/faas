@@ -114,7 +114,19 @@ export default function UserProfilePage() {
 
   useEffect(() => {
     if (userProfile) {
-      const dob = userProfile.dateOfBirth && isValid(parseISO(userProfile.dateOfBirth)) ? parseISO(userProfile.dateOfBirth) : undefined;
+      let dob: Date | undefined;
+      const dobValue = userProfile.dateOfBirth as any;
+      if (dobValue) {
+          if (typeof dobValue.toDate === 'function') { // Firestore Timestamp
+              dob = dobValue.toDate();
+          } else if (typeof dobValue === 'string') { // ISO String
+              const parsed = parseISO(dobValue);
+              if (isValid(parsed)) {
+                  dob = parsed;
+              }
+          }
+      }
+      
       form.reset({
         fullName: userProfile.fullName || '',
         phoneNumber: userProfile.phoneNumber || '',
@@ -518,7 +530,7 @@ export default function UserProfilePage() {
               <CardContent className="text-sm">
                 <InfoItem icon={Mail} label="Email" value={currentProfile.emailAddress || 'Not provided'} />
                 <InfoItem icon={Phone} label="Phone" value={currentProfile.phoneNumber || 'Not set'} />
-                {currentProfile.dateOfBirth && isValid(parseISO(currentProfile.dateOfBirth)) && <InfoItem label="Date of Birth" value={format(parseISO(currentProfile.dateOfBirth), 'MMMM d, yyyy')} />}
+                {currentProfile.dateOfBirth && <InfoItem icon={CalendarDaysIcon} label="Date of Birth" value={formatTimestamp(currentProfile.dateOfBirth, 'MMMM d, yyyy')} />}
                 <InfoItem icon={Briefcase} label="Gender" value={currentProfile.gender || 'Not specified'}/>
                 {currentProfile.nationalId && <InfoItem label="National ID" value={currentProfile.nationalId} />}
                 {currentProfile.address && (
