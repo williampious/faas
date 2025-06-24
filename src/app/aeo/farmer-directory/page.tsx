@@ -54,7 +54,7 @@ const farmerFormSchema = z.object({
 type FarmerFormValues = z.infer<typeof farmerFormSchema>;
 
 export default function FarmerDirectoryPage() {
-  const { userProfile: aeoProfile, isLoading: isAeoProfileLoading } = useUserProfile();
+  const { userProfile: aeoProfile, isLoading: isAeoProfileLoading } from 'useUserProfile';
   const { toast } = useToast();
   const router = useRouter();
   const [farmers, setFarmers] = useState<AgriFAASUserProfile[]>([]);
@@ -129,7 +129,6 @@ export default function FarmerDirectoryPage() {
 
     const newFarmerProfile: AgriFAASUserProfile = {
       userId: farmerId,
-      firebaseUid: farmerId, 
       fullName: data.fullName,
       phoneNumber: data.phoneNumber || undefined,
       emailAddress: data.emailAddress || undefined,

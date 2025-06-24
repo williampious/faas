@@ -7,12 +7,13 @@ To get started, take a look at src/app/page.tsx.
 
 ## Important Note on Firestore Security Rules
 
-If you encounter permission errors, especially during **Farm Setup** ("Failed to create farm: MISSING_PERMISSION"), when **inviting users**, or when **managing farm plots**, you must update your Firestore Security Rules. The default rules are too restrictive.
+If you encounter permission errors, especially during **Farm Setup**, **inviting users**, **managing farm plots**, or when an **AEO manages farmers**, you must update your Firestore Security Rules. The default rules are too restrictive.
 
 The setup and multi-tenancy features require permission to:
 1.  Create a document in the `farms` collection.
 2.  Update the `users` document with the new `farmId`.
 3.  Read and write to collections (like `plots`) where the document's `farmId` matches the user's `farmId`.
+4.  Allow Agric Extension Officers (AEOs) to create and manage farmer profiles.
 
 Here is a recommended ruleset that enables these core functionalities. Copy and paste this into your Firebase Console -> Firestore Database -> Rules.
 
@@ -27,6 +28,12 @@ service cloud.firestore {
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin']);
     }
+    
+    function isUserAEO() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Agric Extension Officer']);
+    }
 
     // A helper function to check if a user is part of a specific farm.
     function isFarmMember(farmId) {
@@ -36,12 +43,41 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow create: if request.auth != null && (request.auth.uid == userId || isUserAdmin());
-      allow read: if request.auth != null && (request.auth.uid == userId || isUserAdmin());
-      // Users need to be able to update their own profile, including adding the farmId during setup.
-      allow update: if request.auth != null && (request.auth.uid == userId || isUserAdmin());
+      // Who can create a user document?
+      // 1. A user registering themselves.
+      // 2. An Admin inviting a user.
+      // 3. An AEO adding a farmer.
+      allow create: if request.auth != null && (
+                      request.auth.uid == userId || 
+                      isUserAdmin() ||
+                      (isUserAEO() && request.resource.data.managedByAEO == request.auth.uid)
+                    );
+
+      // Who can read a user document?
+      // 1. The user themselves.
+      // 2. An Admin.
+      // 3. An AEO reading a profile of a farmer they manage (for 'get' operations).
+      //    The 'list' operation in the farmer directory is secured by the 'where' clause in the client query.
+      allow read: if request.auth != null && (
+                    request.auth.uid == userId ||
+                    isUserAdmin() ||
+                    (isUserAEO() && resource.data.managedByAEO == request.auth.uid)
+                  );
+
+      // Who can update a user document?
+      // 1. The user themselves.
+      // 2. An Admin.
+      // 3. An AEO updating a farmer they manage.
+      allow update: if request.auth != null && (
+                      request.auth.uid == userId ||
+                      isUserAdmin() ||
+                      (isUserAEO() && resource.data.managedByAEO == request.auth.uid)
+                    );
+
+      // Only admins can delete user profiles.
       allow delete: if isUserAdmin();
     }
+
 
     match /farms/{farmId} {
       // Any authenticated user can create a farm, as long as they set themselves as the owner.
@@ -110,7 +146,7 @@ service cloud.firestore {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
-
+    
     match /transactions/{transactionId} {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read: if isFarmMember(resource.data.farmId);
@@ -127,4 +163,7 @@ service cloud.firestore {
 }
 ```
 Apply these rules in your Firebase Console, and the farm setup and plot management features should work perfectly.
+
+
+
 
