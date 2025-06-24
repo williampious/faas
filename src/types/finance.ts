@@ -14,7 +14,7 @@ export type LinkedModule =
   | 'Land Preparation' 
   | 'Planting' 
   | 'Crop Maintenance' 
-  | 'Harvesting' 
+  | 'Harvesting'
   | 'Animal Housing'
   | 'Animal Health'
   | 'Other';

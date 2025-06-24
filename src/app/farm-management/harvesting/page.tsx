@@ -6,14 +6,14 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Wheat, PlusCircle, Trash2, Edit2, ArrowLeft, DollarSign } from 'lucide-react';
+import { Wheat, PlusCircle, Trash2, Edit2, ArrowLeft, DollarSign, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, parseISO, isValid } from 'date-fns';
@@ -22,9 +22,12 @@ import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
 import type { PaymentSource, CostCategory, OperationalTransaction } from '@/types/finance';
 import { paymentSources, costCategories } from '@/types/finance';
+import type { HarvestingRecord, CostItem, SaleItem, YieldUnit } from '@/types/harvesting';
+import { yieldUnits } from '@/types/harvesting';
+import { useUserProfile } from '@/contexts/user-profile-context';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 
-const yieldUnits = ['kg', 'bags (50kg)', 'bags (100kg)', 'crates', 'tons', 'bunches', 'pieces'] as const;
-type YieldUnit = typeof yieldUnits[number];
 
 const costItemSchema = z.object({
   id: z.string().optional(),
@@ -32,36 +35,19 @@ const costItemSchema = z.object({
   category: z.enum(costCategories, { required_error: "Category is required."}),
   paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
-  quantity: z.preprocess(
-    (val) => parseFloat(String(val)),
-    z.number().min(0.01, "Quantity must be greater than 0.")
-  ),
-  unitPrice: z.preprocess(
-    (val) => parseFloat(String(val)),
-    z.number().min(0.01, "Unit price must be greater than 0.")
-  ),
+  quantity: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Quantity must be greater than 0.")),
+  unitPrice: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Unit price must be greater than 0.")),
   total: z.number().optional(),
 });
 
 type CostItemFormValues = z.infer<typeof costItemSchema>;
 
-interface CostItem extends CostItemFormValues {
-  id: string;
-  total: number;
-}
-
 const saleItemSchema = z.object({
   id: z.string().optional(),
   buyer: z.string().min(1, "Buyer name is required.").max(100),
-  quantitySold: z.preprocess(
-    (val) => parseFloat(String(val)),
-    z.number().min(0.01, "Quantity sold must be greater than 0.")
-  ),
+  quantitySold: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Quantity sold must be greater than 0.")),
   unitOfSale: z.string().min(1, "Unit of sale is required.").max(50),
-  pricePerUnit: z.preprocess(
-    (val) => parseFloat(String(val)),
-    z.number().min(0.01, "Price per unit must be greater than 0.")
-  ),
+  pricePerUnit: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Price per unit must be greater than 0.")),
   saleDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid sale date is required." }),
   paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   totalSaleAmount: z.number().optional(),
@@ -69,40 +55,12 @@ const saleItemSchema = z.object({
 
 type SaleItemFormValues = z.infer<typeof saleItemSchema>;
 
-interface SaleItem extends SaleItemFormValues {
-  id: string;
-  totalSaleAmount: number;
-}
-
-interface HarvestingRecord {
-  id: string;
-  cropType: string;
-  variety?: string;
-  dateHarvested: string;
-  areaHarvested: string;
-  yieldQuantity: number;
-  yieldUnit: YieldUnit;
-  qualityGrade?: string;
-  postHarvestActivities?: string;
-  storageLocation?: string;
-  notes?: string;
-  costItems: CostItem[];
-  totalHarvestCost: number;
-  salesDetails?: SaleItem[];
-  totalSalesIncome: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
 const harvestRecordFormSchema = z.object({
   cropType: z.string().min(1, { message: "Crop type is required." }).max(100),
   variety: z.string().max(100).optional(),
   dateHarvested: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid date is required." }),
   areaHarvested: z.string().min(1, { message: "Area harvested is required." }).max(100),
-  yieldQuantity: z.preprocess(
-    (val) => parseFloat(String(val)),
-    z.number().min(0.01, "Yield quantity must be greater than 0.")
-  ),
+  yieldQuantity: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Yield quantity must be greater than 0.")),
   yieldUnit: z.enum(yieldUnits, { required_error: "Yield unit is required." }),
   qualityGrade: z.string().max(50).optional(),
   postHarvestActivities: z.string().max(500).optional(),
@@ -114,8 +72,8 @@ const harvestRecordFormSchema = z.object({
 
 type HarvestRecordFormValues = z.infer<typeof harvestRecordFormSchema>;
 
-const LOCAL_STORAGE_KEY_RECORDS = 'harvestingRecords_v1';
-const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
+const RECORDS_COLLECTION = 'harvestingRecords';
+const TRANSACTIONS_COLLECTION = 'transactions';
 const ACTIVITY_FORM_ID = 'harvesting-record-form';
 
 export default function HarvestingPage() {
@@ -123,8 +81,10 @@ export default function HarvestingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<HarvestingRecord | null>(null);
   const { toast } = useToast();
-  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
   const form = useForm<HarvestRecordFormValues>({
     resolver: zodResolver(harvestRecordFormSchema),
@@ -141,14 +101,31 @@ export default function HarvestingPage() {
   const watchedSaleItems = form.watch("salesDetails");
 
   useEffect(() => {
-    setIsMounted(true);
-    const storedRecords = localStorage.getItem(LOCAL_STORAGE_KEY_RECORDS);
-    if (storedRecords) setRecords(JSON.parse(storedRecords));
-  }, []);
+    if (isProfileLoading) return;
+    if (!userProfile?.farmId) {
+      setError("Farm information is not available. Cannot load data.");
+      setIsLoading(false);
+      return;
+    }
 
-  useEffect(() => {
-    if (isMounted) localStorage.setItem(LOCAL_STORAGE_KEY_RECORDS, JSON.stringify(records));
-  }, [records, isMounted]);
+    const fetchRecords = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
+        const q = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const querySnapshot = await getDocs(q);
+        const fetchedRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as HarvestingRecord[];
+        setRecords(fetchedRecords);
+      } catch (err: any) {
+        console.error("Error fetching harvest records:", err);
+        setError(`Failed to fetch data: ${err.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRecords();
+  }, [userProfile, isProfileLoading]);
 
   const handleOpenModal = (recordToEdit?: HarvestingRecord) => {
     if (recordToEdit) {
@@ -170,75 +147,127 @@ export default function HarvestingPage() {
     setIsModalOpen(true);
   };
 
-  const onSubmit: SubmitHandler<HarvestRecordFormValues> = (data) => {
-    const now = new Date().toISOString();
-    const activityId = editingRecord ? editingRecord.id : crypto.randomUUID();
-
-    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
-      ...ci, id: ci.id || crypto.randomUUID(), category: ci.category, paymentSource: ci.paymentSource,
-      quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice), total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
-    }));
+  const onSubmit: SubmitHandler<HarvestRecordFormValues> = async (data) => {
+    if (!userProfile?.farmId || !db) {
+      toast({ title: "Error", description: "Cannot save. Farm/database information is missing.", variant: "destructive" });
+      return;
+    }
+    
+    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({ ...ci, id: ci.id || crypto.randomUUID(), category: ci.category, paymentSource: ci.paymentSource, quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice), total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0) }));
     const totalHarvestCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
 
-    const processedSaleItems: SaleItem[] = (data.salesDetails || []).map(si => ({
-      ...si, id: si.id || crypto.randomUUID(), quantitySold: Number(si.quantitySold),
-      pricePerUnit: Number(si.pricePerUnit), totalSaleAmount: (Number(si.quantitySold) || 0) * (Number(si.pricePerUnit) || 0),
-    }));
+    const processedSaleItems: SaleItem[] = (data.salesDetails || []).map(si => ({ ...si, id: si.id || crypto.randomUUID(), quantitySold: Number(si.quantitySold), pricePerUnit: Number(si.pricePerUnit), totalSaleAmount: (Number(si.quantitySold) || 0) * (Number(si.pricePerUnit) || 0) }));
     const totalSalesIncome = processedSaleItems.reduce((sum, item) => sum + item.totalSaleAmount, 0);
 
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    let allTransactions: OperationalTransaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
-    allTransactions = allTransactions.filter(t => t.linkedActivityId !== activityId);
-    
-    const newTransactions: OperationalTransaction[] = [
+    const recordData = {
+        farmId: userProfile.farmId,
+        ...data,
+        costItems: processedCostItems,
+        totalHarvestCost,
+        salesDetails: processedSaleItems,
+        totalSalesIncome,
+        updatedAt: serverTimestamp(),
+    };
+
+    const batch = writeBatch(db);
+
+    try {
+      let activityId: string;
+      if (editingRecord) {
+        activityId = editingRecord.id;
+        const recordRef = doc(db, RECORDS_COLLECTION, activityId);
+        batch.update(recordRef, recordData);
+        
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", activityId));
+        const oldTransSnap = await getDocs(transQuery);
+        oldTransSnap.forEach(doc => batch.delete(doc.ref));
+
+      } else {
+        const recordRef = doc(collection(db, RECORDS_COLLECTION));
+        activityId = recordRef.id;
+        batch.set(recordRef, { ...recordData, createdAt: serverTimestamp() });
+      }
+
+      const newTransactions: Omit<OperationalTransaction, 'id'>[] = [
         ...processedCostItems.map(item => ({
-            id: crypto.randomUUID(), date: data.dateHarvested, description: item.description,
+            farmId: userProfile.farmId, date: data.dateHarvested, description: item.description,
             amount: item.total, type: 'Expense' as const, category: item.category, paymentSource: item.paymentSource,
             linkedModule: 'Harvesting' as const, linkedActivityId: activityId, linkedItemId: item.id,
         })),
         ...processedSaleItems.map(item => ({
-            id: crypto.randomUUID(), date: item.saleDate, description: `Sale of ${data.cropType} to ${item.buyer}`,
+            farmId: userProfile.farmId, date: item.saleDate, description: `Sale of ${data.cropType} to ${item.buyer}`,
             amount: item.totalSaleAmount, type: 'Income' as const, category: 'Crop Sales' as any, paymentSource: item.paymentSource,
             linkedModule: 'Harvesting' as const, linkedActivityId: activityId, linkedItemId: item.id,
         }))
-    ];
-    allTransactions.push(...newTransactions);
-    localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
+      ];
 
-    if (editingRecord) {
-      const updatedRecord = { ...editingRecord, ...data, costItems: processedCostItems, totalHarvestCost, salesDetails: processedSaleItems, totalSalesIncome, updatedAt: now };
-      setRecords(records.map(rec => rec.id === activityId ? updatedRecord : rec));
-      toast({ title: "Harvest Record Updated", description: `Record for ${data.cropType} has been updated.` });
-    } else {
-      const newRecord: HarvestingRecord = {
-        ...data, id: activityId, variety: data.variety || undefined, qualityGrade: data.qualityGrade || undefined,
-        postHarvestActivities: data.postHarvestActivities || undefined, storageLocation: data.storageLocation || undefined,
-        notes: data.notes || undefined, costItems: processedCostItems, totalHarvestCost, salesDetails: processedSaleItems, totalSalesIncome,
-        createdAt: now, updatedAt: now,
-      };
-      setRecords(prev => [...prev, newRecord]);
-      toast({ title: "Harvest Record Logged", description: `Record for ${data.cropType} has been successfully logged.` });
+      newTransactions.forEach(trans => {
+        const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
+        batch.set(transRef, trans);
+      });
+
+      await batch.commit();
+
+      if (editingRecord) {
+        const updatedRecordForState = { ...editingRecord, ...recordData, id: activityId };
+        setRecords(records.map(rec => rec.id === activityId ? updatedRecordForState : rec));
+        toast({ title: "Record Updated", description: `Record for ${data.cropType} has been updated.` });
+      } else {
+        const newRecordForState = { ...recordData, id: activityId, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+        setRecords(prev => [...prev, newRecordForState]);
+        toast({ title: "Record Logged", description: `Record for ${data.cropType} has been successfully logged.` });
+      }
+
+      setIsModalOpen(false);
+      setEditingRecord(null);
+      form.reset();
+
+    } catch (err: any) {
+        console.error("Error saving record:", err);
+        toast({ title: "Save Failed", description: `Could not save record. Error: ${err.message}`, variant: "destructive" });
     }
-    
-    setIsModalOpen(false);
-    setEditingRecord(null);
-    form.reset();
   };
 
-  const handleDeleteRecord = (id: string) => {
+
+  const handleDeleteRecord = async (id: string) => {
     const recordToDelete = records.find(r => r.id === id);
-    setRecords(records.filter((rec) => rec.id !== id));
+    if (!recordToDelete || !db) return;
     
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    if(storedTransactions) {
-        let allTransactions: OperationalTransaction[] = JSON.parse(storedTransactions);
-        allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
-        localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
+    const batch = writeBatch(db);
+    try {
+        batch.delete(doc(db, RECORDS_COLLECTION, id));
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", id));
+        const transSnap = await getDocs(transQuery);
+        transSnap.forEach(doc => batch.delete(doc.ref));
+
+        await batch.commit();
+        setRecords(records.filter((rec) => rec.id !== id));
+        toast({ title: "Record Deleted", description: `Harvest record for "${recordToDelete.cropType}" has been removed.`, variant: "destructive" });
+    } catch(err: any) {
+        console.error("Error deleting record:", err);
+        toast({ title: "Deletion Failed", description: `Could not delete record. Error: ${err.message}`, variant: "destructive" });
     }
-    toast({ title: "Record Deleted", description: `Harvest record for "${recordToDelete?.cropType}" has been removed.`, variant: "destructive" });
   };
   
-  if (!isMounted) return null;
+  if (isProfileLoading || isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
+        <Loader2 className="h-12 w-12 text-primary animate-spin" />
+        <p className="ml-3 text-lg text-muted-foreground">Loading harvest data...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+     return (
+        <div className="container mx-auto py-10">
+         <Card className="w-full max-w-lg mx-auto text-center shadow-lg">
+            <CardHeader><CardTitle className="flex items-center justify-center text-xl text-destructive"><AlertTriangle className="mr-2 h-6 w-6" /> Data Loading Error</CardTitle></CardHeader>
+            <CardContent><p className="text-muted-foreground mb-2">{error}</p></CardContent>
+         </Card>
+        </div>
+     );
+  }
 
   return (
     <div>
@@ -338,7 +367,7 @@ export default function HarvestingPage() {
             <Table>
               <TableHeader><TableRow><TableHead>Crop Type</TableHead><TableHead>Date</TableHead><TableHead>Yield</TableHead><TableHead className="text-right">Total Cost</TableHead><TableHead className="text-right">Total Income</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {records.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((record) => (
+                {records.sort((a,b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime()).map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">{record.cropType} {record.variety && `(${record.variety})`}</TableCell>
                     <TableCell>{isValid(parseISO(record.dateHarvested)) ? format(parseISO(record.dateHarvested), 'PP') : 'Invalid Date'}</TableCell>
@@ -356,11 +385,9 @@ export default function HarvestingPage() {
       <Card className="mt-6 bg-muted/30 p-4">
         <CardHeader className="p-0 pb-2"><CardTitle className="text-base font-semibold text-muted-foreground">About Harvesting & Sales Costing</CardTitle></CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This section helps track yield data, sales income, and costs associated with harvesting and initial post-harvest activities.</p>
-            <p>&bull; Log details for each crop harvested, including yield quantity, units, quality, and where it's stored.</p>
-            <p>&bull; Itemize costs by category for labor, equipment, transportation, packaging, etc.</p>
-            <p>&bull; Add details for each sale made from this harvest, including buyer, quantity, price, and date.</p>
-            <p>&bull; This data is vital for assessing crop profitability and managing post-harvest logistics.</p>
+            <p>&bull; This module now saves all data to Firestore, making it accessible to all farm members.</p>
+            <p>&bull; This is the first module to log **Income**. Both sales income and harvest costs are now part of your central financial ledger.</p>
+            <p>&bull; The data you enter here is crucial for assessing crop profitability and managing post-harvest logistics.</p>
         </CardContent>
       </Card>
     </div>
