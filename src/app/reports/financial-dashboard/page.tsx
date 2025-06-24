@@ -70,7 +70,7 @@ export default function FinancialDashboardPage() {
       try {
         const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("farmId", "==", userProfile.farmId));
         const querySnapshot = await getDocs(transQuery);
-        const transactions = querySnapshot.docs.map(doc => doc.data()) as OperationalTransaction[];
+        const transactions = querySnapshot.docs.map(doc => doc.data() as OperationalTransaction);
         
         transactions.forEach(t => {
           const monthKey = format(parseISO(t.date), 'yyyy-MM');
@@ -299,12 +299,10 @@ export default function FinancialDashboardPage() {
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
             <p>&bull; This dashboard provides a financial summary based on data stored centrally in Firestore.</p>
-            <p>&bull; **Note:** This dashboard currently reflects financial data from migrated modules only. As we convert each module (Planting, Harvesting, etc.) to use Firestore, their data will appear here.</p>
-            <p>&bull; Currently, data from the **Land Preparation** and **Planting** modules is included.</p>
+            <p>&bull; Income and expense data is aggregated from all the operational modules (Land Prep, Planting, Harvesting, etc.).</p>
+            <p>&bull; As you log costs and sales across the app, this dashboard will update automatically to reflect the changes.</p>
         </CardContent>
       </Card>
     </div>
   );
 }
-
-    

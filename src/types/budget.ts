@@ -22,6 +22,7 @@ export interface BudgetCategory {
 
 export interface Budget {
   id: string;
+  farmId: string;
   name: string; // e.g., "2024 Maize Season Budget", "Annual Farm Budget 2025"
   startDate: string; // ISO date string "yyyy-MM-dd"
   endDate: string; // ISO date string "yyyy-MM-dd"
@@ -30,6 +31,6 @@ export interface Budget {
   totalActualSpending?: number; // Sum of all category actual amounts
   totalVariance?: number;
   notes?: string;
-  createdAt: string; // ISO datetime string
-  updatedAt: string; // ISO datetime string
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
 }

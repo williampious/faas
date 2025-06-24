@@ -200,10 +200,7 @@ export default function UserProfilePage() {
   
   const handleResetLocalData = () => {
     const keysToRemove = [
-      'animalHealthRecords_v1', 'animalHousingRecords_v1', 'cropMaintenanceActivities_v1',
-      'harvestingRecords_v1', 'landPreparationActivities_v4', 'plantingRecords_v1',
-      'farmPlots_v1', 'resourceInventory_v1', 'farmTasks_v2', 'farmBudgets_v1',
-      'farmTransactions_v1', 'livestockProductionFocus_v1', 'weatherLocation', 'farmEvents',
+      'farmTasks_v2', 'weatherLocation', 'farmEvents'
     ];
 
     keysToRemove.forEach(key => {
@@ -212,7 +209,7 @@ export default function UserProfilePage() {
 
     toast({
       title: "Local Data Reset",
-      description: "All operational data has been cleared from your browser. The page will now reload.",
+      description: "Remaining local data has been cleared from your browser. The page will now reload.",
     });
 
     // Reload the page to reflect the cleared state
@@ -639,13 +636,13 @@ export default function UserProfilePage() {
                 <CardContent>
                     <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive">Reset All Local Data</Button>
+                        <Button variant="destructive">Reset Local Data</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action will permanently delete all operational data stored in your browser, including tasks, inventory, budget data, and all farm management records. It will NOT delete your user profile or farm setup from the server. This is useful for clearing test data and starting fresh.
+                            This action will permanently delete any remaining operational data stored only in your browser, such as Tasks and Calendar Events. It will NOT delete any data from the central database (Users, Plots, Budgets, etc.).
                             <br/><br/>
                             This cannot be undone.
                         </AlertDialogDescription>
@@ -657,7 +654,7 @@ export default function UserProfilePage() {
                     </AlertDialogContent>
                     </AlertDialog>
                     <p className="text-xs text-muted-foreground mt-4">
-                        <strong>Note on User Data:</strong> To clear user and farm profiles, you must manually delete the documents from the 'users' and 'farms' collections in your Firebase Firestore console. This is recommended when moving from a testing to a production environment.
+                        <strong>Note on User Data:</strong> To clear user and farm profiles from the central database, you must manually delete the documents from the 'users' and 'farms' collections in your Firebase Firestore console.
                     </p>
                 </CardContent>
                 </Card>
