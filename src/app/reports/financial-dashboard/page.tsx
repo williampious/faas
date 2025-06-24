@@ -9,8 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import type { OperationalTransaction } from '@/types/finance';
 import { useRouter } from 'next/navigation';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { ChartContainer } from '@/components/ui/chart';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
@@ -211,14 +210,30 @@ export default function FinancialDashboardPage() {
       <div className="grid lg:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Income vs. Expense (Coming Soon)</CardTitle>
+            <CardTitle>Monthly Income vs. Expense</CardTitle>
             <CardDescription>A visual summary of your cash flow over recent months.</CardDescription>
           </CardHeader>
           <CardContent>
             {monthlyChartData.length > 0 ? (
-              <div className="text-center py-10 opacity-50">
-                <BarChart2 className="mx-auto h-12 w-12 text-muted-foreground" />
-                <p className="mt-4 text-muted-foreground">Monthly Trend Chart is under development.</p>
+              <div className="w-full h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyChartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value: number) => formatCurrency(value)} />
+                        <Tooltip
+                            contentStyle={{
+                                backgroundColor: 'hsl(var(--background))',
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: 'var(--radius)',
+                            }}
+                            formatter={(value: number) => formatCurrency(value)}
+                        />
+                        <Legend />
+                        <Bar dataKey="income" fill="hsl(var(--chart-2))" name="Income" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="expense" fill="hsl(var(--chart-1))" name="Expense" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                </ResponsiveContainer>
               </div>
             ) : (
               <div className="text-center py-10">
