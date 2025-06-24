@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, CalendarRange, Trash2, Banknote, ArrowLeft, Eye, Loader2, AlertTriangle } from 'lucide-react';
-import { format, parseISO, isValid, isAfter, isEqual, isWithinInterval } from 'date-fns';
+import { format, parseISO, isValid, isAfter, isEqual } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Budget } from '@/types/budget';
 import type { OperationalTransaction } from '@/types/finance';
@@ -73,36 +73,37 @@ export default function BudgetingPage() {
         if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
 
         const budgetsQuery = query(collection(db, BUDGETS_COLLECTION), where("farmId", "==", userProfile.farmId));
-        const transactionsQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("farmId", "==", userProfile.farmId));
-
-        const [budgetsSnapshot, transactionsSnapshot] = await Promise.all([
-          getDocs(budgetsQuery),
-          getDocs(transactionsQuery)
-        ]);
-
+        const budgetsSnapshot = await getDocs(budgetsQuery);
         const fetchedBudgets = budgetsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Budget));
-        const allTransactions = transactionsSnapshot.docs.map(doc => doc.data() as OperationalTransaction);
 
-        const updatedBudgets = fetchedBudgets.map(budget => {
-          const totalBudgetedAmount = budget.categories.reduce((sum, cat) => sum + (cat.budgetedAmount || 0), 0);
-          
-          const budgetInterval = { start: parseISO(budget.startDate), end: parseISO(budget.endDate) };
-          const relevantExpenses = allTransactions
-            .filter(t => t.type === 'Expense' && isWithinInterval(parseISO(t.date), budgetInterval));
-          const totalActualSpending = relevantExpenses.reduce((sum, t) => sum + (t.amount || 0), 0);
-          
-          return {
-            ...budget,
-            totalBudgetedAmount,
-            totalActualSpending,
-            totalVariance: totalBudgetedAmount - totalActualSpending,
-          };
+        const updatedBudgetsPromises = fetchedBudgets.map(async (budget) => {
+            const relevantExpensesQuery = query(
+                collection(db, TRANSACTIONS_COLLECTION),
+                where("farmId", "==", userProfile.farmId),
+                where("type", "==", "Expense"),
+                where("date", ">=", budget.startDate),
+                where("date", "<=", budget.endDate)
+            );
+            const expensesSnapshot = await getDocs(relevantExpensesQuery);
+            const relevantExpenses = expensesSnapshot.docs.map(d => d.data() as OperationalTransaction);
+            
+            const totalActualSpending = relevantExpenses.reduce((sum, t) => sum + (t.amount || 0), 0);
+            const totalBudgetedAmount = budget.categories.reduce((sum, cat) => sum + (cat.budgetedAmount || 0), 0);
+            
+            return {
+                ...budget,
+                totalBudgetedAmount,
+                totalActualSpending,
+                totalVariance: totalBudgetedAmount - totalActualSpending,
+            };
         });
 
+        const updatedBudgets = await Promise.all(updatedBudgetsPromises);
         setBudgets(updatedBudgets);
+
       } catch (err: any) {
         console.error("Error fetching data:", err);
-        setError(`Failed to fetch budget data: ${err.message}`);
+        setError(`Failed to fetch budget data: ${err.message}. This might require a Firestore index. Check the browser console for a link to create it.`);
       } finally {
         setIsLoading(false);
       }

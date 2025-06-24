@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import type { OperationalTransaction } from '@/types/finance';
 import { useRouter } from 'next/navigation';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subMonths } from 'date-fns';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -67,7 +67,15 @@ export default function FinancialDashboardPage() {
       const expenseByCategory: { [key: string]: number } = {};
 
       try {
-        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const endDate = new Date();
+        const startDate = subMonths(endDate, 12);
+
+        const transQuery = query(
+            collection(db, TRANSACTIONS_COLLECTION), 
+            where("farmId", "==", userProfile.farmId),
+            where("date", ">=", format(startDate, 'yyyy-MM-dd')),
+            where("date", "<=", format(endDate, 'yyyy-MM-dd'))
+        );
         const querySnapshot = await getDocs(transQuery);
         const transactions = querySnapshot.docs.map(doc => doc.data() as OperationalTransaction);
         
@@ -147,7 +155,7 @@ export default function FinancialDashboardPage() {
       <PageHeader
         title="Financial Dashboard"
         icon={FileText}
-        description="Overview of your farm's financial performance based on centrally stored data."
+        description="Overview of your farm's financial performance based on centrally stored data for the last 12 months."
         action={
             <Button onClick={() => router.push('/reports/budgeting')}>
                 Manage Budgets
@@ -163,7 +171,7 @@ export default function FinancialDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-800 dark:text-green-200">{formatCurrency(totalIncome)}</div>
-            <p className="text-xs text-green-600 dark:text-green-400">Sum of all sales income</p>
+            <p className="text-xs text-green-600 dark:text-green-400">Last 12 months</p>
           </CardContent>
         </Card>
 
@@ -174,7 +182,7 @@ export default function FinancialDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-800 dark:text-red-200">{formatCurrency(totalExpenses)}</div>
-            <p className="text-xs text-red-600 dark:text-red-400">Sum of all operational costs</p>
+            <p className="text-xs text-red-600 dark:text-red-400">Last 12 months</p>
           </CardContent>
         </Card>
 
@@ -186,7 +194,7 @@ export default function FinancialDashboardPage() {
           <CardContent>
             <div className={`text-2xl font-bold ${netProfitLoss >=0 ? 'text-blue-800 dark:text-blue-200' : 'text-orange-800 dark:text-orange-200'}`}>{formatCurrency(netProfitLoss)}</div>
             <p className={`text-xs ${netProfitLoss >=0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
-              {netProfitLoss >= 0 ? 'Income minus Expenses' : 'Expenses exceed Income'}
+              Last 12 months
             </p>
           </CardContent>
         </Card>
@@ -199,7 +207,7 @@ export default function FinancialDashboardPage() {
           <CardContent>
             <div className={`text-2xl font-bold ${profitMargin >=0 ? 'text-purple-800 dark:text-purple-200' : 'text-orange-800 dark:text-orange-200'}`}>{profitMargin.toFixed(1)}%</div>
             <p className={`text-xs ${profitMargin >=0 ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400'}`}>
-              Profit as a percentage of income.
+              Last 12 months
             </p>
           </CardContent>
         </Card>
@@ -211,7 +219,7 @@ export default function FinancialDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Monthly Income vs. Expense</CardTitle>
-            <CardDescription>A visual summary of your cash flow over recent months.</CardDescription>
+            <CardDescription>A visual summary of your cash flow over the last 12 months.</CardDescription>
           </CardHeader>
           <CardContent>
             {monthlyChartData.length > 0 ? (
@@ -247,7 +255,7 @@ export default function FinancialDashboardPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Expense Breakdown by Category</CardTitle>
-                <CardDescription>See where your money is going across different operational categories.</CardDescription>
+                <CardDescription>See where your money is going across different operational categories in the last 12 months.</CardDescription>
             </CardHeader>
             <CardContent>
             {expenseBreakdownData.length > 0 ? (

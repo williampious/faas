@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Banknote, ArrowLeft, PlusCircle, Edit2, Trash2, FolderKanban, DollarSign, Loader2, AlertTriangle } from 'lucide-react';
-import { format, parseISO, isValid, isWithinInterval } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Budget, BudgetCategory } from '@/types/budget';
 import type { OperationalTransaction } from '@/types/finance';
@@ -78,12 +78,16 @@ export default function BudgetDetailPage() {
           return;
         }
 
-        const transactionsQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const transactionsQuery = query(
+            collection(db, TRANSACTIONS_COLLECTION),
+            where("farmId", "==", userProfile.farmId),
+            where("type", "==", "Expense"),
+            where("date", ">=", budgetData.startDate),
+            where("date", "<=", budgetData.endDate)
+        );
         const transSnap = await getDocs(transactionsQuery);
-        const allTransactions = transSnap.docs.map(d => d.data() as OperationalTransaction);
+        const relevantExpenses = transSnap.docs.map(d => d.data() as OperationalTransaction);
         
-        const budgetInterval = { start: parseISO(budgetData.startDate), end: parseISO(budgetData.endDate) };
-        const relevantExpenses = allTransactions.filter(t => t.type === 'Expense' && isWithinInterval(parseISO(t.date), budgetInterval));
         const totalActualSpending = relevantExpenses.reduce((sum, t) => sum + (t.amount || 0), 0);
         const totalBudgeted = budgetData.categories.reduce((sum, cat) => sum + (cat.budgetedAmount || 0), 0);
 
@@ -101,7 +105,7 @@ export default function BudgetDetailPage() {
       setIsLoading(false);
     }, (err) => {
       console.error("Error fetching budget details:", err);
-      setError(`Failed to load budget: ${err.message}`);
+      setError(`Failed to load budget: ${err.message}. This may be a permissions issue or require a Firestore index. Check the browser console for a link to create the index.`);
       setIsLoading(false);
     });
 
