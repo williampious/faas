@@ -52,21 +52,24 @@ export default function AEODashboardPage() {
       description: "Log interactions, advice provided, and track follow-up visits with farmers for comprehensive support.",
       icon: MessageSquareText,
       href: "/aeo/support-communication",
-      cta: "View Logs"
+      cta: "View Logs",
+      disabled: true
     },
     {
       title: "Monitoring & Reports",
       description: "Access farmer-level dashboards, generate regional summaries, and track key performance indicators.",
       icon: BarChart3,
       href: "/aeo/reports",
-      cta: "Generate Reports"
+      cta: "Generate Reports",
+      disabled: true
     },
     {
       title: "Knowledge Base",
       description: "Share training materials, guides, and best practices with farmers. Log training sessions and field demos.",
       icon: BookOpenCheck,
       href: "/aeo/knowledge-transfer",
-      cta: "Access Resources"
+      cta: "Access Resources",
+      disabled: true
     },
      {
       title: "AEO Profile & Settings",

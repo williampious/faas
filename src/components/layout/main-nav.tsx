@@ -105,6 +105,11 @@ export function MainNav() {
     if (href === '/animal-production' && pathname.startsWith('/animal-production')) return true;
     if (href === '/reports/budgeting' && pathname.startsWith('/reports/budgeting')) return true;
     
+    // Exact match for farmer directory
+    if (href === '/aeo/farmer-directory' && pathname.startsWith('/aeo/farmer-directory')) return true;
+    // Match for farmer profile sub-pages
+    if (href === '/aeo/farmer-directory' && pathname.startsWith('/aeo/farmer-profile')) return true;
+    
     return pathname.startsWith(href) && href.length > 1; // Avoids matching "/" for everything
   };
 
