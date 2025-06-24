@@ -75,13 +75,23 @@ service cloud.firestore {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
-    
+
     match /harvestingRecords/{recordId} {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
-
+    
     match /animalHousingRecords/{recordId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
+
+    match /animalHealthRecords/{recordId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
+    
+    match /resources/{resourceId} {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
@@ -102,6 +112,7 @@ service cloud.firestore {
 }
 ```
 Apply these rules in your Firebase Console, and the farm setup and plot management features should work perfectly.
+
 
 
 

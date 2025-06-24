@@ -11,14 +11,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Archive, PlusCircle, Edit2, Trash2 } from 'lucide-react';
+import { Archive, PlusCircle, Edit2, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { ResourceItem, ResourceCategory } from '@/types/inventory';
 import { resourceCategories } from '@/types/inventory';
+import { useUserProfile } from '@/contexts/user-profile-context';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import type { OperationalTransaction } from '@/types/finance';
 
 const resourceItemFormSchema = z.object({
   name: z.string().min(2, { message: "Resource name must be at least 2 characters." }).max(100),
@@ -39,7 +43,8 @@ const resourceItemFormSchema = z.object({
 
 type ResourceItemFormValues = z.infer<typeof resourceItemFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'resourceInventory_v1';
+const RESOURCES_COLLECTION = 'resources';
+const TRANSACTIONS_COLLECTION = 'transactions';
 const RESOURCE_FORM_ID = 'resource-item-form';
 
 export default function ResourceInventoryPage() {
@@ -47,39 +52,50 @@ export default function ResourceInventoryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ResourceItem | null>(null);
   const { toast } = useToast();
-  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
   const form = useForm<ResourceItemFormValues>({
     resolver: zodResolver(resourceItemFormSchema),
     defaultValues: {
-      name: '',
-      category: undefined,
-      quantity: 0,
-      unit: '',
-      supplier: '',
-      purchaseDate: '',
-      costPerUnit: undefined,
-      notes: '',
+      name: '', category: undefined, quantity: 0, unit: '', supplier: '',
+      purchaseDate: '', costPerUnit: undefined, notes: '',
     },
   });
   
   useEffect(() => {
-    setIsMounted(true);
-    const storedItems = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (storedItems) {
-      setItems(JSON.parse(storedItems));
+    if (isProfileLoading) return;
+    if (!userProfile?.farmId) {
+      setError("Farm information is not available. Cannot load data.");
+      setIsLoading(false);
+      return;
     }
-     if (window.location.hash === '#add') {
+
+    const fetchItems = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
+        const q = query(collection(db, RESOURCES_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const querySnapshot = await getDocs(q);
+        const fetchedItems = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ResourceItem[];
+        setItems(fetchedItems);
+      } catch (err: any) {
+        console.error("Error fetching resources:", err);
+        setError(`Failed to fetch data: ${err.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchItems();
+    
+    if (window.location.hash === '#add') {
       setIsModalOpen(true);
       window.location.hash = ''; 
     }
-  }, []);
-
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
-    }
-  }, [items, isMounted]);
+  }, [userProfile, isProfileLoading]);
 
   const handleOpenModal = (itemToEdit?: ResourceItem) => {
     if (itemToEdit) {
@@ -100,48 +116,114 @@ export default function ResourceInventoryPage() {
     setIsModalOpen(true);
   };
   
-  const onSubmit: SubmitHandler<ResourceItemFormValues> = (data) => {
-    const now = new Date().toISOString();
-    const totalCost = (data.quantity || 0) * (data.costPerUnit || 0);
-
-    if (editingItem) {
-      const updatedItem: ResourceItem = {
-        ...editingItem,
-        ...data,
-        totalCost,
-        updatedAt: now,
-      };
-      setItems(items.map((item) => (item.id === editingItem.id ? updatedItem : item)));
-      toast({ title: "Resource Updated", description: `"${data.name}" has been updated.` });
-    } else {
-      const newItem: ResourceItem = {
-        id: crypto.randomUUID(),
-        ...data,
-        totalCost,
-        createdAt: now,
-        updatedAt: now,
-      };
-      setItems((prev) => [...prev, newItem]);
-      toast({ title: "Resource Added", description: `"${data.name}" has been added to your inventory.` });
+  const onSubmit: SubmitHandler<ResourceItemFormValues> = async (data) => {
+    if (!userProfile?.farmId || !db) {
+      toast({ title: "Error", description: "Cannot save. Farm/database information is missing.", variant: "destructive" });
+      return;
     }
-    setIsModalOpen(false);
-    setEditingItem(null);
-    form.reset();
+
+    const totalCost = (data.quantity || 0) * (data.costPerUnit || 0);
+    const resourceData = {
+      farmId: userProfile.farmId,
+      ...data,
+      totalCost,
+      updatedAt: serverTimestamp(),
+    };
+
+    const batch = writeBatch(db);
+
+    try {
+      let resourceId: string;
+      if (editingItem) {
+        resourceId = editingItem.id;
+        const resourceRef = doc(db, RESOURCES_COLLECTION, resourceId);
+        batch.update(resourceRef, resourceData);
+        
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", resourceId));
+        const oldTransSnap = await getDocs(transQuery);
+        oldTransSnap.forEach(doc => batch.delete(doc.ref));
+
+      } else {
+        const resourceRef = doc(collection(db, RESOURCES_COLLECTION));
+        resourceId = resourceRef.id;
+        batch.set(resourceRef, { ...resourceData, createdAt: serverTimestamp() });
+      }
+
+      if (totalCost > 0) {
+        const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
+        const newTransaction: Omit<OperationalTransaction, 'id'> = {
+          farmId: userProfile.farmId,
+          date: data.purchaseDate,
+          description: `Purchase: ${data.name}`,
+          amount: totalCost,
+          type: 'Expense',
+          category: 'Material/Input', // Defaulting for inventory items
+          paymentSource: 'Cash', // Defaulting as form doesn't capture it
+          linkedModule: 'Resource Inventory',
+          linkedActivityId: resourceId,
+          linkedItemId: resourceId,
+        };
+        batch.set(transRef, newTransaction);
+      }
+
+      await batch.commit();
+
+      if (editingItem) {
+        const updatedItemForState = { ...editingItem, ...resourceData, totalCost };
+        setItems(items.map(item => item.id === editingItem.id ? updatedItemForState : item));
+        toast({ title: "Resource Updated", description: `"${data.name}" has been updated.` });
+      } else {
+        const newItemForState = { ...resourceData, id: crypto.randomUUID(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), totalCost };
+        setItems(prev => [...prev, newItemForState]);
+        toast({ title: "Resource Added", description: `"${data.name}" has been added to inventory.` });
+      }
+      setIsModalOpen(false);
+      form.reset();
+    } catch (err: any) {
+      console.error("Error saving resource:", err);
+      toast({ title: "Save Failed", description: `Could not save resource. Error: ${err.message}`, variant: "destructive" });
+    }
   };
 
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = async (id: string) => {
     const itemToDelete = items.find(i => i.id === id);
-    setItems(items.filter((item) => item.id !== id));
-    toast({ title: "Resource Deleted", description: `"${itemToDelete?.name}" has been removed.`, variant: "destructive" });
-  };
+    if (!itemToDelete || !db) return;
 
-  if (!isMounted) {
+    const batch = writeBatch(db);
+    try {
+        batch.delete(doc(db, RESOURCES_COLLECTION, id));
+        
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", id));
+        const transSnap = await getDocs(transQuery);
+        transSnap.forEach(doc => batch.delete(doc.ref));
+
+        await batch.commit();
+        setItems(items.filter((item) => item.id !== id));
+        toast({ title: "Resource Deleted", description: `"${itemToDelete.name}" and its financial record have been removed.`, variant: "destructive" });
+    } catch(err: any) {
+         console.error("Error deleting resource:", err);
+        toast({ title: "Deletion Failed", description: `Could not delete resource. Error: ${err.message}`, variant: "destructive" });
+    }
+  };
+  
+  if (isProfileLoading || isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
-        <Archive className="h-12 w-12 text-primary animate-pulse" />
+        <Loader2 className="h-12 w-12 text-primary animate-spin" />
         <p className="ml-3 text-lg text-muted-foreground">Loading inventory...</p>
       </div>
     );
+  }
+
+   if (error) {
+     return (
+        <div className="container mx-auto py-10">
+         <Card className="w-full max-w-lg mx-auto text-center shadow-lg">
+            <CardHeader><CardTitle className="flex items-center justify-center text-xl text-destructive"><AlertTriangle className="mr-2 h-6 w-6" /> Data Loading Error</CardTitle></CardHeader>
+            <CardContent><p className="text-muted-foreground mb-2">{error}</p></CardContent>
+         </Card>
+        </div>
+     );
   }
 
   return (
