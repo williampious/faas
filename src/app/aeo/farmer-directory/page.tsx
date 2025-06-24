@@ -27,6 +27,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { v4 as uuidv4 } from 'uuid';
 
 
 const genderOptions: Gender[] = ['Male', 'Female', 'Other', 'PreferNotToSay'];
@@ -54,7 +55,7 @@ const farmerFormSchema = z.object({
 type FarmerFormValues = z.infer<typeof farmerFormSchema>;
 
 export default function FarmerDirectoryPage() {
-  const { userProfile: aeoProfile, isLoading: isAeoProfileLoading } from 'useUserProfile';
+  const { userProfile: aeoProfile, isLoading: isAeoProfileLoading } = useUserProfile();
   const { toast } = useToast();
   const router = useRouter();
   const [farmers, setFarmers] = useState<AgriFAASUserProfile[]>([]);
@@ -125,7 +126,7 @@ export default function FarmerDirectoryPage() {
     }
 
     setIsSubmitting(true);
-    const farmerId = crypto.randomUUID();
+    const farmerId = uuidv4();
 
     const newFarmerProfile: AgriFAASUserProfile = {
       userId: farmerId,

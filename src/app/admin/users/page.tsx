@@ -24,6 +24,7 @@ import { useUserProfile } from '@/contexts/user-profile-context';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
+import { v4 as uuidv4 } from 'uuid';
 
 
 const usersCollectionName = 'users';
@@ -189,8 +190,8 @@ export default function AdminUsersPage() {
         return;
     }
 
-    const invitationToken = crypto.randomUUID();
-    const temporaryUserId = crypto.randomUUID();
+    const invitationToken = uuidv4();
+    const temporaryUserId = uuidv4();
 
     try {
         const newUserProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt' | 'firebaseUid'> & { createdAt: any, updatedAt: any } = {
