@@ -22,7 +22,6 @@ import { collection, getDocs, query, where, orderBy, doc, updateDoc, serverTimes
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 
@@ -190,8 +189,8 @@ export default function AdminUsersPage() {
         return;
     }
 
-    const invitationToken = uuidv4();
-    const temporaryUserId = uuidv4();
+    const invitationToken = crypto.randomUUID();
+    const temporaryUserId = crypto.randomUUID();
 
     try {
         const newUserProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt' | 'firebaseUid'> & { createdAt: any, updatedAt: any } = {
@@ -599,8 +598,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-    
-
-    
-
-    
