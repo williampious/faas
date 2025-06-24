@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler, Controller } from 'react-ho
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Shovel, PlusCircle, Trash2, Edit2, DollarSign, ArrowLeft } from 'lucide-react';
+import { Shovel, PlusCircle, Trash2, Edit2, DollarSign, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,9 @@ import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
 import type { PaymentSource, CostCategory, OperationalTransaction } from '@/types/finance';
 import { paymentSources, costCategories } from '@/types/finance';
+import { useUserProfile } from '@/contexts/user-profile-context';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, documentId } from 'firebase/firestore';
 
 const activityTypes = ['Field Clearing', 'Weeding', 'Ploughing', 'Harrowing', 'Levelling', 'Manure Spreading', 'Herbicide Application'] as const;
 type LandPreparationActivityType = typeof activityTypes[number];
@@ -52,14 +55,15 @@ interface CostItem extends CostItemFormValues {
 
 interface LandPreparationActivity {
   id: string;
+  farmId: string;
   activityType: LandPreparationActivityType;
   date: string; // ISO string "yyyy-MM-dd"
   areaAffected: string;
   notes?: string;
   costItems: CostItem[];
   totalActivityCost: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: any;
+  updatedAt: any;
 }
 
 const activityFormSchema = z.object({
@@ -72,8 +76,8 @@ const activityFormSchema = z.object({
 
 type ActivityFormValues = z.infer<typeof activityFormSchema>;
 
-const LOCAL_STORAGE_KEY_ACTIVITIES = 'landPreparationActivities_v4';
-const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
+const ACTIVITIES_COLLECTION = 'landPreparationActivities';
+const TRANSACTIONS_COLLECTION = 'transactions';
 const ACTIVITY_FORM_ID = 'land-prep-activity-form';
 
 export default function LandPreparationPage() {
@@ -81,151 +85,196 @@ export default function LandPreparationPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<LandPreparationActivity | null>(null);
   const { toast } = useToast();
-  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
     defaultValues: {
-      activityType: undefined,
-      date: '',
-      areaAffected: '',
-      notes: '',
-      costItems: [],
+      activityType: undefined, date: '', areaAffected: '', notes: '', costItems: [],
     },
   });
 
-  const { fields, append, remove, update } = useFieldArray({
-    control: form.control,
-    name: "costItems",
-  });
-
+  const { fields, append, remove } = useFieldArray({ control: form.control, name: "costItems" });
   const watchedCostItems = form.watch("costItems");
-
   const calculateTotalActivityCost = (items: CostItemFormValues[] | undefined) => {
     if (!items) return 0;
-    return items.reduce((acc, item) => {
-      const quantity = Number(item.quantity) || 0;
-      const unitPrice = Number(item.unitPrice) || 0;
-      return acc + (quantity * unitPrice);
-    }, 0);
+    return items.reduce((acc, item) => (acc + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)), 0);
   };
 
   useEffect(() => {
-    setIsMounted(true);
-    const storedActivities = localStorage.getItem(LOCAL_STORAGE_KEY_ACTIVITIES);
-    if (storedActivities) {
-      setActivities(JSON.parse(storedActivities));
+    if (isProfileLoading) return;
+    if (!userProfile?.farmId) {
+      setError("Farm information is not available. Cannot load data.");
+      setIsLoading(false);
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem(LOCAL_STORAGE_KEY_ACTIVITIES, JSON.stringify(activities));
-    }
-  }, [activities, isMounted]);
+    const fetchActivities = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
+        const q = query(collection(db, ACTIVITIES_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const querySnapshot = await getDocs(q);
+        const fetchedActivities = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as LandPreparationActivity[];
+        setActivities(fetchedActivities);
+      } catch (err: any) {
+        console.error("Error fetching activities:", err);
+        setError(`Failed to fetch data: ${err.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchActivities();
+  }, [userProfile, isProfileLoading]);
 
   const handleOpenModal = (activityToEdit?: LandPreparationActivity) => {
     if (activityToEdit) {
       setEditingActivity(activityToEdit);
       form.reset({
-        activityType: activityToEdit.activityType,
-        date: activityToEdit.date,
-        areaAffected: activityToEdit.areaAffected,
+        ...activityToEdit,
         notes: activityToEdit.notes || '',
         costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID()})) || [],
       });
     } else {
       setEditingActivity(null);
-      form.reset({
-        activityType: undefined,
-        date: '',
-        areaAffected: '',
-        notes: '',
-        costItems: [],
-      });
+      form.reset({ activityType: undefined, date: '', areaAffected: '', notes: '', costItems: [] });
     }
     setIsModalOpen(true);
   };
 
-  const onSubmit: SubmitHandler<ActivityFormValues> = (data) => {
-    const now = new Date().toISOString();
-    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
-      ...ci,
-      id: ci.id || crypto.randomUUID(),
-      category: ci.category,
-      paymentSource: ci.paymentSource,
-      quantity: Number(ci.quantity),
-      unitPrice: Number(ci.unitPrice),
-      total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
-    }));
-
-    const totalActivityCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
-    const activityId = editingActivity ? editingActivity.id : crypto.randomUUID();
-
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    let allTransactions: OperationalTransaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
-    
-    allTransactions = allTransactions.filter(t => t.linkedActivityId !== activityId);
-    
-    const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
-      id: crypto.randomUUID(),
-      date: data.date,
-      description: item.description,
-      amount: item.total,
-      type: 'Expense',
-      category: item.category,
-      paymentSource: item.paymentSource,
-      linkedModule: 'Land Preparation',
-      linkedActivityId: activityId,
-      linkedItemId: item.id,
-    }));
-    allTransactions.push(...newTransactions);
-
-    localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
-
-    if (editingActivity) {
-      const updatedActivity: LandPreparationActivity = { ...editingActivity, ...data, costItems: processedCostItems, totalActivityCost, updatedAt: now };
-      setActivities(activities.map((act) => (act.id === editingActivity.id ? updatedActivity : act)));
-      toast({ title: "Activity Updated", description: `${data.activityType} activity has been updated.` });
-    } else {
-      const newActivity: LandPreparationActivity = {
-        ...data,
-        id: activityId,
-        notes: data.notes || undefined,
-        costItems: processedCostItems,
-        totalActivityCost,
-        createdAt: now,
-        updatedAt: now,
-      };
-      setActivities(prev => [...prev, newActivity]);
-      toast({ title: "Activity Logged", description: `${data.activityType} activity has been successfully logged.` });
+  const onSubmit: SubmitHandler<ActivityFormValues> = async (data) => {
+    if (!userProfile?.farmId || !db) {
+      toast({ title: "Error", description: "Cannot save. Farm/database information is missing.", variant: "destructive" });
+      return;
     }
 
-    setIsModalOpen(false);
-    setEditingActivity(null);
-    form.reset();
+    const totalActivityCost = calculateTotalActivityCost(data.costItems);
+    const activityData = {
+      farmId: userProfile.farmId,
+      ...data,
+      totalActivityCost,
+      costItems: (data.costItems || []).map(ci => ({
+        ...ci,
+        total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
+        id: ci.id || crypto.randomUUID(),
+      })),
+      updatedAt: serverTimestamp(),
+    };
+    
+    const batch = writeBatch(db);
+
+    try {
+      if (editingActivity) {
+        const activityRef = doc(db, ACTIVITIES_COLLECTION, editingActivity.id);
+        batch.update(activityRef, activityData);
+        
+        // Delete old transactions associated with this activity
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", editingActivity.id));
+        const oldTransSnap = await getDocs(transQuery);
+        oldTransSnap.forEach(doc => batch.delete(doc.ref));
+
+      } else {
+        const activityRef = doc(collection(db, ACTIVITIES_COLLECTION));
+        batch.set(activityRef, { ...activityData, createdAt: serverTimestamp() });
+        activityData.id = activityRef.id; // Use the new ID for linking
+      }
+
+      // Add new transactions
+      activityData.costItems.forEach(item => {
+        const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
+        const newTransaction: Omit<OperationalTransaction, 'id'> = {
+          farmId: userProfile.farmId,
+          date: data.date,
+          description: item.description,
+          amount: item.total,
+          type: 'Expense',
+          category: item.category,
+          paymentSource: item.paymentSource,
+          linkedModule: 'Land Preparation',
+          linkedActivityId: activityData.id,
+          linkedItemId: item.id,
+        };
+        batch.set(transRef, newTransaction);
+      });
+
+      await batch.commit();
+
+      if (editingActivity) {
+        setActivities(activities.map(a => a.id === editingActivity.id ? { ...a, ...activityData, id: editingActivity.id } : a));
+        toast({ title: "Activity Updated", description: `${data.activityType} activity has been updated.` });
+      } else {
+        const newActivityForState: LandPreparationActivity = {
+            ...activityData, 
+            id: activityData.id,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        }
+        setActivities(prev => [...prev, newActivityForState]);
+        toast({ title: "Activity Logged", description: `${data.activityType} activity has been successfully logged.` });
+      }
+
+      setIsModalOpen(false);
+      setEditingActivity(null);
+      form.reset();
+
+    } catch (err: any) {
+        console.error("Error saving activity:", err);
+        toast({ title: "Save Failed", description: `Could not save activity. Error: ${err.message}`, variant: "destructive" });
+    }
   };
 
-  const handleDeleteActivity = (id: string) => {
+  const handleDeleteActivity = async (id: string) => {
     const activityToDelete = activities.find(a => a.id === id);
-    if (!activityToDelete) return;
+    if (!activityToDelete || !db) return;
     
-    setActivities(activities.filter((act) => act.id !== id));
-    
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    if(storedTransactions) {
-        let allTransactions: OperationalTransaction[] = JSON.parse(storedTransactions);
-        allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
-        localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
-    }
+    const batch = writeBatch(db);
+    try {
+        // Delete the main activity document
+        batch.delete(doc(db, ACTIVITIES_COLLECTION, id));
+        
+        // Delete all linked transactions
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", id));
+        const transSnap = await getDocs(transQuery);
+        transSnap.forEach(doc => batch.delete(doc.ref));
 
-    toast({ title: "Activity Deleted", description: `Activity "${activityToDelete.activityType}" has been removed.`, variant: "destructive" });
+        await batch.commit();
+        setActivities(activities.filter((act) => act.id !== id));
+        toast({ title: "Activity Deleted", description: `Activity "${activityToDelete.activityType}" and its financial records have been removed.`, variant: "destructive" });
+    } catch(err: any) {
+         console.error("Error deleting activity:", err);
+        toast({ title: "Deletion Failed", description: `Could not delete activity. Error: ${err.message}`, variant: "destructive" });
+    }
   };
 
 
-  if (!isMounted) {
-    return null; 
+  if (isProfileLoading || (isLoading && !error)) {
+    return (
+      <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
+        <Loader2 className="h-12 w-12 text-primary animate-spin" />
+        <p className="ml-3 text-lg text-muted-foreground">Loading data...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+     return (
+        <div className="container mx-auto py-10">
+         <Card className="w-full max-w-lg mx-auto text-center shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center justify-center text-xl text-destructive">
+                    <AlertTriangle className="mr-2 h-6 w-6" /> Data Loading Error
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-muted-foreground mb-2">{error}</p>
+            </CardContent>
+         </Card>
+        </div>
+     );
   }
 
   return (
@@ -248,10 +297,7 @@ export default function LandPreparationPage() {
 
       <Dialog open={isModalOpen} onOpenChange={(isOpen) => {
         setIsModalOpen(isOpen);
-        if (!isOpen) {
-          form.reset();
-          setEditingActivity(null);
-        }
+        if (!isOpen) { form.reset(); setEditingActivity(null); }
       }}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader>
@@ -287,7 +333,7 @@ export default function LandPreparationPage() {
                 <section className="space-y-4 p-4 border rounded-lg">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-primary">Cost Items</h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], paymentSource: paymentSources[0], unit: '', quantity: 1, unitPrice: 0 })}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: 'Labor', paymentSource: 'Cash', unit: '', quantity: 1, unitPrice: 0 })}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item
                     </Button>
                   </div>
@@ -348,9 +394,7 @@ export default function LandPreparationPage() {
             </Form>
           </div>
           <DialogFooter className="py-4 px-6 border-t">
-            <DialogClose asChild>
-              <Button type="button" variant="outline">Cancel</Button>
-            </DialogClose>
+            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
             <Button type="submit" form={ACTIVITY_FORM_ID}>
               {editingActivity ? 'Save Changes' : 'Log Activity'}
             </Button>
@@ -414,10 +458,9 @@ export default function LandPreparationPage() {
             <CardTitle className="text-base font-semibold text-muted-foreground">About Land Preparation Costing</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This section helps you track crucial groundwork and associated costs before planting.</p>
-            <p>&bull; Log activities and itemize costs by category (Material/Input, Labor, Equipment, etc.). Select a "Payment Source" for each cost to enable cash flow tracking.</p>
-            <p>&bull; Record the date, specific area affected, and any relevant notes for each activity.</p>
-            <p>&bull; The total cost for each activity is automatically calculated and logged in the central financial ledger.</p>
+            <p>&bull; Data in this module is now stored centrally in Firestore, not in your browser. All users from your farm will see the same list.</p>
+            <p>&bull; Log activities and itemize costs by category (Material/Input, Labor, Equipment, etc.).</p>
+            <p>&bull; The total cost for each activity is automatically calculated and logged in the central `transactions` collection, which feeds the Financial Dashboard.</p>
         </CardContent>
       </Card>
     </div>

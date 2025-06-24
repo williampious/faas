@@ -21,12 +21,13 @@ export type LinkedModule =
 
 export interface OperationalTransaction {
   id: string; // a unique id for the transaction itself
+  farmId: string; // Foreign key to the farm
   date: string; // ISO "yyyy-MM-dd"
   description: string; // From cost/sale item description
   amount: number;
   type: TransactionType;
   category: CostCategory;
-  paymentSource: PaymentSource; // Made mandatory for expenses
+  paymentSource: PaymentSource;
   linkedModule: LinkedModule;
   linkedActivityId: string; // ID of the parent activity (e.g., land prep record)
   linkedItemId: string; // ID of the specific cost/sale item

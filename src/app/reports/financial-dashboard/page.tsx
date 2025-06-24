@@ -4,16 +4,17 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { DollarSign, TrendingUp, TrendingDown, FileText, BarChart2, Percent, PieChartIcon } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, FileText, BarChart2, Percent, PieChartIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import type { OperationalTransaction } from '@/types/finance';
 import { useRouter } from 'next/navigation';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer } from '@/components/ui/chart';
 import { format, parseISO } from 'date-fns';
-
-const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
+import { useUserProfile } from '@/contexts/user-profile-context';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface MonthlyData {
   month: string;
@@ -38,6 +39,7 @@ const PIE_CHART_COLORS = [
   "hsl(var(--chart-2) / 0.7)",
 ];
 
+const TRANSACTIONS_COLLECTION = 'transactions';
 
 export default function FinancialDashboardPage() {
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -47,85 +49,95 @@ export default function FinancialDashboardPage() {
   const [monthlyChartData, setMonthlyChartData] = useState<MonthlyData[]>([]);
   const [expenseBreakdownData, setExpenseBreakdownData] = useState<CategoryData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+
 
   useEffect(() => {
-    if (!isMounted) return;
-
-    setIsLoading(true);
-    
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    let currentTotalIncome = 0;
-    let currentTotalExpenses = 0;
-    const monthlyAggregates: { [key: string]: { income: number; expense: number } } = {};
-    const expenseByCategory: { [key: string]: number } = {};
-
-    if (storedTransactions) {
-      const transactions: OperationalTransaction[] = JSON.parse(storedTransactions);
-      
-      transactions.forEach(t => {
-        const monthKey = format(parseISO(t.date), 'yyyy-MM');
-        if (!monthlyAggregates[monthKey]) {
-          monthlyAggregates[monthKey] = { income: 0, expense: 0 };
-        }
-
-        if (t.type === 'Income') {
-          monthlyAggregates[monthKey].income += t.amount || 0;
-        } else {
-          monthlyAggregates[monthKey].expense += t.amount || 0;
-          
-          if (!expenseByCategory[t.category]) {
-            expenseByCategory[t.category] = 0;
-          }
-          expenseByCategory[t.category] += t.amount || 0;
-        }
-      });
-      
-      currentTotalIncome = Object.values(monthlyAggregates).reduce((sum, m) => sum + m.income, 0);
-      currentTotalExpenses = Object.values(monthlyAggregates).reduce((sum, m) => sum + m.expense, 0);
+    if (isProfileLoading) return;
+    if (!userProfile?.farmId) {
+      setIsLoading(false);
+      return;
     }
-    
-    const currentNetProfitLoss = currentTotalIncome - currentTotalExpenses;
-    const currentProfitMargin = currentTotalIncome > 0 ? (currentNetProfitLoss / currentTotalIncome) * 100 : 0;
 
-    setTotalIncome(currentTotalIncome);
-    setTotalExpenses(currentTotalExpenses);
-    setNetProfitLoss(currentNetProfitLoss);
-    setProfitMargin(currentProfitMargin);
-    
-    const monthlyData = Object.entries(monthlyAggregates)
-      .map(([key, value]) => ({
-        month: format(parseISO(`${key}-01`), 'MMM yy'),
-        income: value.income,
-        expense: value.expense,
-      }))
-      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+    const fetchAndProcessTransactions = async () => {
+      setIsLoading(true);
+      let currentTotalIncome = 0;
+      let currentTotalExpenses = 0;
+      const monthlyAggregates: { [key: string]: { income: number; expense: number } } = {};
+      const expenseByCategory: { [key: string]: number } = {};
+
+      try {
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const querySnapshot = await getDocs(transQuery);
+        const transactions = querySnapshot.docs.map(doc => doc.data()) as OperationalTransaction[];
+        
+        transactions.forEach(t => {
+          const monthKey = format(parseISO(t.date), 'yyyy-MM');
+          if (!monthlyAggregates[monthKey]) {
+            monthlyAggregates[monthKey] = { income: 0, expense: 0 };
+          }
+
+          if (t.type === 'Income') {
+            monthlyAggregates[monthKey].income += t.amount || 0;
+          } else {
+            monthlyAggregates[monthKey].expense += t.amount || 0;
+            if (!expenseByCategory[t.category]) {
+              expenseByCategory[t.category] = 0;
+            }
+            expenseByCategory[t.category] += t.amount || 0;
+          }
+        });
+        
+        currentTotalIncome = Object.values(monthlyAggregates).reduce((sum, m) => sum + m.income, 0);
+        currentTotalExpenses = Object.values(monthlyAggregates).reduce((sum, m) => sum + m.expense, 0);
+
+      } catch(err) {
+        console.error("Error fetching financial data:", err);
+      }
+
+      const currentNetProfitLoss = currentTotalIncome - currentTotalExpenses;
+      const currentProfitMargin = currentTotalIncome > 0 ? (currentNetProfitLoss / currentTotalIncome) * 100 : 0;
+
+      setTotalIncome(currentTotalIncome);
+      setTotalExpenses(currentTotalExpenses);
+      setNetProfitLoss(currentNetProfitLoss);
+      setProfitMargin(currentProfitMargin);
       
-    const categoryData = Object.entries(expenseByCategory)
-      .map(([name, total], index) => ({ 
-        name, 
-        total,
-        percentage: currentTotalExpenses > 0 ? (total / currentTotalExpenses) * 100 : 0,
-        fill: PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
-      }))
-      .sort((a, b) => b.total - a.total);
-    
-    setMonthlyChartData(monthlyData);
-    setExpenseBreakdownData(categoryData);
-    
-    setIsLoading(false);
+      const monthlyData = Object.entries(monthlyAggregates)
+        .map(([key, value]) => ({
+          month: format(parseISO(`${key}-01`), 'MMM yy'),
+          income: value.income,
+          expense: value.expense,
+        }))
+        .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+        
+      const categoryData = Object.entries(expenseByCategory)
+        .map(([name, total], index) => ({ 
+          name, 
+          total,
+          percentage: currentTotalExpenses > 0 ? (total / currentTotalExpenses) * 100 : 0,
+          fill: PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
+        }))
+        .sort((a, b) => b.total - a.total);
+      
+      setMonthlyChartData(monthlyData);
+      setExpenseBreakdownData(categoryData);
+      
+      setIsLoading(false);
+    };
 
-  }, [isMounted]);
+    fetchAndProcessTransactions();
+  }, [userProfile, isProfileLoading]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
   };
   
-  if (!isMounted || isLoading) {
+  if (isProfileLoading || isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
-        <BarChart2 className="h-12 w-12 text-primary animate-pulse" />
+        <Loader2 className="h-12 w-12 text-primary animate-spin" />
         <p className="ml-3 text-lg text-muted-foreground">Loading financial summary...</p>
       </div>
     );
@@ -136,7 +148,7 @@ export default function FinancialDashboardPage() {
       <PageHeader
         title="Financial Dashboard"
         icon={FileText}
-        description="Overview of your farm's financial performance based on logged activities and sales."
+        description="Overview of your farm's financial performance based on centrally stored data."
         action={
             <Button onClick={() => router.push('/reports/budgeting')}>
                 Manage Budgets
@@ -152,7 +164,7 @@ export default function FinancialDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-800 dark:text-green-200">{formatCurrency(totalIncome)}</div>
-            <p className="text-xs text-green-600 dark:text-green-400">Sum of all sales income from harvests</p>
+            <p className="text-xs text-green-600 dark:text-green-400">Sum of all sales income</p>
           </CardContent>
         </Card>
 
@@ -175,7 +187,7 @@ export default function FinancialDashboardPage() {
           <CardContent>
             <div className={`text-2xl font-bold ${netProfitLoss >=0 ? 'text-blue-800 dark:text-blue-200' : 'text-orange-800 dark:text-orange-200'}`}>{formatCurrency(netProfitLoss)}</div>
             <p className={`text-xs ${netProfitLoss >=0 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`}>
-              {netProfitLoss >= 0 ? 'Total Income minus Total Expenses' : 'Total Expenses exceed Total Income'}
+              {netProfitLoss >= 0 ? 'Income minus Expenses' : 'Expenses exceed Income'}
             </p>
           </CardContent>
         </Card>
@@ -188,7 +200,7 @@ export default function FinancialDashboardPage() {
           <CardContent>
             <div className={`text-2xl font-bold ${profitMargin >=0 ? 'text-purple-800 dark:text-purple-200' : 'text-orange-800 dark:text-orange-200'}`}>{profitMargin.toFixed(1)}%</div>
             <p className={`text-xs ${profitMargin >=0 ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400'}`}>
-              Shows profit as a percentage of total income.
+              Profit as a percentage of income.
             </p>
           </CardContent>
         </Card>
@@ -235,28 +247,16 @@ export default function FinancialDashboardPage() {
                                         <div className="rounded-lg border bg-background p-2 shadow-sm">
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div className="flex flex-col">
-                                                    <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                                    Category
-                                                    </span>
-                                                    <span className="font-bold text-muted-foreground">
-                                                    {data.name}
-                                                    </span>
+                                                    <span className="text-[0.70rem] uppercase text-muted-foreground">Category</span>
+                                                    <span className="font-bold text-muted-foreground">{data.name}</span>
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                                    Amount
-                                                    </span>
-                                                    <span className="font-bold">
-                                                    {formatCurrency(data.total)}
-                                                    </span>
+                                                    <span className="text-[0.70rem] uppercase text-muted-foreground">Amount</span>
+                                                    <span className="font-bold">{formatCurrency(data.total)}</span>
                                                 </div>
                                                  <div className="flex flex-col">
-                                                    <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                                    Percentage
-                                                    </span>
-                                                    <span className="font-bold">
-                                                    {data.percentage.toFixed(1)}%
-                                                    </span>
+                                                    <span className="text-[0.70rem] uppercase text-muted-foreground">Percentage</span>
+                                                    <span className="font-bold">{data.percentage.toFixed(1)}%</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -298,9 +298,9 @@ export default function FinancialDashboardPage() {
             <CardTitle className="text-base font-semibold text-muted-foreground">About This Dashboard</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This dashboard provides a high-level financial summary based on data logged in the Farm Management modules.</p>
-            <p>&bull; All data is currently sourced from your browser's local storage. Ensure you use the same browser to maintain data continuity.</p>
-            <p>&bull; To add more data, log costs and sales in the "Harvesting" module, or costs in the "Land Preparation" module. Other modules will be integrated soon.</p>
+            <p>&bull; This dashboard provides a financial summary based on data stored centrally in Firestore.</p>
+            <p>&bull; **Note:** This dashboard currently reflects financial data from migrated modules only. As we convert each module (Planting, Harvesting, etc.) to use Firestore, their data will appear here.</p>
+            <p>&bull; Currently, only data from the **Land Preparation** module is included.</p>
         </CardContent>
       </Card>
     </div>

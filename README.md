@@ -28,6 +28,13 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin']);
     }
 
+    // A helper function to check if a user is part of a specific farm.
+    function isFarmMember(farmId) {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.farmId == farmId;
+    }
+
     match /users/{userId} {
       allow create: if request.auth != null && (request.auth.uid == userId || isUserAdmin());
       allow read: if request.auth != null && (request.auth.uid == userId || isUserAdmin());
@@ -40,29 +47,30 @@ service cloud.firestore {
       // Any authenticated user can create a farm, as long as they set themselves as the owner.
       // This is essential for the initial farm setup process.
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-
-      // For now, allow any authenticated user to read farm data.
-      // For stricter rules, you could check if the user is associated with the farm:
-      // allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.farmId == farmId;
-      allow read: if request.auth != null;
+      
+      // For now, allow any authenticated member of the farm to read the farm details.
+      allow read: if isFarmMember(farmId);
 
       // Only the farm owner or an admin can update or delete the farm.
       allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || isUserAdmin());
     }
 
-    // Rules for multi-tenant collections like 'plots'
+    // Rules for multi-tenant collections
     match /plots/{plotId} {
-      // A user can create a plot if the plot's farmId matches their own farmId.
-      allow create: if request.auth != null &&
-                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.farmId == request.resource.data.farmId;
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
+    
+    match /landPreparationActivities/{activityId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
 
-      // A user can read plots that belong to their farm.
-      allow read: if request.auth != null &&
-                  get(/databases/$(database)/documents/users/$(request.auth.uid)).data.farmId == resource.data.farmId;
-
-      // A user can update or delete a plot if it belongs to their farm.
-      allow update, delete: if request.auth != null &&
-                            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.farmId == resource.data.farmId;
+    match /transactions/{transactionId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read: if isFarmMember(resource.data.farmId);
+      // Prevent direct modification of financial records. This should be handled by the app logic.
+      allow update, delete: if false;
     }
 
     // Default deny for other paths. It's important to keep this to ensure
