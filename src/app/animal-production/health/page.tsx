@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { ShieldCheck, PlusCircle, Trash2, Edit2, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,10 @@ import type { PaymentSource, CostCategory, OperationalTransaction } from '@/type
 import { paymentSources, costCategories } from '@/types/finance';
 import type { CostItem, HealthRecord, HealthActivityType } from '@/types/livestock';
 import { healthActivityTypes } from '@/types/livestock';
+import { useUserProfile } from '@/contexts/user-profile-context';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+
 
 const costItemSchema = z.object({
   id: z.string().optional(),
@@ -55,8 +59,8 @@ const healthRecordFormSchema = z.object({
 });
 type HealthRecordFormValues = z.infer<typeof healthRecordFormSchema>;
 
-const LOCAL_STORAGE_KEY_RECORDS = 'animalHealthRecords_v1';
-const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
+const RECORDS_COLLECTION = 'animalHealthRecords';
+const TRANSACTIONS_COLLECTION = 'transactions';
 const ACTIVITY_FORM_ID = 'health-record-form';
 
 
@@ -65,8 +69,10 @@ export default function HealthCarePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<HealthRecord | null>(null);
   const { toast } = useToast();
-  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
   const form = useForm<HealthRecordFormValues>({
     resolver: zodResolver(healthRecordFormSchema),
@@ -87,20 +93,34 @@ export default function HealthCarePage() {
     if (!items) return 0;
     return items.reduce((acc, item) => (acc + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)), 0);
   };
-
+  
   useEffect(() => {
-    setIsMounted(true);
-    const storedRecords = localStorage.getItem(LOCAL_STORAGE_KEY_RECORDS);
-    if (storedRecords) {
-      setRecords(JSON.parse(storedRecords));
+    if (isProfileLoading) return;
+    if (!userProfile?.farmId) {
+      setError("Farm information is not available. Cannot load data.");
+      setIsLoading(false);
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem(LOCAL_STORAGE_KEY_RECORDS, JSON.stringify(records));
-    }
-  }, [records, isMounted]);
+    const fetchRecords = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
+        const q = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const querySnapshot = await getDocs(q);
+        const fetchedRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as HealthRecord[];
+        setRecords(fetchedRecords);
+      } catch (err: any) {
+        console.error("Error fetching health records:", err);
+        setError(`Failed to fetch data: ${err.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRecords();
+  }, [userProfile, isProfileLoading]);
+
 
   const handleOpenModal = (recordToEdit?: HealthRecord) => {
     if (recordToEdit) {
@@ -123,64 +143,125 @@ export default function HealthCarePage() {
     setIsModalOpen(true);
   };
 
-  const onSubmit: SubmitHandler<HealthRecordFormValues> = (data) => {
-    const now = new Date().toISOString();
-    const activityId = editingRecord ? editingRecord.id : crypto.randomUUID();
-    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
-      ...ci, id: ci.id || crypto.randomUUID(), category: ci.category, paymentSource: ci.paymentSource,
-      quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice),
-      total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
-    }));
+  const onSubmit: SubmitHandler<HealthRecordFormValues> = async (data) => {
+    if (!userProfile?.farmId || !db) {
+      toast({ title: "Error", description: "Cannot save. Farm/database information is missing.", variant: "destructive" });
+      return;
+    }
+  
+    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({ ...ci, id: ci.id || crypto.randomUUID(), category: ci.category, paymentSource: ci.paymentSource, quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice), total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0) }));
     const totalActivityCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
 
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    let allTransactions: OperationalTransaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
-    allTransactions = allTransactions.filter(t => t.linkedActivityId !== activityId);
-    
-    const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
-      id: crypto.randomUUID(), date: data.date, description: item.description, amount: item.total, type: 'Expense' as const,
-      category: item.category, paymentSource: item.paymentSource, linkedModule: 'Animal Health' as const,
-      linkedActivityId: activityId, linkedItemId: item.id,
-    }));
-    allTransactions.push(...newTransactions);
-    localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
-
-    if (editingRecord) {
-      const updatedRecord = { ...editingRecord, ...data, costItems: processedCostItems, totalActivityCost, updatedAt: now };
-      setRecords(records.map((rec) => rec.id === activityId ? updatedRecord : rec));
-      toast({ title: "Health Record Updated", description: `${data.activityType} activity has been updated.` });
-    } else {
-      const newRecord: HealthRecord = {
-        id: activityId, ...data,
-        medicationOrTreatment: data.medicationOrTreatment || undefined,
-        dosage: data.dosage || undefined,
-        administeredBy: data.administeredBy || undefined,
-        notes: data.notes || undefined,
-        costItems: processedCostItems, totalActivityCost, createdAt: now, updatedAt: now,
-      };
-      setRecords(prev => [...prev, newRecord]);
-      toast({ title: "Health Record Logged", description: `${data.activityType} activity has been successfully logged.` });
+    const recordData: any = {
+        farmId: userProfile.farmId,
+        ...data,
+        totalActivityCost,
+        costItems: processedCostItems,
+        updatedAt: serverTimestamp(),
+    };
+  
+    const batch = writeBatch(db);
+  
+    try {
+      let recordId: string;
+      if (editingRecord) {
+        recordId = editingRecord.id;
+        const recordRef = doc(db, RECORDS_COLLECTION, recordId);
+        batch.update(recordRef, recordData);
+        
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", recordId));
+        const oldTransSnap = await getDocs(transQuery);
+        oldTransSnap.forEach(doc => batch.delete(doc.ref));
+      } else {
+        const recordRef = doc(collection(db, RECORDS_COLLECTION));
+        recordId = recordRef.id;
+        batch.set(recordRef, { ...recordData, createdAt: serverTimestamp() });
+      }
+  
+      recordData.costItems.forEach((item: CostItem) => {
+        const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
+        const newTransaction: Omit<OperationalTransaction, 'id'> = {
+          farmId: userProfile.farmId,
+          date: data.date,
+          description: item.description,
+          amount: item.total,
+          type: 'Expense',
+          category: item.category,
+          paymentSource: item.paymentSource,
+          linkedModule: 'Animal Health',
+          linkedActivityId: recordId,
+          linkedItemId: item.id,
+        };
+        batch.set(transRef, newTransaction);
+      });
+  
+      await batch.commit();
+  
+      if (editingRecord) {
+        setRecords(records.map(rec => rec.id === recordId ? { ...rec, ...recordData, id: recordId } : rec));
+        toast({ title: "Record Updated", description: `Record for ${data.activityType} has been updated.` });
+      } else {
+        const newRecordForState: HealthRecord = {
+            ...recordData,
+            id: recordId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        setRecords(prev => [...prev, newRecordForState]);
+        toast({ title: "Record Logged", description: `Record for ${data.activityType} has been successfully logged.` });
+      }
+  
+      setIsModalOpen(false);
+      setEditingRecord(null);
+      form.reset();
+  
+    } catch (err: any) {
+        console.error("Error saving record:", err);
+        toast({ title: "Save Failed", description: `Could not save record. Error: ${err.message}`, variant: "destructive" });
     }
-    
-    setIsModalOpen(false);
-    setEditingRecord(null);
-    form.reset();
   };
 
-  const handleDeleteRecord = (id: string) => {
+
+  const handleDeleteRecord = async (id: string) => {
     const recordToDelete = records.find(r => r.id === id);
-    setRecords(records.filter((rec) => rec.id !== id));
+    if (!recordToDelete || !db) return;
     
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    if(storedTransactions) {
-        let allTransactions: OperationalTransaction[] = JSON.parse(storedTransactions);
-        allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
-        localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
+    const batch = writeBatch(db);
+    try {
+        batch.delete(doc(db, RECORDS_COLLECTION, id));
+        
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", id));
+        const transSnap = await getDocs(transQuery);
+        transSnap.forEach(doc => batch.delete(doc.ref));
+
+        await batch.commit();
+        setRecords(records.filter((rec) => rec.id !== id));
+        toast({ title: "Record Deleted", description: `Health record "${recordToDelete.activityType}" has been removed.`, variant: "destructive" });
+    } catch(err: any) {
+         console.error("Error deleting record:", err);
+        toast({ title: "Deletion Failed", description: `Could not delete record. Error: ${err.message}`, variant: "destructive" });
     }
-    toast({ title: "Record Deleted", description: `Health record "${recordToDelete?.activityType}" has been removed.`, variant: "destructive" });
   };
   
-  if (!isMounted) return null;
+  if (isProfileLoading || isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
+        <Loader2 className="h-12 w-12 text-primary animate-spin" />
+        <p className="ml-3 text-lg text-muted-foreground">Loading health records...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+     return (
+        <div className="container mx-auto py-10">
+         <Card className="w-full max-w-lg mx-auto text-center shadow-lg">
+            <CardHeader><CardTitle className="flex items-center justify-center text-xl text-destructive"><AlertTriangle className="mr-2 h-6 w-6" /> Data Loading Error</CardTitle></CardHeader>
+            <CardContent><p className="text-muted-foreground mb-2">{error}</p></CardContent>
+         </Card>
+        </div>
+     );
+  }
 
   return (
     <div>
@@ -268,7 +349,7 @@ export default function HealthCarePage() {
             <Table>
               <TableHeader><TableRow><TableHead>Activity Type</TableHead><TableHead>Date</TableHead><TableHead>Animals Affected</TableHead><TableHead className="text-right">Total Cost</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {records.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((record) => (
+                {records.sort((a,b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime()).map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">{record.activityType}</TableCell>
                     <TableCell>{isValid(parseISO(record.date)) ? format(parseISO(record.date), 'PP') : 'Invalid Date'}</TableCell>
@@ -288,9 +369,8 @@ export default function HealthCarePage() {
       <Card className="mt-6 bg-muted/30 p-4">
         <CardHeader className="p-0 pb-2"><CardTitle className="text-base font-semibold text-muted-foreground">About Health Costing</CardTitle></CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This section tracks vital health and biosecurity activities and their costs.</p>
+            <p>&bull; Health record data is now stored centrally in Firestore, available to all farm members.</p>
             <p>&bull; Log activities such as vaccinations, treatments, or regular health checks.</p>
-            <p>&bull; Itemize costs for medicines, vaccines, veterinary services, and other related inputs.</p>
             <p>&bull; All costs logged here are automatically added to the central financial ledger for accurate tracking.</p>
         </CardContent>
       </Card>
