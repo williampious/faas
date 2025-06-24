@@ -70,7 +70,7 @@ export default function InstallationGuidePage() {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12">
       <div className="container mx-auto px-4">
         <header className="mb-10 text-center">
-          <Link href="/" className="inline-block mb-4">
+          <Link href="/">
             <Image
               src="/agrifaas-logo.png"
               alt="AgriFAAS Connect Logo"
@@ -113,10 +113,10 @@ export default function InstallationGuidePage() {
               Ensure your browser is up-to-date. PWA installation features are standard in modern versions of Chrome, Edge, and Safari.
               The availability of the 'Install' option can sometimes depend on how frequently you visit the site or specific browser criteria.
             </p>
-            <Link href="/help" passHref>
+            <Link href="/help">
                 <Button variant="outline" className="mr-2">Visit Help Center</Button>
             </Link>
-             <Link href="/" passHref>
+             <Link href="/">
                 <Button>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
                 </Button>
@@ -126,4 +126,3 @@ export default function InstallationGuidePage() {
     </div>
   );
 }
-

@@ -50,7 +50,7 @@ export default function HelpPage() {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12">
       <div className="container mx-auto px-4">
         <header className="mb-10 text-center">
-          <Link href="/" className="inline-block mb-4">
+          <Link href="/">
             <Image
               src="/agrifaas-logo.png"
               alt="AgriFAAS Connect Logo"
@@ -89,10 +89,10 @@ export default function HelpPage() {
         
         <div className="text-center">
             <p className="text-muted-foreground mb-4">Can't find what you're looking for?</p>
-            <Link href="/faq" passHref>
+            <Link href="/faq">
                 <Button variant="outline" className="mr-2">Visit our FAQ Page</Button>
             </Link>
-            <Link href="/" passHref>
+            <Link href="/">
                 <Button>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
                 </Button>

@@ -45,7 +45,7 @@ export default function FeaturesPage() {
       categoryTitle: "User & System Management",
       features: [
         { name: "User Profile Management", description: "Users can view and update their personal and contact information." },
-        { name:_("Role-Based Access Control"), description: "Navigation and features adapt based on assigned user roles (Admin, Manager, Farmer, AEO, etc.)." },
+        { name: "Role-Based Access Control", description: "Navigation and features adapt based on assigned user roles (Admin, Manager, Farmer, AEO, etc.)." },
         { name: "Admin User Management", description: "Admins can view all users, manage roles, and add new users via a secure invitation link system." },
         { name: "Admin Dashboard", description: "Central hub for administrators to oversee application users and settings." },
       ]
@@ -79,7 +79,7 @@ export default function FeaturesPage() {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12">
       <div className="container mx-auto px-4">
         <header className="mb-10 text-center">
-          <Link href="/" className="inline-block mb-4">
+          <Link href="/">
             <Image
               src="/agrifaas-logo.png"
               alt="AgriFAAS Connect Logo"
@@ -122,7 +122,7 @@ export default function FeaturesPage() {
         </div>
         
         <div className="text-center mt-12">
-            <Link href="/" passHref>
+            <Link href="/">
                 <Button size="lg">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
                 </Button>

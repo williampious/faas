@@ -110,7 +110,7 @@ export default function PricingPage() {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12">
       <div className="container mx-auto px-4">
         <header className="mb-10 text-center">
-          <Link href="/" className="inline-block mb-4">
+          <Link href="/">
             <Image
               src="/agrifaas-logo.png"
               alt="AgriFAAS Connect Logo"
@@ -153,7 +153,7 @@ export default function PricingPage() {
                 </ul>
               </CardContent>
               <CardFooter className="mt-auto p-6">
-                <Link href={tier.href} passHref className="w-full">
+                <Link href={tier.href} className="w-full">
                   <Button size="lg" variant={tier.buttonVariant} className="w-full">
                     {tier.buttonText}
                   </Button>
@@ -167,7 +167,7 @@ export default function PricingPage() {
           <p className="text-muted-foreground mb-4">
             Need a custom solution or have questions? <Link href="/#contact-us" className="text-primary hover:underline">Contact us</Link>.
           </p>
-          <Link href="/" passHref>
+          <Link href="/">
             <Button variant="outline" size="lg">
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
             </Button>
@@ -177,4 +177,3 @@ export default function PricingPage() {
     </div>
   );
 }
-

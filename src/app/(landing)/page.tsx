@@ -7,6 +7,52 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon, LayoutList, DownloadCloud, LifeBuoy, HelpCircle } from 'lucide-react';
 
+interface BenefitCardProps {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+}
+
+function BenefitCard({ icon: Icon, title, description }: BenefitCardProps) {
+  return (
+    <Card className="bg-card/80 dark:bg-card/60 shadow-lg hover:shadow-xl transition-shadow duration-300 p-6 text-center flex flex-col items-center h-full">
+      <div className="p-3 bg-primary/10 rounded-full inline-block mb-4">
+        <Icon className="h-10 w-10 text-primary" />
+      </div>
+      <CardTitle className="text-xl text-primary mb-2 font-semibold">{title}</CardTitle>
+      <CardContent className="p-0 flex-grow">
+        <p className="text-muted-foreground text-sm">{description}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface StepCardProps {
+  stepNumber: number;
+  icon: React.ElementType;
+  title: string;
+  description: string;
+}
+
+function StepCard({ stepNumber, icon: Icon, title, description }: StepCardProps) {
+  return (
+    <Card className="bg-card/80 dark:bg-card/60 shadow-lg hover:shadow-xl transition-shadow duration-300 p-5 text-center flex flex-col items-center h-full">
+      <div className="relative mb-4">
+        <div className="p-3 bg-primary/10 rounded-full inline-block">
+          <Icon className="h-10 w-10 text-primary" />
+        </div>
+        <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+          {stepNumber}
+        </div>
+      </div>
+      <CardTitle className="text-lg text-primary mb-2 font-semibold">{title}</CardTitle>
+      <CardContent className="p-0 flex-grow">
+        <p className="text-muted-foreground text-sm">{description}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function LandingPage() {
   const whyAgriFAASPoints = [
     {
@@ -58,7 +104,7 @@ export default function LandingPage() {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50">
       <div className="container mx-auto px-4 py-8 sm:py-12 flex flex-col items-center">
         <header className="mb-12 text-center pt-8">
-            <Link href="/" className="inline-block mb-4">
+            <Link href="/">
               <Image
                 src="/agrifaas-logo.png"
                 alt="AgriFAAS Connect Logo"
@@ -91,13 +137,13 @@ export default function LandingPage() {
                 Streamline operations, access resources, and unlock new opportunities with our all-in-one solution.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Link href="/auth/signin" passHref>
+                <Link href="/auth/signin">
                   <Button size="lg" className="w-full text-lg py-3 sm:py-4">
                     Sign In
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
-                <Link href="/auth/register" passHref>
+                <Link href="/auth/register">
                   <Button variant="secondary" size="lg" className="w-full text-lg py-3 sm:py-4">
                     Register
                   </Button>
@@ -147,25 +193,25 @@ export default function LandingPage() {
             Find out more about our features, how to install the app, and get support.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link href="/features" passHref>
+            <Link href="/features">
               <Button variant="secondary" size="lg">
                 <LayoutList className="mr-2 h-4 w-4" />
                 Explore Features
               </Button>
             </Link>
-            <Link href="/installation-guide" passHref>
+            <Link href="/installation-guide">
               <Button variant="secondary" size="lg">
                 <DownloadCloud className="mr-2 h-4 w-4" />
                 Installation Guide
               </Button>
             </Link>
-            <Link href="/help" passHref>
+            <Link href="/help">
               <Button variant="secondary" size="lg">
                 <LifeBuoy className="mr-2 h-4 w-4" />
                 Help Center
               </Button>
             </Link>
-            <Link href="/faq" passHref>
+            <Link href="/faq">
               <Button variant="secondary" size="lg">
                 <HelpCircle className="mr-2 h-4 w-4" />
                 View FAQ
@@ -209,51 +255,5 @@ export default function LandingPage() {
         </div>
       </footer>
     </div>
-  );
-}
-
-interface BenefitCardProps {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-}
-
-function BenefitCard({ icon: Icon, title, description }: BenefitCardProps) {
-  return (
-    <Card className="bg-card/80 dark:bg-card/60 shadow-lg hover:shadow-xl transition-shadow duration-300 p-6 text-center flex flex-col items-center h-full">
-      <div className="p-3 bg-primary/10 rounded-full inline-block mb-4">
-        <Icon className="h-10 w-10 text-primary" />
-      </div>
-      <CardTitle className="text-xl text-primary mb-2 font-semibold">{title}</CardTitle>
-      <CardContent className="p-0 flex-grow">
-        <p className="text-muted-foreground text-sm">{description}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-interface StepCardProps {
-  stepNumber: number;
-  icon: React.ElementType;
-  title: string;
-  description: string;
-}
-
-function StepCard({ stepNumber, icon: Icon, title, description }: StepCardProps) {
-  return (
-    <Card className="bg-card/80 dark:bg-card/60 shadow-lg hover:shadow-xl transition-shadow duration-300 p-5 text-center flex flex-col items-center h-full">
-      <div className="relative mb-4">
-        <div className="p-3 bg-primary/10 rounded-full inline-block">
-          <Icon className="h-10 w-10 text-primary" />
-        </div>
-        <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
-          {stepNumber}
-        </div>
-      </div>
-      <CardTitle className="text-lg text-primary mb-2 font-semibold">{title}</CardTitle>
-      <CardContent className="p-0 flex-grow">
-        <p className="text-muted-foreground text-sm">{description}</p>
-      </CardContent>
-    </Card>
   );
 }

@@ -36,54 +36,20 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    React.AnchorHTMLAttributes<HTMLAnchorElement>, // Allow anchor props
     VariantProps<typeof buttonVariants> {
-  asChild?: boolean // Button's own asChild prop
+  asChild?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    {
-      className,
-      variant,
-      size,
-      asChild: buttonAsChild = false, // Button's own asChild prop
-      ...restProps // Contains other props, including those potentially passed by Link
-    },
-    ref
-  ) => {
-    // Destructure 'asChild' from restProps to ensure it's not passed to the DOM element
-    // if Link passes it down.
-    const { asChild: incomingAsChildFromLink, ...elementSpecificProps } = restProps
-
-    // Determine the component to render.
-    // If Button's own asChild is true, use Slot.
-    // Else, if href is present (passed from Link), render an 'a' tag.
-    // Otherwise, render a 'button' tag.
-    const Comp = buttonAsChild
-      ? Slot
-      : (elementSpecificProps.href ? "a" : "button")
-
-    const finalProps: React.HTMLAttributes<HTMLElement> & Record<string, any> = {
-      className: cn(buttonVariants({ variant, size, className })),
-      ref: ref as React.ForwardedRef<any>, // Ref can be for button or anchor
-      ...elementSpecificProps,
-    }
-
-    // Ensure 'type' prop is handled correctly for 'a' vs 'button'
-     if (Comp === 'a' && typeof finalProps.type === 'string') {
-      // Remove button-specific type if we are rendering an anchor
-      if (finalProps.type === 'submit' || finalProps.type === 'reset' || finalProps.type === 'button') {
-       delete finalProps.type;
-      }
-    }
-    if (Comp === 'button' && !finalProps.type && !finalProps.href) {
-      // Default type for button if not an anchor and type not specified
-      finalProps.type = 'button';
-    }
-
-
-    return <Comp {...finalProps} />
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    )
   }
 )
 Button.displayName = "Button"

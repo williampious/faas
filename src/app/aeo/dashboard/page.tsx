@@ -17,7 +17,7 @@ interface AEOFeatureCardProps {
 
 function AEOFeatureCard({ title, description, icon: Icon, href, cta, disabled }: AEOFeatureCardProps) {
   return (
-    <Link href={disabled ? "#" : href} passHref className={disabled ? 'pointer-events-none' : ''}>
+    <Link href={disabled ? "#" : href} className={disabled ? 'pointer-events-none' : ''}>
       <Card className={`shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-primary'}`}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">

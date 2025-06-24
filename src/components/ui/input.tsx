@@ -5,8 +5,11 @@ import { cn } from "@/lib/utils"
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, value, ...props }, ref) => {
-    const finalValue = Number.isNaN(value as number) ? "" : value;
-    
+    const finalValue =
+      value === null || (typeof value === 'number' && Number.isNaN(value))
+        ? ''
+        : value;
+
     return (
       <input
         type={type}
@@ -15,7 +18,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className
         )}
         ref={ref}
-        value={finalValue ?? ""}
+        value={finalValue ?? ''}
         {...props}
       />
     )

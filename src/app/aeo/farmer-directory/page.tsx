@@ -347,7 +347,7 @@ export default function FarmerDirectoryPage() {
                     <TableCell>{farmer.address?.community || 'N/A'}</TableCell>
                     <TableCell>{farmer.phoneNumber || 'N/A'}</TableCell>
                     <TableCell className="text-right space-x-2">
-                       <Link href={`/aeo/farmer-profile/${farmer.userId}`} passHref>
+                       <Link href={`/aeo/farmer-profile/${farmer.userId}`}>
                         <Button variant="outline" size="sm">
                           <Eye className="h-3.5 w-3.5 mr-1" /> View
                         </Button>
@@ -370,4 +370,3 @@ export default function FarmerDirectoryPage() {
     </div>
   );
 }
-

@@ -67,6 +67,36 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+interface InfoItemProps {
+  icon?: React.ElementType;
+  label: string;
+  value?: string | React.ReactNode;
+  className?: string;
+}
+
+function InfoItem({ icon: Icon, label, value, className }: InfoItemProps) {
+  const isConsideredEmpty = value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
+  
+  if (isConsideredEmpty && typeof value !== 'boolean' && typeof value !== 'number') {
+    return null; 
+  }
+
+  let displayValue = value;
+  if (typeof value === 'boolean') {
+    displayValue = value ? "Yes" : "No";
+  }
+
+  return (
+    <div className={cn("py-2 flex flex-col sm:flex-row sm:justify-between sm:items-start border-b border-border/50 last:border-b-0", className)}>
+      <span className="font-medium text-muted-foreground flex items-center whitespace-nowrap mb-1 sm:mb-0 sm:mr-2">
+        {Icon && <Icon className="mr-2 h-4 w-4 text-primary/80 shrink-0" />}
+        {label}:
+      </span>
+      {typeof displayValue === 'string' ? <span className="sm:text-right text-foreground break-words">{displayValue}</span> : <div className="sm:text-right text-foreground break-words">{displayValue}</div>}
+    </div>
+  );
+}
+
 
 export default function UserProfilePage() {
   const { userProfile, isLoading: isProfileLoading, error: profileError, user } = useUserProfile();
@@ -565,35 +595,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
-interface InfoItemProps {
-  icon?: React.ElementType;
-  label: string;
-  value?: string | React.ReactNode;
-  className?: string;
-}
-
-function InfoItem({ icon: Icon, label, value, className }: InfoItemProps) {
-  const isConsideredEmpty = value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
-  
-  if (isConsideredEmpty && typeof value !== 'boolean' && typeof value !== 'number') {
-    return null; 
-  }
-
-  let displayValue = value;
-  if (typeof value === 'boolean') {
-    displayValue = value ? "Yes" : "No";
-  }
-
-  return (
-    <div className={cn("py-2 flex flex-col sm:flex-row sm:justify-between sm:items-start border-b border-border/50 last:border-b-0", className)}>
-      <span className="font-medium text-muted-foreground flex items-center whitespace-nowrap mb-1 sm:mb-0 sm:mr-2">
-        {Icon && <Icon className="mr-2 h-4 w-4 text-primary/80 shrink-0" />}
-        {label}:
-      </span>
-      {typeof displayValue === 'string' ? <span className="sm:text-right text-foreground break-words">{displayValue}</span> : <div className="sm:text-right text-foreground break-words">{displayValue}</div>}
-    </div>
-  );
-}
-
-    

@@ -46,7 +46,7 @@ export default function HRDashboardPage() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {hrFeatures.map((feature) => (
-          <Link href={feature.href} passHref key={feature.title} className={feature.href === "#" ? 'pointer-events-none' : ''}>
+          <Link href={feature.href} key={feature.title} className={feature.href === "#" ? 'pointer-events-none' : ''}>
             <Card className={`shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full ${feature.href === "#" ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-primary'}`}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
