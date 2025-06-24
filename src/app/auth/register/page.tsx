@@ -99,6 +99,8 @@ export default function RegisterPage() {
       } else if (registrationError.code === 'permission-denied') {
         displayError = 'Firestore Permission Denied: Could not save your profile. Please ensure Firestore rules allow user profile creation during registration. Contact support if this persists.';
         console.error("Detailed Firestore Permission Denied Error during registration:", registrationError.details || registrationError);
+      } else if (registrationError.code === 'auth/network-request-failed') {
+        displayError = 'Network error: Could not connect to authentication servers. Please check your internet connection and ensure Firebase configuration (especially authDomain) is correct.';
       }
       
       if (firebaseUser) {

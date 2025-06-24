@@ -64,6 +64,8 @@ export default function SignInPage() {
         errorMessage = 'Invalid email or password. Please try again.';
       } else if (firebaseError.code === 'auth/too-many-requests') {
         errorMessage = 'Too many sign-in attempts. Please try again later.';
+      } else if (firebaseError.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error: Could not connect to authentication servers. Please check your internet connection and ensure Firebase configuration (especially authDomain) is correct.';
       }
       setError(errorMessage);
     } finally {

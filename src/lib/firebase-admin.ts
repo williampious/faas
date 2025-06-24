@@ -45,14 +45,14 @@ if (!admin.apps.length) {
     console.log("Firebase Admin SDK already initialized.");
 }
 
-let adminDbInstance = null;
-let adminAuthInstance = null;
+let adminDbInstance: admin.firestore.Firestore | null = null;
+let adminAuthInstance: admin.auth.Auth | null = null;
 
 if (admin.apps.length > 0 && admin.apps[0]) { // Check if an app was successfully initialized
     try {
         adminDbInstance = admin.firestore();
         adminAuthInstance = admin.auth();
-    } catch (e) {
+    } catch (e: any) {
         console.error("Error getting admin Firestore/Auth instances:", e);
     }
 }
