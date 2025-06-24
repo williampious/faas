@@ -4,74 +4,79 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, LayoutList, CheckCircle, Construction } from 'lucide-react';
+import { ArrowLeft, LayoutList, CheckCircle, Construction, Cloud, Users, Beef, Tractor } from 'lucide-react';
 import Image from 'next/image';
 
 export default function FeaturesPage() {
   const featureCategories = [
     {
-      categoryTitle: "Core Farm Management",
+      categoryTitle: "Platform & Collaboration",
+      icon: Cloud,
       features: [
-        { name: "Dashboard Overview", description: "At-a-glance summary of farm activities, calendar events, and key alerts." },
-        { name: "Land Preparation Tracking", description: "Log activities like clearing, ploughing, and harrowing, with detailed cost tracking per activity." },
-        { name: "Planting Records", description: "Record crop types, varieties, planting dates, areas, methods, and all associated costs." },
-        { name: "Crop Maintenance Logs", description: "Track irrigation, fertilization, pest/disease control, and other maintenance activities with integrated costing." },
-        { name: "Harvesting & Post-Harvest", description: "Log yield data, quality, storage, sales, and harvest-related costs. Sales data automatically feeds into the financial dashboard as income." },
-        { name: "Plot/Field Management", description: "Define and manage individual farm plots or fields, including size, soil type, and location." },
-        { name: "Soil & Water Management", description: "Log and visualize soil test results, manage water sources, and optimize irrigation. (Coming Soon)", comingSoon: true },
+        { name: "Cloud-Based Data Sync", description: "All your farm data is stored securely in the cloud, enabling real-time collaboration for your entire team. Access up-to-date information from any device." },
+        { name: "Role-Based Access Control", description: "Navigation and features adapt based on assigned user roles (Admin, Manager, Farmer, AEO, etc.), ensuring users only see what they need." },
+        { name: "Progressive Web App (PWA)", description: "Installable on mobile devices for an app-like experience with offline capabilities for cached assets." },
       ]
     },
     {
-      categoryTitle: "Livestock Production (Iterative Rollout)",
+      categoryTitle: "Core Crop Management",
+      icon: Tractor,
       features: [
-        { name: "Livestock Focus Setup", description: "Define primary animal type (e.g., Poultry, Cattle) and management system (Extensive, Intensive)." },
-        { name: "Housing & Infrastructure Management", description: "Log housing units (barns, pens), capacity, and track setup/maintenance costs." },
-        { name: "Health Care & Biosecurity", description: "Log vaccinations, health monitoring, medication, and track related costs which are integrated with the financial ledger." },
-        { name: "Feeding & Nutrition", description: "Track feed types, schedules, inventory, and dietary needs. (Coming Soon)", comingSoon: true },
-        { name: "Breeding & Incubation", description: "Manage breeding ratios, incubation, fertility, and hatch rates. (Coming Soon)", comingSoon: true },
+        { name: "Dashboard Overview", description: "At-a-glance summary of farm activities, calendar events, and key alerts." },
+        { name: "Land Preparation Tracking", description: "Log activities like clearing, ploughing, and harrowing, with detailed cost tracking that feeds the financial dashboard." },
+        { name: "Planting Records", description: "Record crop types, varieties, planting dates, and all associated costs in a central database." },
+        { name: "Crop Maintenance Logs", description: "Track irrigation, fertilization, pest/disease control, and other maintenance activities with integrated costing." },
+        { name: "Harvesting & Post-Harvest", description: "Log yield data, quality, storage, sales, and costs. Sales data automatically feeds into the financial dashboard as income." },
+        { name: "Plot/Field Management", description: "Define and manage individual farm plots or fields, including size, soil type, and location." },
+      ]
+    },
+    {
+      categoryTitle: "Livestock Production",
+      icon: Beef,
+      features: [
+        { name: "Livestock Focus Setup", description: "Define primary animal type (e.g., Poultry, Cattle) and management system to tailor the modules." },
+        { name: "Housing & Infrastructure Management", description: "Log housing units (barns, pens), capacity, and track setup/maintenance costs centrally." },
+        { name: "Health Care & Biosecurity", description: "Log vaccinations, health monitoring, and medication. Costs are automatically integrated with the financial ledger." },
+        { name: "Feeding & Nutrition", description: "Track feed types, schedules, inventory, and dietary needs.", comingSoon: true },
+        { name: "Breeding & Incubation", description: "Manage breeding ratios, incubation, fertility, and hatch rates.", comingSoon: true },
       ]
     },
     {
       categoryTitle: "Planning & Support Tools",
+      icon: CheckCircle,
       features: [
-        { name: "Farm Calendar", description: "Schedule and view tasks and important events on a monthly calendar." },
-        { name: "Task Management", description: "Kanban-style board to manage tasks through To Do, In Progress, and Done stages with drag-and-drop functionality." },
-        { name: "Resource Inventory", description: "Track stock levels of resources like seeds, fertilizers, and fuel. Log purchases and costs." },
+        { name: "Collaborative Farm Calendar", description: "Schedule and view tasks and important events on a shared team calendar." },
+        { name: "Team Task Management", description: "Kanban-style board to manage tasks through To Do, In Progress, and Done stages with drag-and-drop functionality, visible to the whole team." },
+        { name: "Centralized Resource Inventory", description: "Track stock levels of resources like seeds and fertilizers. Purchases are logged as expenses automatically." },
         { name: "Weather Monitoring", description: "View mock weather data for a specified location to aid in planning." },
-        { name: "AI Planting Advice", description: "Get AI-generated recommendations for planting schedules and fertilization (powered by Genkit)." },
+        { name: "AI Planting Advice", description: "Get AI-generated recommendations for planting schedules and fertilization (powered by Google's AI)." },
       ]
     },
     {
       categoryTitle: "User & System Management",
+      icon: Users,
       features: [
+        { name: "Admin User Management", description: "Admins can view all users, manage roles, and add new team members via a secure invitation link system." },
         { name: "User Profile Management", description: "Users can view and update their personal and contact information." },
-        { name: "Role-Based Access Control", description: "Navigation and features adapt based on assigned user roles (Admin, Manager, Farmer, AEO, etc.)." },
-        { name: "Admin User Management", description: "Admins can view all users, manage roles, and add new users via a secure invitation link system." },
-        { name: "Admin Dashboard", description: "Central hub for administrators to oversee application users and settings." },
+        { name: "Secure Farm Setup", description: "The first user sets up the farm, becoming the owner and administrator for the new, isolated farm environment." },
       ]
     },
     {
         categoryTitle: "Agric Extension Officer (AEO) Tools",
+        icon: Users,
         features: [
-            { name: "AEO Dashboard", description: "Dedicated dashboard for AEOs to manage their activities." },
+            { name: "AEO Dashboard", description: "Dedicated dashboard for AEOs to manage their activities and farmer interactions." },
             { name: "Farmer Directory Management", description: "AEOs can add and view profiles of farmers they manage within their assigned regions and districts." },
             { name: "Detailed Farmer Profile View", description: "View comprehensive details of individual farmers, including farm details, challenges, and needs." },
         ]
     },
     {
         categoryTitle: "Financial & Reporting",
+        icon: CheckCircle,
         features: [
-            { name: "Financial Dashboard (Live)", description: "Dynamic overview of total income and expenses, with charts for monthly trends and expense breakdown by category." },
-            { name: "Budgeting Tool", description: "Create and manage budgets for specific seasons or periods. Define expense categories and track overall budget vs. actual spending." },
+            { name: "Live Financial Dashboard", description: "Dynamic overview of total income and expenses, with charts for monthly trends and expense breakdown by category." },
+            { name: "Collaborative Budgeting Tool", description: "Create and manage budgets for specific seasons or periods. Track overall budget vs. actual spending in real-time." },
         ]
-    },
-    {
-      categoryTitle: "Platform & User Experience",
-      features: [
-        { name: "Progressive Web App (PWA)", description: "Installable on mobile devices for an app-like experience with offline capabilities for cached assets." },
-        { name: "Responsive Design", description: "Accessible on various devices, including desktops, tablets, and smartphones." },
-        { name: "Help & FAQ Pages", description: "Dedicated sections for user assistance and common questions." },
-      ]
     }
   ];
 
@@ -92,7 +97,7 @@ export default function FeaturesPage() {
             <LayoutList className="mr-3 h-10 w-10" /> AgriFAAS Connect Features
           </h1>
           <p className="mt-3 text-lg sm:text-xl text-foreground/80 max-w-2xl mx-auto">
-            Discover the capabilities of our farm management platform.
+            Discover the capabilities of our collaborative, cloud-based farm management platform.
           </p>
         </header>
 
@@ -100,7 +105,10 @@ export default function FeaturesPage() {
           {featureCategories.map((category, catIndex) => (
             <Card key={catIndex} className="w-full max-w-4xl mx-auto shadow-xl">
               <CardHeader className="bg-primary/5">
-                <CardTitle className="text-2xl text-primary">{category.categoryTitle}</CardTitle>
+                <CardTitle className="text-2xl text-primary flex items-center">
+                  <category.icon className="mr-3 h-6 w-6" />
+                  {category.categoryTitle}
+                </CardTitle>
               </CardHeader>
               <CardContent className="pt-6 space-y-4">
                 {category.features.map((feature, featIndex) => (

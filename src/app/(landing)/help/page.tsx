@@ -10,38 +10,43 @@ import Image from 'next/image';
 export default function HelpPage() {
   const helpTopics = [
     {
-      title: "Getting Started with AgriFAAS Connect",
-      description: "Learn how to register, set up your profile, and navigate the dashboard.",
+      title: "Getting Started Guide",
+      description: "Learn how to register as the first admin, set up your farm, and invite your team members.",
       link: "#getting-started"
     },
     {
-      title: "Managing Your Farm Operations",
-      description: "Guides on land preparation, planting, crop maintenance, and harvesting.",
+      title: "Admin: User Management",
+      description: "A guide for Admins on how to use the User Management dashboard to invite new users and manage roles.",
+      link: "#user-management"
+    },
+    {
+      title: "Managing Farm Operations",
+      description: "Detailed guides on using the cloud-based modules for Land Preparation, Planting, Crop Maintenance, and Harvesting.",
       link: "#farm-operations"
     },
     {
-      title: "Using the Farm Calendar and Task Manager",
-      description: "Tips for effectively planning your activities and managing tasks.",
+      title: "Managing Livestock Operations",
+      description: "Learn how to log and manage livestock housing and health records in the central database.",
+      link: "#livestock-operations"
+    },
+    {
+      title: "Using Collaborative Tools",
+      description: "Tips for using the shared Farm Calendar and team-based Task Management board effectively.",
       link: "#planning-tools"
     },
     {
-      title: "Financial Reporting & Budgeting",
-      description: "Understand the financial dashboard, track income/expenses, and create budgets.",
+      title: "Financials & Budgeting",
+      description: "Understand the live Financial Dashboard, track income/expenses, and create collaborative budgets.",
       link: "#financials"
     },
     {
       title: "Using AEO Tools",
-      description: "A guide for Agric Extension Officers on using the farmer directory and other specialized tools.",
+      description: "A guide for Agric Extension Officers on managing their Farmer Directory, adding farmers, and viewing profiles.",
       link: "#aeo-tools"
     },
     {
-      title: "Understanding AI Planting Advice",
-      description: "How to input data and interpret the AI-generated planting recommendations.",
-      link: "#ai-advice"
-    },
-    {
-      title: "Account & Profile Settings",
-      description: "How to update your personal information, password, and notification preferences.",
+      title: "Profile & Settings",
+      description: "How to update your personal information and preferences.",
       link: "#account-settings"
     }
   ];

@@ -4,29 +4,8 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, DownloadCloud, Smartphone, Compass, Share, SquareArrowUp, PlusSquare, MonitorSmartphone } from 'lucide-react';
+import { ArrowLeft, DownloadCloud, Smartphone, MonitorSmartphone } from 'lucide-react';
 import Image from 'next/image';
-
-// Mock Apple icon as lucide-react doesn't have it directly.
-// In a real scenario, you might use a dedicated icon library or SVG.
-const AppleIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"/>
-    <path d="M10 2c1 .5 2 2 2 5"/>
-  </svg>
-);
-
-// Mock Chrome icon
-const ChromeIcon = () => (
- <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <circle cx="12" cy="12" r="4"/>
-    <line x1="21.17" y1="8" x2="12" y2="8"/>
-    <line x1="3.95" y1="6.06" x2="8.54" y2="14"/>
-    <line x1="10.88" y1="21.94" x2="15.46" y2="14"/>
-  </svg>
-);
-
 
 export default function InstallationGuidePage() {
   const installationSteps = [
@@ -43,7 +22,7 @@ export default function InstallationGuidePage() {
     },
     {
       platform: "Android (Chrome)",
-      icon: ChromeIcon,
+      icon: Smartphone,
       steps: [
         "Open AgriFAAS Connect in the Chrome browser on your Android device.",
         "Tap the three-dot menu icon (⋮) in the top-right corner of Chrome.",
@@ -54,7 +33,7 @@ export default function InstallationGuidePage() {
     },
     {
       platform: "iOS (Safari)",
-      icon: AppleIcon,
+      icon: Smartphone,
       steps: [
         "Open AgriFAAS Connect in the Safari browser on your iPhone or iPad.",
         "Tap the 'Share' icon at the bottom of the screen (it looks like a square with an arrow pointing upwards).",

@@ -12,35 +12,35 @@ export default function FaqPage() {
   const faqItems = [
     {
       question: "What is AgriFAAS Connect?",
-      answer: "AgriFAAS Connect is a comprehensive farm management platform designed to simplify agricultural operations. It helps you log and manage everything from land preparation and planting to harvesting and sales. It also includes tools for task management, inventory, budgeting, AI-powered advice, and specialized features for Agric Extension Officers (AEOs)."
+      answer: "AgriFAAS Connect is a comprehensive, cloud-based farm management platform designed for collaboration. It helps you and your team log and manage every aspect of your operation—from land preparation and planting to harvesting and sales. It features real-time data synchronization, robust user management with specific roles, task management, inventory, budgeting, AI-powered advice, and specialized tools for Agric Extension Officers (AEOs)."
     },
     {
-      question: "How do I register for an account?",
-      answer: "You can register by clicking the 'Register' button on the homepage. Any new user who registers through this public page is automatically assigned an 'Admin' role, giving them full access to all features, including User Management."
+      question: "How do I get an account?",
+      answer: "To ensure data security and proper organization, new users are added by invitation only. An existing Administrator on a farm account must invite you using the 'User Management' dashboard. This process allows them to assign you the correct role (e.g., Manager, Farmer, AEO) before you even sign up."
     },
     {
-      question: "How do I add my team members?",
-      answer: "Once you are registered as an Admin, you can navigate to the 'Admin' section and use the 'User Management' dashboard. Click the 'Add New User' button to invite team members via a secure link. This allows you to assign specific roles (like Manager, Farmer, or Farm Staff) to them before they complete their registration."
+        question: "I'm the first person from my farm. How do I register?",
+        answer: "The very first user can register via the public 'Register' button on the homepage. This initial user is automatically assigned the 'Admin' role, giving them the ability to set up the farm and invite the rest of their team members."
+    },
+    {
+      question: "How is my data stored and secured?",
+      answer: "All your farm's data is stored centrally and securely in Firebase Firestore, a robust cloud database. This allows for real-time collaboration, meaning any update made by a team member is instantly visible to others. Access to data is controlled by multi-tenant security rules, ensuring that only authenticated members of your farm can access your information."
     },
     {
       question: "Can I use AgriFAAS Connect on my mobile device?",
       answer: "Yes, AgriFAAS Connect is designed as a Progressive Web App (PWA). It's fully responsive and can be 'installed' on your smartphone or tablet's home screen for an app-like experience with offline access to cached assets."
     },
     {
-      question: "How is my data stored and secured?",
-      answer: "User profile data is stored securely in Firebase Firestore. Operational data logged within specific modules (like Land Prep, Planting, Tasks, Inventory) is currently stored in your browser's local storage. This allows for offline accessibility on the device you use to enter the data. We prioritize data security and use Firebase's robust infrastructure."
-    },
-    {
-        question: "What if I forget my password?",
-        answer: "The 'Forgot your password?' link on the Sign In page is a placeholder for a planned feature. Full password reset functionality will be implemented in a future update."
-    },
-    {
         question: "What do the AEO (Agric Extension Officer) tools do?",
-        answer: "The AEO module provides specialized tools for extension officers. It includes a dedicated dashboard, a Farmer Directory to manage and view profiles of farmers in their region, and detailed profile views to track farmer-specific information, challenges, and needs."
+        answer: "The AEO module provides a dedicated dashboard for extension officers. It includes a 'Farmer Directory' which allows them to add new farmers, view detailed profiles of farmers they manage, and track farmer-specific information, challenges, and needs within their assigned region."
+    },
+    {
+        question: "How does user management work?",
+        answer: "Users with the 'Admin' role have access to a User Management dashboard. From there, they can view all users on the farm, manage their roles (e.g., promote a Farmer to a Manager), and invite new users by generating a secure, one-time registration link."
     },
     {
         question: "How do I get AI Planting Advice?",
-        answer: "Navigate to the 'AI Advice' section from your dashboard. You'll need to provide details about your farm's weather data, soil conditions, and the crop you intend to plant. The system will then generate tailored advice using Genkit."
+        answer: "Navigate to the 'AI Advice' section from your dashboard. You'll need to provide details about your farm's weather data, soil conditions, and the crop you intend to plant. The system will then generate tailored advice using Google's AI models."
     }
   ];
 
