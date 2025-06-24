@@ -29,6 +29,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 const genderOptions: Gender[] = ['Male', 'Female', 'Other', 'PreferNotToSay'];
 const communicationChannelOptions: CommunicationChannel[] = ['SMS', 'AppNotification', 'WhatsApp'];
@@ -182,6 +184,29 @@ export default function UserProfilePage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+  
+  const handleResetLocalData = () => {
+    const keysToRemove = [
+      'animalHealthRecords_v1', 'animalHousingRecords_v1', 'cropMaintenanceActivities_v1',
+      'harvestingRecords_v1', 'landPreparationActivities_v4', 'plantingRecords_v1',
+      'farmPlots_v1', 'resourceInventory_v1', 'farmTasks_v2', 'farmBudgets_v1',
+      'farmTransactions_v1', 'livestockProductionFocus_v1', 'weatherLocation', 'farmEvents',
+    ];
+
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+    });
+
+    toast({
+      title: "Local Data Reset",
+      description: "All operational data has been cleared from your browser. The page will now reload.",
+    });
+
+    // Reload the page to reflect the cleared state
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
   };
 
   if (isProfileLoading) {
@@ -589,6 +614,41 @@ export default function UserProfilePage() {
                   <InfoItem label="Weather Updates" value={currentProfile.receiveWeatherUpdates ? 'Subscribed' : 'Not Subscribed'} />
                 </CardContent>
               </Card>
+
+              <Card className="shadow-lg border-destructive/50">
+                <CardHeader>
+                    <CardTitle className="font-headline text-lg flex items-center text-destructive">
+                    <AlertTriangle className="mr-2 h-5 w-5" /> Advanced Settings
+                    </CardTitle>
+                    <CardDescription>
+                    These are destructive actions. Use with caution.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive">Reset All Local Data</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action will permanently delete all operational data stored in your browser, including tasks, inventory, budget data, and all farm management records. It will NOT delete your user profile or farm setup from the server. This is useful for clearing test data and starting fresh.
+                            <br/><br/>
+                            This cannot be undone.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleResetLocalData}>Yes, Reset Data</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                    </AlertDialog>
+                    <p className="text-xs text-muted-foreground mt-4">
+                        <strong>Note on User Data:</strong> To clear user and farm profiles, you must manually delete the documents from the 'users' and 'farms' collections in your Firebase Firestore console. This is recommended when moving from a testing to a production environment.
+                    </p>
+                </CardContent>
+                </Card>
           </div>
         </div>
       )}
