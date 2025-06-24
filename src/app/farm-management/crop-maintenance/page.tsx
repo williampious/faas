@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { ShieldAlert, PlusCircle, Trash2, Edit2, ArrowLeft } from 'lucide-react';
+import { ShieldAlert, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,10 @@ import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
 import type { PaymentSource, CostCategory, OperationalTransaction } from '@/types/finance';
 import { paymentSources, costCategories } from '@/types/finance';
+import { useUserProfile } from '@/contexts/user-profile-context';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+
 
 const maintenanceActivityTypes = [
   'Irrigation', 
@@ -63,6 +67,7 @@ interface CostItem extends CostItemFormValues {
 
 interface CropMaintenanceActivity {
   id: string;
+  farmId: string;
   activityType: CropMaintenanceActivityType;
   date: string; // ISO string "yyyy-MM-dd"
   cropsAffected: string; 
@@ -71,8 +76,8 @@ interface CropMaintenanceActivity {
   notes?: string;
   costItems: CostItem[];
   totalActivityCost: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: any;
+  updatedAt: any;
 }
 
 const activityFormSchema = z.object({
@@ -87,8 +92,8 @@ const activityFormSchema = z.object({
 
 type ActivityFormValues = z.infer<typeof activityFormSchema>;
 
-const LOCAL_STORAGE_KEY_ACTIVITIES = 'cropMaintenanceActivities_v1';
-const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
+const ACTIVITIES_COLLECTION = 'cropMaintenanceActivities';
+const TRANSACTIONS_COLLECTION = 'transactions';
 const ACTIVITY_FORM_ID = 'crop-maintenance-form';
 
 export default function CropMaintenancePage() {
@@ -96,8 +101,10 @@ export default function CropMaintenancePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<CropMaintenanceActivity | null>(null);
   const { toast } = useToast();
-  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
@@ -115,14 +122,31 @@ export default function CropMaintenancePage() {
   };
 
   useEffect(() => {
-    setIsMounted(true);
-    const storedActivities = localStorage.getItem(LOCAL_STORAGE_KEY_ACTIVITIES);
-    if (storedActivities) setActivities(JSON.parse(storedActivities));
-  }, []);
+    if (isProfileLoading) return;
+    if (!userProfile?.farmId) {
+      setError("Farm information is not available. Cannot load data.");
+      setIsLoading(false);
+      return;
+    }
 
-  useEffect(() => {
-    if (isMounted) localStorage.setItem(LOCAL_STORAGE_KEY_ACTIVITIES, JSON.stringify(activities));
-  }, [activities, isMounted]);
+    const fetchActivities = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
+        const q = query(collection(db, ACTIVITIES_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const querySnapshot = await getDocs(q);
+        const fetchedActivities = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CropMaintenanceActivity[];
+        setActivities(fetchedActivities);
+      } catch (err: any) {
+        console.error("Error fetching activities:", err);
+        setError(`Failed to fetch data: ${err.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchActivities();
+  }, [userProfile, isProfileLoading]);
 
   const handleOpenModal = (activityToEdit?: CropMaintenanceActivity) => {
     if (activityToEdit) {
@@ -139,60 +163,132 @@ export default function CropMaintenancePage() {
     setIsModalOpen(true);
   };
 
-  const onSubmit: SubmitHandler<ActivityFormValues> = (data) => {
-    const now = new Date().toISOString();
-    const activityId = editingActivity ? editingActivity.id : crypto.randomUUID();
-    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
-      ...ci, id: ci.id || crypto.randomUUID(), category: ci.category, paymentSource: ci.paymentSource,
-      quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice),
-      total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
-    }));
-    const totalActivityCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
-
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    let allTransactions: OperationalTransaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
-    allTransactions = allTransactions.filter(t => t.linkedActivityId !== activityId);
-    
-    const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
-      id: crypto.randomUUID(), date: data.date, description: item.description, amount: item.total, type: 'Expense' as const,
-      category: item.category, paymentSource: item.paymentSource, linkedModule: 'Crop Maintenance' as const,
-      linkedActivityId: activityId, linkedItemId: item.id,
-    }));
-    allTransactions.push(...newTransactions);
-    localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
-
-    if (editingActivity) {
-      const updatedActivity = { ...editingActivity, ...data, costItems: processedCostItems, totalActivityCost, updatedAt: now };
-      setActivities(activities.map((act) => act.id === activityId ? updatedActivity : act));
-      toast({ title: "Activity Updated", description: `${data.activityType} activity has been updated.` });
-    } else {
-      const newActivity: CropMaintenanceActivity = {
-        ...data, id: activityId, activityDetails: data.activityDetails || undefined, notes: data.notes || undefined,
-        costItems: processedCostItems, totalActivityCost, createdAt: now, updatedAt: now,
-      };
-      setActivities(prev => [...prev, newActivity]);
-      toast({ title: "Activity Logged", description: `${data.activityType} activity has been successfully logged.` });
+  const onSubmit: SubmitHandler<ActivityFormValues> = async (data) => {
+    if (!userProfile?.farmId || !db) {
+      toast({ title: "Error", description: "Cannot save. Farm/database information is missing.", variant: "destructive" });
+      return;
     }
-    
-    setIsModalOpen(false);
-    setEditingActivity(null);
-    form.reset();
+  
+    const totalActivityCost = calculateTotalCost(data.costItems);
+    const activityData: any = {
+      farmId: userProfile.farmId,
+      ...data,
+      totalActivityCost,
+      costItems: (data.costItems || []).map(ci => ({
+        ...ci,
+        total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
+        id: ci.id || crypto.randomUUID(),
+      })),
+      updatedAt: serverTimestamp(),
+    };
+  
+    const batch = writeBatch(db);
+  
+    try {
+      let activityId: string;
+      if (editingActivity) {
+        activityId = editingActivity.id;
+        const activityRef = doc(db, ACTIVITIES_COLLECTION, activityId);
+        batch.update(activityRef, activityData);
+        
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", activityId));
+        const oldTransSnap = await getDocs(transQuery);
+        oldTransSnap.forEach(doc => batch.delete(doc.ref));
+      } else {
+        const activityRef = doc(collection(db, ACTIVITIES_COLLECTION));
+        activityId = activityRef.id;
+        batch.set(activityRef, { ...activityData, createdAt: serverTimestamp() });
+      }
+  
+      activityData.costItems.forEach((item: CostItem) => {
+        const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
+        const newTransaction: Omit<OperationalTransaction, 'id'> = {
+          farmId: userProfile.farmId,
+          date: data.date,
+          description: item.description,
+          amount: item.total,
+          type: 'Expense',
+          category: item.category,
+          paymentSource: item.paymentSource,
+          linkedModule: 'Crop Maintenance',
+          linkedActivityId: activityId,
+          linkedItemId: item.id,
+        };
+        batch.set(transRef, newTransaction);
+      });
+  
+      await batch.commit();
+  
+      if (editingActivity) {
+        setActivities(activities.map(a => a.id === activityId ? { ...a, ...activityData, id: activityId } : a));
+        toast({ title: "Activity Updated", description: `${data.activityType} activity has been updated.` });
+      } else {
+        const newActivityForState: CropMaintenanceActivity = {
+            ...activityData,
+            id: activityId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        setActivities(prev => [...prev, newActivityForState]);
+        toast({ title: "Activity Logged", description: `${data.activityType} activity has been successfully logged.` });
+      }
+  
+      setIsModalOpen(false);
+      setEditingActivity(null);
+      form.reset();
+  
+    } catch (err: any) {
+        console.error("Error saving activity:", err);
+        toast({ title: "Save Failed", description: `Could not save activity. Error: ${err.message}`, variant: "destructive" });
+    }
   };
 
-  const handleDeleteActivity = (id: string) => {
+  const handleDeleteActivity = async (id: string) => {
     const activityToDelete = activities.find(a => a.id === id);
-    setActivities(activities.filter((act) => act.id !== id));
+    if (!activityToDelete || !db) return;
     
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    if(storedTransactions) {
-        let allTransactions: OperationalTransaction[] = JSON.parse(storedTransactions);
-        allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
-        localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
+    const batch = writeBatch(db);
+    try {
+        batch.delete(doc(db, ACTIVITIES_COLLECTION, id));
+        
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", id));
+        const transSnap = await getDocs(transQuery);
+        transSnap.forEach(doc => batch.delete(doc.ref));
+
+        await batch.commit();
+        setActivities(activities.filter((act) => act.id !== id));
+        toast({ title: "Activity Deleted", description: `Activity "${activityToDelete.activityType}" has been removed.`, variant: "destructive" });
+    } catch(err: any) {
+         console.error("Error deleting activity:", err);
+        toast({ title: "Deletion Failed", description: `Could not delete activity. Error: ${err.message}`, variant: "destructive" });
     }
-    toast({ title: "Activity Deleted", description: `Activity "${activityToDelete?.activityType}" has been removed.`, variant: "destructive" });
   };
   
-  if (!isMounted) return null;
+  if (isProfileLoading || isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
+        <Loader2 className="h-12 w-12 text-primary animate-spin" />
+        <p className="ml-3 text-lg text-muted-foreground">Loading data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+     return (
+        <div className="container mx-auto py-10">
+         <Card className="w-full max-w-lg mx-auto text-center shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center justify-center text-xl text-destructive">
+                    <AlertTriangle className="mr-2 h-6 w-6" /> Data Loading Error
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-muted-foreground mb-2">{error}</p>
+            </CardContent>
+         </Card>
+        </div>
+     );
+  }
 
   return (
     <div>
@@ -270,7 +366,7 @@ export default function CropMaintenancePage() {
             <Table>
               <TableHeader><TableRow><TableHead>Activity Type</TableHead><TableHead>Date</TableHead><TableHead>Crop(s) Affected</TableHead><TableHead className="text-right">Total Cost</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {activities.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((activity) => (
+                {activities.sort((a,b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime()).map((activity) => (
                   <TableRow key={activity.id}>
                     <TableCell className="font-medium">{activity.activityType}</TableCell>
                     <TableCell>{isValid(parseISO(activity.date)) ? format(parseISO(activity.date), 'PP') : 'Invalid Date'}</TableCell>
@@ -290,11 +386,9 @@ export default function CropMaintenancePage() {
       <Card className="mt-6 bg-muted/30 p-4">
         <CardHeader className="p-0 pb-2"><CardTitle className="text-base font-semibold text-muted-foreground">About Crop Maintenance Costing</CardTitle></CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This section helps track diverse ongoing crop care tasks and their associated costs.</p>
-            <p>&bull; Log activities such as irrigation, fertilization, pest/disease control, weeding, etc. by category.</p>
-            <p>&bull; Itemize costs for inputs (fertilizers, pesticides), labor, water usage, equipment rental, and more.</p>
+            <p>&bull; Data in this module is now stored centrally in Firestore, ensuring all farm members see the same information.</p>
+            <p>&bull; Log activities such as irrigation, fertilization, pest/disease control, weeding, etc.</p>
             <p>&bull; The total cost for each maintenance activity is automatically calculated and logged in the central financial ledger.</p>
-            <p>&bull; Consistent logging here is vital for understanding operational expenses throughout the crop cycle.</p>
         </CardContent>
       </Card>
     </div>

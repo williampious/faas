@@ -71,6 +71,11 @@ service cloud.firestore {
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
 
+    match /cropMaintenanceActivities/{activityId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
+
     match /transactions/{transactionId} {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read: if isFarmMember(resource.data.farmId);
