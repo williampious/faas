@@ -24,6 +24,7 @@ export interface Farm {
 
 export interface PlotField {
   id: string;
+  farmId: string; // The ID of the farm this plot belongs to (Tenant ID)
   name: string;
   description?: string;
   sizeAcres?: number;
@@ -34,6 +35,6 @@ export interface PlotField {
   // currentCrop?: string;
   // plantingHistory?: Array<{ crop: string; season: string; yield: number; yieldUnit: string }>;
   // activityLog?: Array<{ date: string; activity: string; notes?: string }>;
-  createdAt: string; // ISO datetime string
-  updatedAt: string; // ISO datetime string
+  createdAt: any; // Firestore ServerTimestamp or ISO string
+  updatedAt: any; // Firestore ServerTimestamp or ISO string
 }

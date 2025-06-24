@@ -14,11 +14,13 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { LayoutGrid, PlusCircle, Edit2, Trash2, ArrowLeft, MapPin } from 'lucide-react';
-import { format, parseISO, isValid } from 'date-fns';
+import { LayoutGrid, PlusCircle, Edit2, Trash2, ArrowLeft, MapPin, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { PlotField } from '@/types/farm';
+import { useUserProfile } from '@/contexts/user-profile-context';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 
 const plotFieldFormSchema = z.object({
   name: z.string().min(2, { message: "Plot name must be at least 2 characters." }).max(100),
@@ -43,16 +45,18 @@ const plotFieldFormSchema = z.object({
 
 type PlotFieldFormValues = z.infer<typeof plotFieldFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'farmPlots_v1';
 const PLOT_FORM_ID = 'plot-field-form';
+const PLOTS_COLLECTION = 'plots';
 
 export default function PlotFieldManagementPage() {
   const [plots, setPlots] = useState<PlotField[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlot, setEditingPlot] = useState<PlotField | null>(null);
   const { toast } = useToast();
-  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
   const form = useForm<PlotFieldFormValues>({
     resolver: zodResolver(plotFieldFormSchema),
@@ -63,25 +67,50 @@ export default function PlotFieldManagementPage() {
   });
 
   useEffect(() => {
-    setIsMounted(true);
-    const storedPlots = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (storedPlots) {
-      setPlots(JSON.parse(storedPlots));
+    if (isProfileLoading) return;
+    if (!userProfile?.farmId) {
+      setError("Farm information is not available. Cannot load plot data.");
+      setIsLoading(false);
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(plots));
-    }
-  }, [plots, isMounted]);
+    const fetchPlots = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
+        
+        const plotsQuery = query(
+          collection(db, PLOTS_COLLECTION),
+          where("farmId", "==", userProfile.farmId)
+        );
+        const querySnapshot = await getDocs(plotsQuery);
+        const fetchedPlots = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as PlotField[];
+        setPlots(fetchedPlots);
+      } catch (err: any) {
+        console.error("Error fetching plots:", err);
+        setError(`Failed to fetch plot data. Please check your connection and security rules. Error: ${err.message}`);
+        toast({ title: "Error", description: "Could not fetch plot data.", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPlots();
+  }, [userProfile, isProfileLoading, toast]);
+
 
   const handleOpenModal = (plotToEdit?: PlotField) => {
     if (plotToEdit) {
       setEditingPlot(plotToEdit);
       form.reset({
-        name: plotToEdit.name, description: plotToEdit.description || '',
-        sizeAcres: plotToEdit.sizeAcres, locationNotes: plotToEdit.locationNotes || '',
+        name: plotToEdit.name,
+        description: plotToEdit.description || '',
+        sizeAcres: plotToEdit.sizeAcres,
+        locationNotes: plotToEdit.locationNotes || '',
         gpsCoordinates: {
           latitude: plotToEdit.gpsCoordinates?.latitude,
           longitude: plotToEdit.gpsCoordinates?.longitude,
@@ -98,50 +127,89 @@ export default function PlotFieldManagementPage() {
     setIsModalOpen(true);
   };
 
-  const onSubmit: SubmitHandler<PlotFieldFormValues> = (data) => {
-    const now = new Date().toISOString();
+  const onSubmit: SubmitHandler<PlotFieldFormValues> = async (data) => {
+    if (!userProfile?.farmId) {
+      toast({ title: "Error", description: "Cannot save plot. Farm information is missing.", variant: "destructive" });
+      return;
+    }
+
     const gpsCoords = 
       (data.gpsCoordinates?.latitude !== undefined && data.gpsCoordinates?.longitude !== undefined) ||
       (data.gpsCoordinates?.latitude === 0 && data.gpsCoordinates?.longitude === 0)
       ? { latitude: data.gpsCoordinates.latitude, longitude: data.gpsCoordinates.longitude } 
       : undefined;
 
+    const plotData = {
+      ...data,
+      farmId: userProfile.farmId,
+      gpsCoordinates: gpsCoords,
+      updatedAt: serverTimestamp(),
+    };
 
-    if (editingPlot) {
-      setPlots(
-        plots.map((p) =>
-          p.id === editingPlot.id
-            ? { ...editingPlot, ...data, gpsCoordinates: gpsCoords, updatedAt: now }
-            : p
-        )
-      );
-      toast({ title: "Plot Updated", description: `Plot "${data.name}" has been updated.` });
-    } else {
-      const newPlot: PlotField = {
-        id: crypto.randomUUID(), ...data, sizeAcres: data.sizeAcres,
-        gpsCoordinates: gpsCoords, createdAt: now, updatedAt: now,
-      };
-      setPlots((prev) => [...prev, newPlot]);
-      toast({ title: "Plot Added", description: `Plot "${data.name}" has been added.` });
+    try {
+      if (editingPlot) {
+        const plotDocRef = doc(db, PLOTS_COLLECTION, editingPlot.id);
+        await updateDoc(plotDocRef, plotData);
+        setPlots(plots.map((p) => p.id === editingPlot.id ? { ...p, ...data, gpsCoordinates: gpsCoords } : p));
+        toast({ title: "Plot Updated", description: `Plot "${data.name}" has been updated.` });
+      } else {
+        const docRef = await addDoc(collection(db, PLOTS_COLLECTION), {
+            ...plotData,
+            createdAt: serverTimestamp(),
+        });
+        const newPlot: PlotField = { id: docRef.id, ...plotData, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+        setPlots(prev => [...prev, newPlot]);
+        toast({ title: "Plot Added", description: `Plot "${data.name}" has been added.` });
+      }
+      setIsModalOpen(false);
+      setEditingPlot(null);
+      form.reset();
+    } catch (err: any) {
+       console.error("Error saving plot:", err);
+       toast({ title: "Save Failed", description: `Could not save plot. Error: ${err.message}`, variant: "destructive" });
     }
-    setIsModalOpen(false);
-    setEditingPlot(null);
-    form.reset();
   };
 
-  const handleDeletePlot = (id: string) => {
+  const handleDeletePlot = async (id: string) => {
     const plotToDelete = plots.find(p => p.id === id);
-    setPlots(plots.filter((p) => p.id !== id));
-    toast({ title: "Plot Deleted", description: `Plot "${plotToDelete?.name}" has been removed.`, variant: "destructive" });
+    if (!plotToDelete) return;
+    
+    try {
+      await deleteDoc(doc(db, PLOTS_COLLECTION, id));
+      setPlots(plots.filter((p) => p.id !== id));
+      toast({ title: "Plot Deleted", description: `Plot "${plotToDelete.name}" has been removed.`, variant: "destructive" });
+    } catch (err: any) {
+      console.error("Error deleting plot:", err);
+      toast({ title: "Deletion Failed", description: `Could not delete plot. Error: ${err.message}`, variant: "destructive" });
+    }
   };
 
-  if (!isMounted) {
+  if (isProfileLoading || (isLoading && !error)) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
-        <LayoutGrid className="h-12 w-12 text-primary animate-pulse" />
+        <Loader2 className="h-12 w-12 text-primary animate-pulse" />
         <p className="ml-3 text-lg text-muted-foreground">Loading plot data...</p>
       </div>
     );
+  }
+  
+  if (error) {
+     return (
+        <div className="container mx-auto py-10">
+         <Card className="w-full max-w-lg mx-auto text-center shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center justify-center text-xl text-destructive">
+                    <AlertTriangle className="mr-2 h-6 w-6" />
+                    Data Loading Error
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-muted-foreground mb-2">{error}</p>
+                <p className="mt-4 text-sm text-muted-foreground">Please ensure your Firestore security rules allow reading from the 'plots' collection.</p>
+            </CardContent>
+         </Card>
+        </div>
+     );
   }
 
   return (
@@ -263,10 +331,9 @@ export default function PlotFieldManagementPage() {
             <CardTitle className="text-base font-semibold text-muted-foreground">Plot/Field Management Notes</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; Define each distinct area of your farm here. This helps in organizing activities and tracking per-plot data.</p>
-            <p>&bull; Details like size, soil type, and location notes are valuable for planning and record-keeping.</p>
-            <p>&bull; GPS coordinates can be useful for mapping and precision agriculture in the future.</p>
-            <p>&bull; Future enhancements will link plots to crop history, activities, and soil test results.</p>
+            <p>&bull; This data is now stored centrally in Firestore, not in your browser. All users from your farm will see the same list of plots.</p>
+            <p>&bull; Each plot is tagged with your farm's unique ID to keep it separate from other farms on the platform.</p>
+            <p>&bull; For this to work, you must update your Firestore security rules to allow access to the `plots` collection.</p>
         </CardContent>
       </Card>
     </div>
