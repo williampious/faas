@@ -300,9 +300,11 @@ export default function FinancialDashboardPage() {
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
             <p>&bull; This dashboard provides a financial summary based on data stored centrally in Firestore.</p>
             <p>&bull; **Note:** This dashboard currently reflects financial data from migrated modules only. As we convert each module (Planting, Harvesting, etc.) to use Firestore, their data will appear here.</p>
-            <p>&bull; Currently, only data from the **Land Preparation** module is included.</p>
+            <p>&bull; Currently, data from the **Land Preparation** and **Planting** modules is included.</p>
         </CardContent>
       </Card>
     </div>
   );
 }
+
+    

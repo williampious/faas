@@ -6,14 +6,14 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Sprout, PlusCircle, Trash2, Edit2, ArrowLeft } from 'lucide-react'; 
+import { Sprout, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, parseISO, isValid } from 'date-fns';
@@ -22,9 +22,12 @@ import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
 import type { PaymentSource, CostCategory, OperationalTransaction } from '@/types/finance';
 import { paymentSources, costCategories } from '@/types/finance';
+import type { PlantingRecord, CostItem, PlantingMethod } from '@/types/planting';
+import { plantingMethods } from '@/types/planting';
+import { useUserProfile } from '@/contexts/user-profile-context';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 
-const plantingMethods = ['Direct Sowing', 'Transplanting', 'Broadcasting', 'Drilling'] as const;
-type PlantingMethod = typeof plantingMethods[number];
 
 const costItemSchema = z.object({
   id: z.string().optional(),
@@ -39,26 +42,6 @@ const costItemSchema = z.object({
 
 type CostItemFormValues = z.infer<typeof costItemSchema>;
 
-interface CostItem extends CostItemFormValues {
-  id: string;
-  total: number;
-}
-
-interface PlantingRecord {
-  id: string;
-  cropType: string;
-  variety?: string;
-  datePlanted: string; // ISO string "yyyy-MM-dd"
-  areaPlanted: string;
-  seedSource?: string;
-  plantingMethod: PlantingMethod;
-  notes?: string;
-  costItems: CostItem[];
-  totalPlantingCost: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
 const plantingRecordFormSchema = z.object({
   cropType: z.string().min(1, { message: "Crop type is required." }).max(100),
   variety: z.string().max(100).optional(),
@@ -72,17 +55,22 @@ const plantingRecordFormSchema = z.object({
 
 type PlantingRecordFormValues = z.infer<typeof plantingRecordFormSchema>;
 
-const LOCAL_STORAGE_KEY_ACTIVITIES = 'plantingRecords_v1';
-const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
+
+const RECORDS_COLLECTION = 'plantingRecords';
+const TRANSACTIONS_COLLECTION = 'transactions';
 const ACTIVITY_FORM_ID = 'planting-record-form';
+
 
 export default function PlantingPage() {
   const [records, setRecords] = useState<PlantingRecord[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<PlantingRecord | null>(null);
   const { toast } = useToast();
-  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+
 
   const form = useForm<PlantingRecordFormValues>({
     resolver: zodResolver(plantingRecordFormSchema),
@@ -95,16 +83,33 @@ export default function PlantingPage() {
     if (!items) return 0;
     return items.reduce((acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0);
   };
-
+  
   useEffect(() => {
-    setIsMounted(true);
-    const storedRecords = localStorage.getItem(LOCAL_STORAGE_KEY_ACTIVITIES);
-    if (storedRecords) setRecords(JSON.parse(storedRecords));
-  }, []);
+    if (isProfileLoading) return;
+    if (!userProfile?.farmId) {
+      setError("Farm information is not available. Cannot load data.");
+      setIsLoading(false);
+      return;
+    }
 
-  useEffect(() => {
-    if (isMounted) localStorage.setItem(LOCAL_STORAGE_KEY_ACTIVITIES, JSON.stringify(records));
-  }, [records, isMounted]);
+    const fetchRecords = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
+        const q = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const querySnapshot = await getDocs(q);
+        const fetchedRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PlantingRecord[];
+        setRecords(fetchedRecords);
+      } catch (err: any) {
+        console.error("Error fetching planting records:", err);
+        setError(`Failed to fetch data: ${err.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRecords();
+  }, [userProfile, isProfileLoading]);
 
   const handleOpenModal = (recordToEdit?: PlantingRecord) => {
     if (recordToEdit) {
@@ -120,59 +125,136 @@ export default function PlantingPage() {
     }
     setIsModalOpen(true);
   };
-
-  const onSubmit: SubmitHandler<PlantingRecordFormValues> = (data) => {
-    const now = new Date().toISOString();
-    const activityId = editingRecord ? editingRecord.id : crypto.randomUUID();
-    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
-      ...ci, id: ci.id || crypto.randomUUID(), category: ci.category, paymentSource: ci.paymentSource,
-      quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice), total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
-    }));
-    const totalPlantingCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
-
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    let allTransactions: OperationalTransaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
-    allTransactions = allTransactions.filter(t => t.linkedActivityId !== activityId);
-
-    const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
-      id: crypto.randomUUID(), date: data.datePlanted, description: item.description, amount: item.total,
-      type: 'Expense', category: item.category, paymentSource: item.paymentSource, linkedModule: 'Planting',
-      linkedActivityId: activityId, linkedItemId: item.id,
-    }));
-    allTransactions.push(...newTransactions);
-    localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
-
-    if (editingRecord) {
-      const updatedRecord = { ...editingRecord, ...data, costItems: processedCostItems, totalPlantingCost, updatedAt: now };
-      setRecords(records.map((rec) => rec.id === activityId ? updatedRecord : rec));
-      toast({ title: "Planting Record Updated", description: `Record for ${data.cropType} has been updated.` });
-    } else {
-      const newRecord: PlantingRecord = {
-        id: activityId, ...data, variety: data.variety || undefined, seedSource: data.seedSource || undefined,
-        notes: data.notes || undefined, costItems: processedCostItems, totalPlantingCost, createdAt: now, updatedAt: now,
-      };
-      setRecords(prev => [...prev, newRecord]);
-      toast({ title: "Planting Record Logged", description: `Record for ${data.cropType} has been successfully logged.` });
-    }
-    setIsModalOpen(false);
-    setEditingRecord(null);
-    form.reset();
-  };
-
-  const handleDeleteRecord = (id: string) => {
-    const recordToDelete = records.find(r => r.id === id);
-    setRecords(records.filter((rec) => rec.id !== id));
-    
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    if(storedTransactions) {
-        let allTransactions: OperationalTransaction[] = JSON.parse(storedTransactions);
-        allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
-        localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
-    }
-    toast({ title: "Record Deleted", description: `Planting record for "${recordToDelete?.cropType}" has been removed.`, variant: "destructive" });
-  };
   
-  if (!isMounted) return null;
+  const onSubmit: SubmitHandler<PlantingRecordFormValues> = async (data) => {
+    if (!userProfile?.farmId || !db) {
+      toast({ title: "Error", description: "Cannot save. Farm/database information is missing.", variant: "destructive" });
+      return;
+    }
+
+    const totalPlantingCost = calculateTotalCost(data.costItems);
+    const recordData: any = {
+      farmId: userProfile.farmId,
+      ...data,
+      totalPlantingCost,
+      costItems: (data.costItems || []).map(ci => ({
+        ...ci,
+        total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
+        id: ci.id || crypto.randomUUID(),
+      })),
+      updatedAt: serverTimestamp(),
+    };
+    
+    const batch = writeBatch(db);
+
+    try {
+      if (editingRecord) {
+        const recordRef = doc(db, RECORDS_COLLECTION, editingRecord.id);
+        batch.update(recordRef, recordData);
+        
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", editingRecord.id));
+        const oldTransSnap = await getDocs(transQuery);
+        oldTransSnap.forEach(doc => batch.delete(doc.ref));
+        
+        recordData.id = editingRecord.id;
+
+      } else {
+        const recordRef = doc(collection(db, RECORDS_COLLECTION));
+        batch.set(recordRef, { ...recordData, createdAt: serverTimestamp() });
+        recordData.id = recordRef.id;
+      }
+
+      recordData.costItems.forEach((item: CostItem) => {
+        const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
+        const newTransaction: Omit<OperationalTransaction, 'id'> = {
+          farmId: userProfile.farmId,
+          date: data.datePlanted,
+          description: item.description,
+          amount: item.total,
+          type: 'Expense',
+          category: item.category,
+          paymentSource: item.paymentSource,
+          linkedModule: 'Planting',
+          linkedActivityId: recordData.id,
+          linkedItemId: item.id,
+        };
+        batch.set(transRef, newTransaction);
+      });
+
+      await batch.commit();
+
+      if (editingRecord) {
+        setRecords(records.map(r => r.id === editingRecord.id ? { ...r, ...recordData, id: editingRecord.id } : r));
+        toast({ title: "Record Updated", description: `Planting record for ${data.cropType} has been updated.` });
+      } else {
+        const newRecordForState: PlantingRecord = {
+            ...recordData, 
+            id: recordData.id,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        }
+        setRecords(prev => [...prev, newRecordForState]);
+        toast({ title: "Record Logged", description: `Planting record for ${data.cropType} has been logged.` });
+      }
+
+      setIsModalOpen(false);
+      setEditingRecord(null);
+      form.reset();
+
+    } catch (err: any) {
+        console.error("Error saving record:", err);
+        toast({ title: "Save Failed", description: `Could not save record. Error: ${err.message}`, variant: "destructive" });
+    }
+  };
+
+
+  const handleDeleteRecord = async (id: string) => {
+    const recordToDelete = records.find(r => r.id === id);
+    if (!recordToDelete || !db) return;
+    
+    const batch = writeBatch(db);
+    try {
+        batch.delete(doc(db, RECORDS_COLLECTION, id));
+        
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", id));
+        const transSnap = await getDocs(transQuery);
+        transSnap.forEach(doc => batch.delete(doc.ref));
+
+        await batch.commit();
+        setRecords(records.filter((r) => r.id !== id));
+        toast({ title: "Record Deleted", description: `Planting record for "${recordToDelete.cropType}" has been removed.`, variant: "destructive" });
+    } catch(err: any) {
+        console.error("Error deleting record:", err);
+        toast({ title: "Deletion Failed", description: `Could not delete record. Error: ${err.message}`, variant: "destructive" });
+    }
+  };
+
+  if (isProfileLoading || isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
+        <Loader2 className="h-12 w-12 text-primary animate-spin" />
+        <p className="ml-3 text-lg text-muted-foreground">Loading planting records...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+     return (
+        <div className="container mx-auto py-10">
+         <Card className="w-full max-w-lg mx-auto text-center shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center justify-center text-xl text-destructive">
+                    <AlertTriangle className="mr-2 h-6 w-6" /> Data Loading Error
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-muted-foreground mb-2">{error}</p>
+            </CardContent>
+         </Card>
+        </div>
+     );
+  }
+
 
   return (
     <div>
@@ -267,12 +349,12 @@ export default function PlantingPage() {
       <Card className="mt-6 bg-muted/30 p-4">
         <CardHeader className="p-0 pb-2"><CardTitle className="text-base font-semibold text-muted-foreground">About Planting Costing</CardTitle></CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This section helps track details and costs associated with planting activities.</p>
-            <p>&bull; Log records for each crop, variety, area, and method. Itemize costs for seeds, labor, machinery, etc. by category.</p>
-            <p>&bull; The total cost for each planting record is automatically calculated and logged in the central financial ledger.</p>
-            <p>&bull; This data is crucial for understanding per-crop expenditure and overall farm financial health.</p>
+            <p>&bull; This module's data is now stored centrally in Firestore.</p>
+            <p>&bull; Itemize costs for seeds, labor, machinery, etc. All costs are added to the central financial ledger.</p>
         </CardContent>
       </Card>
     </div>
   );
 }
+
+    
