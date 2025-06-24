@@ -98,6 +98,16 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /tasks/{taskId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
+
+    match /farmEvents/{eventId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
+
     // Default deny for other paths. It's important to keep this to ensure
     // collections you haven't explicitly defined rules for remain secure.
     match /{document=**} {
