@@ -6,14 +6,14 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Home as HomeIcon, PlusCircle, Trash2, Edit2, ArrowLeft } from 'lucide-react';
+import { Home as HomeIcon, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, parseISO, isValid } from 'date-fns';
@@ -24,6 +24,10 @@ import type { HousingRecord, CostItem } from '@/types/livestock';
 import { housingTypes } from '@/types/livestock';
 import { costCategories, paymentSources } from '@/types/finance';
 import type { OperationalTransaction } from '@/types/finance';
+import { useUserProfile } from '@/contexts/user-profile-context';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+
 
 const costItemSchema = z.object({
   id: z.string().optional(),
@@ -61,8 +65,8 @@ const housingRecordFormSchema = z.object({
 
 type HousingRecordFormValues = z.infer<typeof housingRecordFormSchema>;
 
-const LOCAL_STORAGE_KEY = 'animalHousingRecords_v1';
-const LOCAL_STORAGE_KEY_TRANSACTIONS = 'farmTransactions_v1';
+const RECORDS_COLLECTION = 'animalHousingRecords';
+const TRANSACTIONS_COLLECTION = 'transactions';
 const ACTIVITY_FORM_ID = 'housing-record-form';
 
 export default function HousingInfrastructurePage() {
@@ -70,24 +74,17 @@ export default function HousingInfrastructurePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<HousingRecord | null>(null);
   const { toast } = useToast();
-  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
   const form = useForm<HousingRecordFormValues>({
     resolver: zodResolver(housingRecordFormSchema),
     defaultValues: {
-      name: '',
-      housingType: undefined,
-      capacity: 0,
-      capacityUnit: 'birds',
-      dateEstablished: '',
-      ventilationDetails: '',
-      lightingDetails: '',
-      shelterDetails: '',
-      biosecurityMeasures: '',
-      predatorProtection: '',
-      notes: '',
-      costItems: [],
+      name: '', housingType: undefined, capacity: 0, capacityUnit: 'birds', dateEstablished: '',
+      ventilationDetails: '', lightingDetails: '', shelterDetails: '', biosecurityMeasures: '',
+      predatorProtection: '', notes: '', costItems: [],
     },
   });
 
@@ -100,26 +97,36 @@ export default function HousingInfrastructurePage() {
 
   const calculateTotalCost = (items: CostItemFormValues[] | undefined) => {
     if (!items) return 0;
-    return items.reduce((acc, item) => {
-      const quantity = Number(item.quantity) || 0;
-      const unitPrice = Number(item.unitPrice) || 0;
-      return acc + (quantity * unitPrice);
-    }, 0);
+    return items.reduce((acc, item) => (acc + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)), 0);
   };
-
+  
   useEffect(() => {
-    setIsMounted(true);
-    const storedRecords = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (storedRecords) {
-      setRecords(JSON.parse(storedRecords));
+    if (isProfileLoading) return;
+    if (!userProfile?.farmId) {
+      setError("Farm information is not available. Cannot load data.");
+      setIsLoading(false);
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(records));
-    }
-  }, [records, isMounted]);
+    const fetchRecords = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
+        const q = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const querySnapshot = await getDocs(q);
+        const fetchedRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as HousingRecord[];
+        setRecords(fetchedRecords);
+      } catch (err: any) {
+        console.error("Error fetching housing records:", err);
+        setError(`Failed to fetch data: ${err.message}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRecords();
+  }, [userProfile, isProfileLoading]);
+
 
   const handleOpenModal = (recordToEdit?: HousingRecord) => {
     if (recordToEdit) {
@@ -137,101 +144,132 @@ export default function HousingInfrastructurePage() {
     } else {
       setEditingRecord(null);
       form.reset({
-        name: '',
-        housingType: undefined,
-        capacity: 0,
-        capacityUnit: 'birds',
-        dateEstablished: '',
-        ventilationDetails: '',
-        lightingDetails: '',
-        shelterDetails: '',
-        biosecurityMeasures: '',
-        predatorProtection: '',
-        notes: '',
-        costItems: [],
+        name: '', housingType: undefined, capacity: 0, capacityUnit: 'birds', dateEstablished: '',
+        ventilationDetails: '', lightingDetails: '', shelterDetails: '', biosecurityMeasures: '',
+        predatorProtection: '', notes: '', costItems: [],
       });
     }
     setIsModalOpen(true);
   };
 
-  const onSubmit: SubmitHandler<HousingRecordFormValues> = (data) => {
-    const now = new Date().toISOString();
-    const activityId = editingRecord ? editingRecord.id : crypto.randomUUID();
-
-    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({
-      ...ci,
-      id: ci.id || crypto.randomUUID(),
-      category: ci.category,
-      paymentSource: ci.paymentSource,
-      quantity: Number(ci.quantity),
-      unitPrice: Number(ci.unitPrice),
-      total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
-    }));
-
+  const onSubmit: SubmitHandler<HousingRecordFormValues> = async (data) => {
+    if (!userProfile?.farmId || !db) {
+      toast({ title: "Error", description: "Cannot save. Farm/database information is missing.", variant: "destructive" });
+      return;
+    }
+  
+    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({ ...ci, id: ci.id || crypto.randomUUID(), category: ci.category, paymentSource: ci.paymentSource, quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice), total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0) }));
     const totalHousingCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
 
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    let allTransactions: OperationalTransaction[] = storedTransactions ? JSON.parse(storedTransactions) : [];
-    allTransactions = allTransactions.filter(t => t.linkedActivityId !== activityId);
-    
-    const newTransactions: OperationalTransaction[] = processedCostItems.map(item => ({
-      id: crypto.randomUUID(), date: data.dateEstablished, description: item.description, amount: item.total, type: 'Expense' as const,
-      category: item.category, paymentSource: item.paymentSource, linkedModule: 'Animal Housing' as const,
-      linkedActivityId: activityId, linkedItemId: item.id,
-    }));
-    allTransactions.push(...newTransactions);
-    localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
-
-    if (editingRecord) {
-      setRecords(
-        records.map((rec) =>
-          rec.id === editingRecord.id ? { ...editingRecord, ...data, costItems: processedCostItems, totalHousingCost, updatedAt: now } : rec
-        )
-      );
-      toast({ title: "Housing Record Updated", description: `Record for ${data.name} has been updated.` });
-    } else {
-      const newRecord: HousingRecord = {
-        id: activityId,
+    const recordData: any = {
+        farmId: userProfile.farmId,
         ...data,
-        ventilationDetails: data.ventilationDetails || undefined,
-        lightingDetails: data.lightingDetails || undefined,
-        shelterDetails: data.shelterDetails || undefined,
-        biosecurityMeasures: data.biosecurityMeasures || undefined,
-        predatorProtection: data.predatorProtection || undefined,
-        notes: data.notes || undefined,
-        costItems: processedCostItems,
         totalHousingCost,
-        createdAt: now,
-        updatedAt: now,
-      };
-      setRecords(prev => [...prev, newRecord]);
-      toast({ title: "Housing Record Logged", description: `Record for ${data.name} has been successfully logged.` });
+        costItems: processedCostItems,
+        updatedAt: serverTimestamp(),
+    };
+  
+    const batch = writeBatch(db);
+  
+    try {
+      let recordId: string;
+      if (editingRecord) {
+        recordId = editingRecord.id;
+        const recordRef = doc(db, RECORDS_COLLECTION, recordId);
+        batch.update(recordRef, recordData);
+        
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", recordId));
+        const oldTransSnap = await getDocs(transQuery);
+        oldTransSnap.forEach(doc => batch.delete(doc.ref));
+      } else {
+        const recordRef = doc(collection(db, RECORDS_COLLECTION));
+        recordId = recordRef.id;
+        batch.set(recordRef, { ...recordData, createdAt: serverTimestamp() });
+      }
+  
+      recordData.costItems.forEach((item: CostItem) => {
+        const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
+        const newTransaction: Omit<OperationalTransaction, 'id'> = {
+          farmId: userProfile.farmId,
+          date: data.dateEstablished,
+          description: item.description,
+          amount: item.total,
+          type: 'Expense',
+          category: item.category,
+          paymentSource: item.paymentSource,
+          linkedModule: 'Animal Housing',
+          linkedActivityId: recordId,
+          linkedItemId: item.id,
+        };
+        batch.set(transRef, newTransaction);
+      });
+  
+      await batch.commit();
+  
+      if (editingRecord) {
+        setRecords(records.map(rec => rec.id === recordId ? { ...rec, ...recordData, id: recordId } : rec));
+        toast({ title: "Record Updated", description: `Record for ${data.name} has been updated.` });
+      } else {
+        const newRecordForState: HousingRecord = {
+            ...recordData,
+            id: recordId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        setRecords(prev => [...prev, newRecordForState]);
+        toast({ title: "Record Logged", description: `Record for ${data.name} has been successfully logged.` });
+      }
+  
+      setIsModalOpen(false);
+      setEditingRecord(null);
+      form.reset();
+  
+    } catch (err: any) {
+        console.error("Error saving record:", err);
+        toast({ title: "Save Failed", description: `Could not save record. Error: ${err.message}`, variant: "destructive" });
     }
-    setIsModalOpen(false);
-    setEditingRecord(null);
-    form.reset();
   };
 
-  const handleDeleteRecord = (id: string) => {
+
+  const handleDeleteRecord = async (id: string) => {
     const recordToDelete = records.find(r => r.id === id);
-    setRecords(records.filter((rec) => rec.id !== id));
+    if (!recordToDelete || !db) return;
     
-    const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY_TRANSACTIONS);
-    if(storedTransactions) {
-        let allTransactions: OperationalTransaction[] = JSON.parse(storedTransactions);
-        allTransactions = allTransactions.filter(t => t.linkedActivityId !== id);
-        localStorage.setItem(LOCAL_STORAGE_KEY_TRANSACTIONS, JSON.stringify(allTransactions));
+    const batch = writeBatch(db);
+    try {
+        batch.delete(doc(db, RECORDS_COLLECTION, id));
+        
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", id));
+        const transSnap = await getDocs(transQuery);
+        transSnap.forEach(doc => batch.delete(doc.ref));
+
+        await batch.commit();
+        setRecords(records.filter((rec) => rec.id !== id));
+        toast({ title: "Record Deleted", description: `Housing record "${recordToDelete.name}" has been removed.`, variant: "destructive" });
+    } catch(err: any) {
+         console.error("Error deleting record:", err);
+        toast({ title: "Deletion Failed", description: `Could not delete record. Error: ${err.message}`, variant: "destructive" });
     }
-    toast({ title: "Record Deleted", description: `Housing record "${recordToDelete?.name}" has been removed.`, variant: "destructive" });
   };
   
-  if (!isMounted) {
+  if (isProfileLoading || isLoading) {
     return (
-       <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
-        <HomeIcon className="h-12 w-12 text-primary animate-pulse" />
+      <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
+        <Loader2 className="h-12 w-12 text-primary animate-spin" />
         <p className="ml-3 text-lg text-muted-foreground">Loading housing data...</p>
       </div>
     );
+  }
+  
+  if (error) {
+     return (
+        <div className="container mx-auto py-10">
+         <Card className="w-full max-w-lg mx-auto text-center shadow-lg">
+            <CardHeader><CardTitle className="flex items-center justify-center text-xl text-destructive"><AlertTriangle className="mr-2 h-6 w-6" /> Data Loading Error</CardTitle></CardHeader>
+            <CardContent><p className="text-muted-foreground mb-2">{error}</p></CardContent>
+         </Card>
+        </div>
+     );
   }
 
   return (
@@ -254,12 +292,9 @@ export default function HousingInfrastructurePage() {
 
       <Dialog open={isModalOpen} onOpenChange={(isOpen) => {
         setIsModalOpen(isOpen);
-        if (!isOpen) {
-          form.reset();
-          setEditingRecord(null);
-        }
+        if (!isOpen) { form.reset(); setEditingRecord(null); }
       }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingRecord ? 'Edit Housing Record' : 'Log New Housing Record'}</DialogTitle>
             <DialogDescription>
@@ -397,7 +432,7 @@ export default function HousingInfrastructurePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {records.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((record) => (
+                {records.sort((a,b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime()).map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">{record.name}</TableCell>
                     <TableCell>{record.housingType}</TableCell>
@@ -426,10 +461,9 @@ export default function HousingInfrastructurePage() {
       <Card className="mt-6 bg-muted/30 p-4">
         <CardHeader className="p-0 pb-2"><CardTitle className="text-base font-semibold text-muted-foreground">About Housing Costing</CardTitle></CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This section helps track the setup and major renovation costs for animal housing and infrastructure.</p>
-            <p>&bull; Log details for each housing unit, including type, capacity, and specific features.</p>
-            <p>&bull; Itemize costs for materials (cement, wood, roofing), labor, equipment used, etc., for construction or significant upgrades.</p>
-            <p>&bull; Ongoing minor maintenance costs might be better suited for a general "Operational Expenses" or a specific "Maintenance" module if created later.</p>
+            <p>&bull; Housing data is now stored centrally in Firestore, available to all farm members.</p>
+            <p>&bull; All costs logged here are automatically added to the central financial ledger.</p>
+            <p>&bull; This module is intended for tracking the setup and major renovation costs for animal housing and infrastructure.</p>
         </CardContent>
       </Card>
     </div>

@@ -38,6 +38,7 @@ export type HousingType = typeof housingTypes[number];
 
 export interface HousingRecord {
   id: string;
+  farmId: string;
   name: string; 
   housingType: HousingType;
   capacity: number; 
@@ -51,8 +52,8 @@ export interface HousingRecord {
   notes?: string;
   costItems: CostItem[]; 
   totalHousingCost: number;
-  createdAt: string; // ISO datetime string
-  updatedAt: string; // ISO datetime string
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
 }
 
 // --- Health Care & Biosecurity Types ---
@@ -78,6 +79,7 @@ export interface HealthRecord {
 // Future types for feeding, etc. will go here
 // e.g.,
 // export interface FeedingSchedule { ... }
+
 
 
 
