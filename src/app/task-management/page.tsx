@@ -251,10 +251,24 @@ export default function TaskManagementPage() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (active.id !== over?.id && over?.id) {
-      const overContainerId = over.data.current?.sortable?.containerId as TaskStatus | undefined;
-      if (overContainerId && taskStatuses.includes(overContainerId)) {
-         handleChangeStatus(active.id as string, overContainerId);
+
+    if (over && active.id !== over.id) {
+      const activeTask = tasks.find(t => t.id === active.id);
+      const overTask = tasks.find(t => t.id === over.id);
+
+      if (activeTask && overTask) {
+        if (activeTask.status === overTask.status) {
+          // Reordering in same column
+          setTasks(currentTasks => {
+            const oldIndex = currentTasks.findIndex(t => t.id === active.id);
+            const newIndex = currentTasks.findIndex(t => t.id === over.id);
+            if (oldIndex === -1 || newIndex === -1) return currentTasks; // Safety check
+            return arrayMove(currentTasks, oldIndex, newIndex);
+          });
+        } else {
+          // Moving to different column
+          handleChangeStatus(active.id as string, overTask.status);
+        }
       }
     }
   };
@@ -315,7 +329,7 @@ export default function TaskManagementPage() {
             <Card key={statusColumn} className="shadow-lg bg-muted/10 dark:bg-muted/20">
               <CardHeader className="border-b border-border/70"><CardTitle className="font-headline text-xl">{statusColumn} ({tasksByStatus(statusColumn).length})</CardTitle></CardHeader>
               <CardContent className="pt-4 min-h-[200px] p-3">
-                <SortableContext items={tasksByStatus(statusColumn)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={tasksByStatus(statusColumn).map(t => t.id)} strategy={verticalListSortingStrategy}>
                   {tasksByStatus(statusColumn).length > 0 ? (
                     tasksByStatus(statusColumn).map(task => (
                       <SortableTaskCard key={task.id} task={task} onEdit={handleOpenModal} onDelete={handleDeleteTask} onChangeStatus={handleChangeStatus} />
@@ -330,3 +344,4 @@ export default function TaskManagementPage() {
     </DndContext>
   );
 }
+
