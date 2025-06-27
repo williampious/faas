@@ -118,5 +118,19 @@ service cloud.firestore {
 ```
 Apply these rules in your Firebase Console, and the farm setup and plot management features should work perfectly.
 
+## Important Note on Firestore Indexes
 
+As you add more features, Firestore may require you to create indexes for more complex queries to work efficiently and securely. If you see an error in your browser console that says `The query requires an index...` followed by a long URL, you must create the specified index.
 
+**Required Indexes:**
+
+1.  **For the Financial Dashboard:**
+    *   **Collection ID:** `transactions`
+    *   **Fields:** `farmId` (Ascending), `date` (Ascending)
+    *   **Query scope:** Collection group
+2.  **For the AEO Farmer Directory:**
+    *   **Collection ID:** `users`
+    *   **Fields:** `managedByAEO` (Ascending), `fullName` (Ascending)
+    *   **Query scope:** Collection
+
+You can create these by following the link provided in the console error, or by going to your **Firebase Console -> Firestore Database -> Indexes** tab and creating them manually. The app will not function correctly without them.
