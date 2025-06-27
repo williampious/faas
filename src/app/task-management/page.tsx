@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,12 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { PlusCircle, ListChecks, Edit2, Trash2, GripVertical, AlertTriangle, CalendarIcon, Briefcase, User, Tag, Loader2 } from 'lucide-react';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { PlusCircle, ListChecks, Edit2, Trash2, GripVertical, CalendarIcon, Briefcase, User, Tag, Loader2 } from 'lucide-react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
@@ -239,7 +239,6 @@ export default function TaskManagementPage() {
       setTasks(tasks.map(task => task.id === id ? { ...task, status: newStatus } : task));
     } catch(err: any) {
       toast({ title: "Status Update Failed", description: err.message, variant: "destructive" });
-      // Optionally revert optimistic UI update here
     }
   };
 
@@ -253,20 +252,28 @@ export default function TaskManagementPage() {
 
     if (over && active.id !== over.id) {
       const activeTask = tasks.find(t => t.id === active.id);
-      const overTask = tasks.find(t => t.id === over.id);
+      
+      const overTaskInToDo = tasksByStatus('To Do').find(t => t.id === over.id);
+      const overTaskInProgress = tasksByStatus('In Progress').find(t => t.id === over.id);
+      const overTaskInDone = tasksByStatus('Done').find(t => t.id === over.id);
+      
+      let newStatus: TaskStatus | undefined;
+      if (overTaskInToDo) newStatus = 'To Do';
+      else if (overTaskInProgress) newStatus = 'In Progress';
+      else if (overTaskInDone) newStatus = 'Done';
 
-      if (activeTask && overTask) {
-        if (activeTask.status === overTask.status) {
+      if (activeTask && newStatus) {
+        if (activeTask.status === newStatus) {
           // Reordering in same column
           setTasks(currentTasks => {
             const oldIndex = currentTasks.findIndex(t => t.id === active.id);
             const newIndex = currentTasks.findIndex(t => t.id === over.id);
-            if (oldIndex === -1 || newIndex === -1) return currentTasks; // Safety check
+            if (oldIndex === -1 || newIndex === -1) return currentTasks;
             return arrayMove(currentTasks, oldIndex, newIndex);
           });
         } else {
           // Moving to different column
-          handleChangeStatus(active.id as string, overTask.status);
+          handleChangeStatus(active.id as string, newStatus);
         }
       }
     }
@@ -343,3 +350,4 @@ export default function TaskManagementPage() {
     </DndContext>
   );
 }
+
