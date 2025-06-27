@@ -249,33 +249,29 @@ export default function TaskManagementPage() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    
+    if (!over) return;
 
-    if (over && active.id !== over.id) {
-      const activeTask = tasks.find(t => t.id === active.id);
-      
-      const overTaskInToDo = tasksByStatus('To Do').find(t => t.id === over.id);
-      const overTaskInProgress = tasksByStatus('In Progress').find(t => t.id === over.id);
-      const overTaskInDone = tasksByStatus('Done').find(t => t.id === over.id);
-      
-      let newStatus: TaskStatus | undefined;
-      if (overTaskInToDo) newStatus = 'To Do';
-      else if (overTaskInProgress) newStatus = 'In Progress';
-      else if (overTaskInDone) newStatus = 'Done';
+    const activeId = active.id;
+    const overId = over.id;
 
-      if (activeTask && newStatus) {
-        if (activeTask.status === newStatus) {
-          // Reordering in same column
-          setTasks(currentTasks => {
-            const oldIndex = currentTasks.findIndex(t => t.id === active.id);
-            const newIndex = currentTasks.findIndex(t => t.id === over.id);
-            if (oldIndex === -1 || newIndex === -1) return currentTasks;
-            return arrayMove(currentTasks, oldIndex, newIndex);
-          });
-        } else {
-          // Moving to different column
-          handleChangeStatus(active.id as string, newStatus);
-        }
-      }
+    if (activeId === overId) return;
+    
+    const activeTask = tasks.find((t) => t.id === activeId);
+    const overTask = tasks.find((t) => t.id === overId);
+
+    if (!activeTask || !overTask) return;
+    
+    // Check if moving to a different column
+    if (activeTask.status !== overTask.status) {
+      handleChangeStatus(activeId as string, overTask.status);
+    } else {
+      // Reordering within the same column
+      setTasks((currentTasks) => {
+        const oldIndex = currentTasks.findIndex((t) => t.id === activeId);
+        const newIndex = currentTasks.findIndex((t) => t.id === overId);
+        return arrayMove(currentTasks, oldIndex, newIndex);
+      });
     }
   };
 
@@ -351,3 +347,4 @@ export default function TaskManagementPage() {
   );
 }
 
+    
