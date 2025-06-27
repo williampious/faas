@@ -233,11 +233,22 @@ export default function TaskManagementPage() {
   };
 
   const handleChangeStatus = async (id: string, newStatus: TaskStatus) => {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+
+    // Update state immediately for better UX
+    setTasks((prevTasks) =>
+      prevTasks.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+    );
+    
     try {
       const taskRef = doc(db, TASKS_COLLECTION, id);
       await updateDoc(taskRef, { status: newStatus, updatedAt: serverTimestamp() });
-      setTasks(tasks.map(task => task.id === id ? { ...task, status: newStatus } : task));
     } catch(err: any) {
+      // Revert state if DB update fails
+      setTasks((prevTasks) =>
+        prevTasks.map((t) => (t.id === id ? { ...t, status: task.status } : t))
+      );
       toast({ title: "Status Update Failed", description: err.message, variant: "destructive" });
     }
   };
@@ -249,31 +260,29 @@ export default function TaskManagementPage() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (!over) return;
 
-    const activeId = active.id;
-    const overId = over.id;
+    const activeContainer = active.data.current?.sortable.containerId;
+    const overContainer = over.data.current?.sortable.containerId;
+    const activeId = active.id.toString();
+    const overId = over.id.toString();
 
     if (activeId === overId) return;
-    
-    const activeTask = tasks.find((t) => t.id === activeId);
-    const overTask = tasks.find((t) => t.id === overId);
 
-    if (!activeTask || !overTask) return;
-    
-    // Check if moving to a different column
-    if (activeTask.status !== overTask.status) {
-      handleChangeStatus(activeId as string, overTask.status);
-    } else {
+    if (activeContainer === overContainer) {
       // Reordering within the same column
       setTasks((currentTasks) => {
         const oldIndex = currentTasks.findIndex((t) => t.id === activeId);
         const newIndex = currentTasks.findIndex((t) => t.id === overId);
         return arrayMove(currentTasks, oldIndex, newIndex);
       });
+    } else {
+      // Moving to a different column (changing status)
+      handleChangeStatus(activeId, overContainer as TaskStatus);
     }
   };
+
 
   const tasksByStatus = (statusFilter: TaskStatus) => tasks.filter(task => task.status === statusFilter);
 
@@ -331,13 +340,17 @@ export default function TaskManagementPage() {
             <Card key={statusColumn} className="shadow-lg bg-muted/10 dark:bg-muted/20">
               <CardHeader className="border-b border-border/70"><CardTitle className="font-headline text-xl">{statusColumn} ({tasksByStatus(statusColumn).length})</CardTitle></CardHeader>
               <CardContent className="pt-4 min-h-[200px] p-3">
-                <SortableContext items={tasksByStatus(statusColumn).map(t => t.id)} strategy={verticalListSortingStrategy}>
-                  {tasksByStatus(statusColumn).length > 0 ? (
-                    tasksByStatus(statusColumn).map(task => (
-                      <SortableTaskCard key={task.id} task={task} onEdit={handleOpenModal} onDelete={handleDeleteTask} onChangeStatus={handleChangeStatus} />
-                    ))
-                  ) : (<p className="text-sm text-muted-foreground italic text-center py-4">Drag tasks here or add a new one.</p>)}
-                </SortableContext>
+                 <SortableContext items={tasksByStatus(statusColumn).map(t => t.id)} strategy={verticalListSortingStrategy}>
+                    {tasksByStatus(statusColumn).length > 0 ? (
+                      tasksByStatus(statusColumn).map(task => (
+                        <SortableTaskCard key={task.id} task={task} onEdit={handleOpenModal} onDelete={handleDeleteTask} onChangeStatus={handleChangeStatus} />
+                      ))
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-sm text-muted-foreground italic text-center py-4">Drag tasks here or add a new one.</p>
+                      </div>
+                    )}
+                 </SortableContext>
               </CardContent>
             </Card>
           ))}
@@ -346,5 +359,3 @@ export default function TaskManagementPage() {
     </DndContext>
   );
 }
-
-    
