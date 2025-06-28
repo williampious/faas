@@ -20,7 +20,7 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy } f
 import { useToast } from '@/hooks/use-toast';
 import type { PlantingAdviceRecord } from '@/types/planting-advice';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 
 
 const PlantingAdviceInputClientSchema = z.object({
@@ -71,9 +71,13 @@ export default function PlantingAdvicePage() {
         const querySnapshot = await getDocs(q);
         const fetchedRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PlantingAdviceRecord[];
         setRecords(fetchedRecords);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching advice records:", err);
-        setError("Could not load past advice records.");
+        let message = "Could not load past advice records.";
+        if (err.message && (err.message.includes('requires an index') || err.message.includes('PERMISSION_DENIED'))) {
+            message += " This often happens if a required Firestore index is missing. Please check the browser console for a link to create it, or refer to the README for instructions."
+        }
+        setError(message);
       } finally {
         setIsRecordsLoading(false);
       }
@@ -121,6 +125,25 @@ export default function PlantingAdvicePage() {
       setIsLoading(false);
     }
   };
+  
+  const getFormattedDate = (timestamp: any): string => {
+    if (!timestamp) return 'Date N/A';
+    try {
+      if (typeof timestamp.toDate === 'function') {
+        const date = timestamp.toDate();
+        if (isValid(date)) return format(date, 'PP');
+      }
+      if (typeof timestamp === 'string') {
+        const date = parseISO(timestamp);
+        if (isValid(date)) return format(date, 'PP');
+      }
+    } catch (e) {
+      console.error("Date formatting error:", e);
+      return 'Invalid Date';
+    }
+    return 'Invalid Date';
+  };
+
 
   return (
     <div>
@@ -225,7 +248,7 @@ export default function PlantingAdvicePage() {
                                 <div className="flex justify-between w-full pr-4">
                                     <span>Advice for <strong>{record.inputs.cropType}</strong></span>
                                     <span className="text-sm text-muted-foreground">
-                                        {format(record.createdAt?.toDate ? record.createdAt.toDate() : parseISO(record.createdAt), 'PP')}
+                                        {getFormattedDate(record.createdAt)}
                                     </span>
                                 </div>
                             </AccordionTrigger>

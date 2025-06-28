@@ -99,6 +99,10 @@ service cloud.firestore {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
+    
+    match /plantingAdviceRecords/{recordId} {
+      allow create, read: if isFarmMember(request.resource.data.farmId);
+    }
 
     match /cropMaintenanceActivities/{activityId} {
       allow create: if isFarmMember(request.resource.data.farmId);
@@ -126,8 +130,7 @@ service cloud.firestore {
     }
     
     match /budgets/{budgetId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
+      allow create, read, update, delete: if isFarmMember(request.resource.data.farmId);
     }
 
     match /tasks/{taskId} {
@@ -176,4 +179,9 @@ You can create these by following the link provided in the console error, or by 
 3.  **For the Budgeting Module:**
     *   **Collection ID:** `transactions`
     *   **Fields:** `farmId` (Ascending), `type` (Ascending), `date` (Ascending)
+    *   **Query scope:** Collection
+    
+4.  **For AI Planting Advice History:**
+    *   **Collection ID:** `plantingAdviceRecords`
+    *   **Fields:** `farmId` (Ascending), `createdAt` (Descending)
     *   **Query scope:** Collection
