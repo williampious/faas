@@ -2,18 +2,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm, useFieldArray, type SubmitHandler, Controller } from 'react-hook-form';
+import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Shovel, PlusCircle, Trash2, Edit2, DollarSign, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Shovel, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, parseISO, isValid } from 'date-fns';
@@ -24,7 +24,8 @@ import type { PaymentSource, CostCategory, OperationalTransaction } from '@/type
 import { paymentSources, costCategories } from '@/types/finance';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, documentId } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid';
 
 const activityTypes = ['Field Clearing', 'Weeding', 'Ploughing', 'Harrowing', 'Levelling', 'Manure Spreading', 'Herbicide Application'] as const;
 type LandPreparationActivityType = typeof activityTypes[number];
@@ -137,7 +138,7 @@ export default function LandPreparationPage() {
       form.reset({
         ...activityToEdit,
         notes: activityToEdit.notes || '',
-        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID()})) || [],
+        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || uuidv4()})) || [],
       });
     } else {
       setEditingActivity(null);
@@ -153,14 +154,14 @@ export default function LandPreparationPage() {
     }
 
     const totalActivityCost = calculateTotalActivityCost(data.costItems);
-    const activityData = {
+    const activityData: any = {
       farmId: userProfile.farmId,
       ...data,
       totalActivityCost,
       costItems: (data.costItems || []).map(ci => ({
         ...ci,
         total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
-        id: ci.id || crypto.randomUUID(),
+        id: ci.id || uuidv4(),
       })),
       updatedAt: serverTimestamp(),
     };
@@ -168,23 +169,24 @@ export default function LandPreparationPage() {
     const batch = writeBatch(db);
 
     try {
+      let activityId: string;
       if (editingActivity) {
-        const activityRef = doc(db, ACTIVITIES_COLLECTION, editingActivity.id);
+        activityId = editingActivity.id;
+        const activityRef = doc(db, ACTIVITIES_COLLECTION, activityId);
         batch.update(activityRef, activityData);
         
-        // Delete old transactions associated with this activity
-        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", editingActivity.id));
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", activityId));
         const oldTransSnap = await getDocs(transQuery);
         oldTransSnap.forEach(doc => batch.delete(doc.ref));
 
       } else {
         const activityRef = doc(collection(db, ACTIVITIES_COLLECTION));
+        activityId = activityRef.id;
         batch.set(activityRef, { ...activityData, createdAt: serverTimestamp() });
-        activityData.id = activityRef.id; // Use the new ID for linking
+        activityData.id = activityRef.id;
       }
 
-      // Add new transactions
-      activityData.costItems.forEach(item => {
+      activityData.costItems.forEach((item: CostItem) => {
         const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
         const newTransaction: Omit<OperationalTransaction, 'id'> = {
           farmId: userProfile.farmId,
@@ -195,7 +197,7 @@ export default function LandPreparationPage() {
           category: item.category,
           paymentSource: item.paymentSource,
           linkedModule: 'Land Preparation',
-          linkedActivityId: activityData.id,
+          linkedActivityId: activityId,
           linkedItemId: item.id,
         };
         batch.set(transRef, newTransaction);
@@ -233,10 +235,8 @@ export default function LandPreparationPage() {
     
     const batch = writeBatch(db);
     try {
-        // Delete the main activity document
         batch.delete(doc(db, ACTIVITIES_COLLECTION, id));
         
-        // Delete all linked transactions
         const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", id));
         const transSnap = await getDocs(transQuery);
         transSnap.forEach(doc => batch.delete(doc.ref));
@@ -248,6 +248,21 @@ export default function LandPreparationPage() {
          console.error("Error deleting activity:", err);
         toast({ title: "Deletion Failed", description: `Could not delete activity. Error: ${err.message}`, variant: "destructive" });
     }
+  };
+  
+  const getSortableDate = (timestamp: any): Date => {
+    if (!timestamp) return new Date(0);
+    if (typeof timestamp.toDate === 'function') { // Firestore Timestamp
+      return timestamp.toDate();
+    }
+    if (typeof timestamp === 'string') { // ISO string
+      const d = parseISO(timestamp);
+      if(isValid(d)) return d;
+    }
+    if (timestamp instanceof Date) {
+        if(isValid(timestamp)) return timestamp;
+    }
+    return new Date(0);
   };
 
 
@@ -422,7 +437,7 @@ export default function LandPreparationPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {activities.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((activity) => (
+                {activities.sort((a,b) => getSortableDate(b.createdAt).getTime() - getSortableDate(a.createdAt).getTime()).map((activity) => (
                   <TableRow key={activity.id}>
                     <TableCell className="font-medium">{activity.activityType}</TableCell>
                     <TableCell>{isValid(parseISO(activity.date)) ? format(parseISO(activity.date), 'MMMM d, yyyy') : 'Invalid Date'}</TableCell>
