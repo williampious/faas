@@ -101,7 +101,8 @@ service cloud.firestore {
     }
     
     match /plantingAdviceRecords/{recordId} {
-      allow create, read: if isFarmMember(request.resource.data.farmId);
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read: if isFarmMember(resource.data.farmId);
     }
 
     match /cropMaintenanceActivities/{activityId} {
@@ -130,7 +131,8 @@ service cloud.firestore {
     }
     
     match /budgets/{budgetId} {
-      allow create, read, update, delete: if isFarmMember(request.resource.data.farmId);
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
 
     match /tasks/{taskId} {
@@ -185,3 +187,5 @@ You can create these by following the link provided in the console error, or by 
     *   **Collection ID:** `plantingAdviceRecords`
     *   **Fields:** `farmId` (Ascending), `createdAt` (Descending)
     *   **Query scope:** Collection
+
+    
