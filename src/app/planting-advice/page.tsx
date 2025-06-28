@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { BrainCircuit, Lightbulb, CheckCircle, AlertTriangle, Loader2, BookClock } from 'lucide-react';
+import { BrainCircuit, Lightbulb, CheckCircle, AlertTriangle, Loader2, History } from 'lucide-react';
 import { generatePlantingAdvice, type PlantingAdviceInput, type PlantingAdviceOutput } from '@/ai/flows/generate-planting-advice';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import { useUserProfile } from '@/contexts/user-profile-context';
@@ -208,7 +208,7 @@ export default function PlantingAdvicePage() {
       
        <Card className="shadow-lg mt-8">
         <CardHeader>
-            <CardTitle className="font-headline flex items-center"><BookClock className="mr-2 h-6 w-6 text-primary" /> Advice History</CardTitle>
+            <CardTitle className="font-headline flex items-center"><History className="mr-2 h-6 w-6 text-primary" /> Advice History</CardTitle>
             <CardDescription>Review previously generated planting advice for your farm.</CardDescription>
         </CardHeader>
         <CardContent>
