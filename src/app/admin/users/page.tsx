@@ -593,7 +593,6 @@ export default function AdminUsersPage() {
             <p>&bull; You can manage roles and account status for existing 'Active', 'Suspended', or 'Deactivated' users using the 'Manage' button.</p>
             <p>&bull; For users with 'Invited' status, you can copy their invitation link again if needed, or delete their profile to revoke the invitation. Their roles/status cannot be edited until they complete registration.</p>
             <p>&bull; <strong>Profile Deletion:</strong> The "Delete" button removes the user's data from Firestore only. It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. For complete user deletion, a backend process using the Firebase Admin SDK is required. This feature is for development/data cleanup purposes.</p>
-            <p>&bull; The general registration page (`/auth/register`) allows self-sign up and currently grants 'Admin' role by default to all new users.</p>
         </CardContent>
       </Card>
     </div>
