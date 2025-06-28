@@ -527,7 +527,7 @@ export default function UserProfilePage() {
               <CardContent className="text-sm">
                 <InfoItem icon={Mail} label="Email" value={currentProfile.emailAddress || 'Not provided'} />
                 <InfoItem icon={Phone} label="Phone" value={currentProfile.phoneNumber || 'Not set'} />
-                {currentProfile.dateOfBirth && <InfoItem icon={CalendarDaysIcon} label="Date of Birth" value={formatTimestamp(currentProfile.dateOfBirth, 'MMMM d, yyyy')} />}
+                {currentProfile.dateOfBirth && <InfoItem icon={CalendarIcon} label="Date of Birth" value={formatTimestamp(currentProfile.dateOfBirth, 'MMMM d, yyyy')} />}
                 <InfoItem icon={Briefcase} label="Gender" value={currentProfile.gender || 'Not specified'}/>
                 {currentProfile.nationalId && <InfoItem label="National ID" value={currentProfile.nationalId} />}
                 {currentProfile.address && (
