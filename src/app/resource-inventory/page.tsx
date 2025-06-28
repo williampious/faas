@@ -23,6 +23,8 @@ import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import type { OperationalTransaction } from '@/types/finance';
+import { paymentSources } from '@/types/finance';
+
 
 const resourceItemFormSchema = z.object({
   name: z.string().min(2, { message: "Resource name must be at least 2 characters." }).max(100),
@@ -38,7 +40,16 @@ const resourceItemFormSchema = z.object({
     (val) => val === "" ? undefined : parseFloat(String(val)),
     z.number().min(0, "Cost cannot be negative.").optional()
   ),
+  paymentSource: z.enum(paymentSources).optional(),
   notes: z.string().max(500).optional(),
+}).refine(data => {
+    if ((data.costPerUnit || 0) > 0 && (data.quantity || 0) > 0) {
+        return !!data.paymentSource;
+    }
+    return true;
+}, {
+    message: "Payment source is required when cost is entered.",
+    path: ["paymentSource"],
 });
 
 type ResourceItemFormValues = z.infer<typeof resourceItemFormSchema>;
@@ -60,7 +71,7 @@ export default function ResourceInventoryPage() {
     resolver: zodResolver(resourceItemFormSchema),
     defaultValues: {
       name: '', category: undefined, quantity: 0, unit: '', supplier: '',
-      purchaseDate: '', costPerUnit: undefined, notes: '',
+      purchaseDate: '', costPerUnit: undefined, paymentSource: undefined, notes: '',
     },
   });
   
@@ -103,6 +114,7 @@ export default function ResourceInventoryPage() {
       form.reset({
         ...itemToEdit,
         supplier: itemToEdit.supplier || '',
+        paymentSource: itemToEdit.paymentSource,
         costPerUnit: itemToEdit.costPerUnit,
         notes: itemToEdit.notes || '',
       });
@@ -110,7 +122,7 @@ export default function ResourceInventoryPage() {
       setEditingItem(null);
       form.reset({
         name: '', category: undefined, quantity: 0, unit: '', supplier: '',
-        purchaseDate: format(new Date(), 'yyyy-MM-dd'), costPerUnit: undefined, notes: '',
+        purchaseDate: format(new Date(), 'yyyy-MM-dd'), costPerUnit: undefined, paymentSource: undefined, notes: '',
       });
     }
     setIsModalOpen(true);
@@ -158,7 +170,7 @@ export default function ResourceInventoryPage() {
           amount: totalCost,
           type: 'Expense',
           category: 'Material/Input', // Defaulting for inventory items
-          paymentSource: 'Cash', // Defaulting as form doesn't capture it
+          paymentSource: data.paymentSource!, // Using form value
           linkedModule: 'Resource Inventory',
           linkedActivityId: resourceId,
           linkedItemId: resourceId,
@@ -272,12 +284,29 @@ export default function ResourceInventoryPage() {
                 <FormField control={form.control} name="supplier" render={({ field }) => (
                   <FormItem><FormLabel>Supplier (Optional)</FormLabel><FormControl><Input placeholder="e.g., Agri-Mart" {...field} /></FormControl><FormMessage /></FormItem>)}
                 />
-                 <div className="grid grid-cols-2 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                    <FormField control={form.control} name="purchaseDate" render={({ field }) => (
                     <FormItem><FormLabel>Purchase Date*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)}
                   />
                   <FormField control={form.control} name="costPerUnit" render={({ field }) => (
                     <FormItem><FormLabel>Cost Per Unit (Optional)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)}
+                  />
+                  <FormField control={form.control} name="paymentSource" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment Source</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          disabled={!form.watch("costPerUnit") || form.watch("costPerUnit") === 0}
+                        >
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {paymentSources.map((src) => (<SelectItem key={src} value={src}>{src}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                  </div>
                 <FormField control={form.control} name="notes" render={({ field }) => (
