@@ -126,7 +126,7 @@ export default function RegisterPage() {
           </Link>
           <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create an Account</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Create your administrator account. After registration, you will be guided to set up your new, private farm environment. To join an existing farm, you must be invited by its administrator.
+            Register for an account. After registering, you will be guided to set up your own private farm, where you will be the administrator. To join an existing farm, you must be invited by its administrator instead.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8 grid gap-6">
