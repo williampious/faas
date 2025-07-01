@@ -197,22 +197,29 @@ export default function AdminUsersPage() {
 
     const invitationToken = uuidv4();
     const temporaryUserId = uuidv4();
+    
+    const selectedRoles = (data.roles as UserRole[]) || ['Farmer'];
+    const isAEOInvite = selectedRoles.includes('Agric Extension Officer');
+    
+    const newUserProfile: Partial<AgriFAASUserProfile> & { createdAt: any, updatedAt: any } = {
+        userId: temporaryUserId,
+        fullName: data.fullName,
+        emailAddress: data.email,
+        role: selectedRoles,
+        accountStatus: 'Invited',
+        registrationDate: new Date().toISOString(),
+        invitationToken: invitationToken,
+        avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    };
+
+    if (!isAEOInvite) {
+        newUserProfile.farmId = userProfile.farmId;
+    }
+
 
     try {
-        const newUserProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt' | 'firebaseUid'> & { createdAt: any, updatedAt: any } = {
-            userId: temporaryUserId,
-            farmId: userProfile.farmId, // Critical Fix: Associate user with the admin's farm
-            fullName: data.fullName,
-            emailAddress: data.email,
-            role: (data.roles as UserRole[]) || ['Farmer'],
-            accountStatus: 'Invited',
-            registrationDate: new Date().toISOString(),
-            invitationToken: invitationToken,
-            avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-        };
-
         await setDoc(doc(db, usersCollectionName, temporaryUserId), newUserProfile);
 
         const inviteLink = `${window.location.origin}/auth/complete-registration?token=${invitationToken}`;
@@ -223,7 +230,7 @@ export default function AdminUsersPage() {
             userId: temporaryUserId,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-        };
+        } as AgriFAASUserProfile;
         setUsers(prevUsers => [...prevUsers, displayProfile].sort((a,b) => (a.fullName || '').localeCompare(b.fullName || '')));
 
         toast({title: "User Added", description: `${data.fullName} has been invited. Share the invitation link with them to complete registration.`});
@@ -593,11 +600,10 @@ export default function AdminUsersPage() {
             <CardTitle className="text-base font-semibold text-muted-foreground">Admin User Management Notes</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; Use "Add New User" to invite users. An invitation link will be generated for you to share with them.</p>
-            <p>&bull; Invited users will have an 'Invited' status until they complete registration using the link. They will set their own password.</p>
-            <p>&bull; You can manage roles and account status for existing 'Active', 'Suspended', or 'Deactivated' users using the 'Manage' button.</p>
-            <p>&bull; For users with 'Invited' status, you can copy their invitation link again if needed, or delete their profile to revoke the invitation. Their roles/status cannot be edited until they complete registration.</p>
-            <p>&bull; <strong>Profile Deletion:</strong> The "Delete" button removes the user's data from Firestore only. It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. For complete user deletion, a backend process using the Firebase Admin SDK is required. This feature is for development/data cleanup purposes.</p>
+            <p>&bull; Use "Add New User" to generate an invitation link. Invited users will set their own password.</p>
+            <p>&bull; When inviting a user, they will be automatically linked to your farm, unless their role is set to 'Agric Extension Officer', in which case they will be created as an independent user without a farm association.</p>
+            <p>&bull; For users with 'Invited' status, you can copy their invitation link again if needed. Their roles/status cannot be edited until they complete registration.</p>
+            <p>&bull; <strong>Profile Deletion:</strong> The "Delete" button removes the user's data from Firestore only. It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. This action is primarily for cleaning up test data or revoking invitations.</p>
         </CardContent>
       </Card>
     </div>
