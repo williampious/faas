@@ -76,6 +76,7 @@ const fieldOfficerNavItems: NavItem[] = [];
 const hrManagerNavItems: NavItem[] = [
   { href: '/hr/dashboard', label: 'HR Dashboard', icon: Briefcase, roles: ['HRManager', 'Admin'] },
   { href: '/hr/employee-records', label: 'Employee Records', icon: Users, roles: ['HRManager', 'Admin'] },
+  { href: '/hr/payroll', label: 'Payroll', icon: Banknote, roles: ['HRManager', 'Admin'] },
 ];
 
 const adminSystemNavItems: NavItem[] = [

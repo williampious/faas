@@ -1,10 +1,9 @@
-
 // src/app/hr/dashboard/page.tsx
 'use client';
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Briefcase, Users, CalendarCheck, FileText } from 'lucide-react';
+import { Briefcase, Users, CalendarCheck, Banknote } from 'lucide-react';
 import Link from 'next/link';
 
 export default function HRDashboardPage() {
@@ -16,22 +15,22 @@ export default function HRDashboardPage() {
       title: "Employee Records",
       description: "Manage employee profiles, contracts, and personal information.",
       icon: Users,
-      href: "/hr/employee-records", // Placeholder link
+      href: "/hr/employee-records", 
       cta: "View Records"
+    },
+    {
+      title: "Payroll Management",
+      description: "Process payroll, manage deductions, and generate payslips.",
+      icon: Banknote,
+      href: "/hr/payroll", 
+      cta: "Manage Payroll"
     },
     {
       title: "Attendance Tracking",
       description: "Monitor employee attendance, leaves, and work hours.",
       icon: CalendarCheck,
-      href: "#", // Placeholder link
+      href: "#", 
       cta: "Track Attendance (Soon)"
-    },
-    {
-      title: "Payroll Management",
-      description: "Process payroll, manage deductions, and generate payslips.",
-      icon: FileText,
-      href: "#", // Placeholder link
-      cta: "Manage Payroll (Soon)"
     },
     // Add more HR specific cards as features are developed
   ];
@@ -67,12 +66,11 @@ export default function HRDashboardPage() {
 
       <Card className="mt-8 bg-secondary/30 rounded-lg shadow">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold text-secondary-foreground">HR Module - Placeholder</CardTitle>
+          <CardTitle className="text-lg font-semibold text-secondary-foreground">HR Module Status</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            This HR Dashboard is currently a placeholder. Full functionality for employee management, attendance, and payroll
-            will be developed in future iterations.
+            This HR Dashboard is expanding. Employee Records and Payroll are now active. Attendance tracking will be developed in a future iteration.
           </p>
         </CardContent>
       </Card>
