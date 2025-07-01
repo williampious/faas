@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { DollarSign, TrendingUp, TrendingDown, FileText, BarChart2, Percent, PieChartIcon, Loader2 } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, FileText, BarChart2, Percent, PieChartIcon, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import type { OperationalTransaction } from '@/types/finance';
@@ -48,6 +48,7 @@ export default function FinancialDashboardPage() {
   const [monthlyChartData, setMonthlyChartData] = useState<MonthlyData[]>([]);
   const [expenseBreakdownData, setExpenseBreakdownData] = useState<CategoryData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
@@ -55,18 +56,21 @@ export default function FinancialDashboardPage() {
   useEffect(() => {
     if (isProfileLoading) return;
     if (!userProfile?.farmId) {
+      setError("Farm information not available. Cannot load financial data.");
       setIsLoading(false);
       return;
     }
 
     const fetchAndProcessTransactions = async () => {
       setIsLoading(true);
-      let currentTotalIncome = 0;
-      let currentTotalExpenses = 0;
-      const monthlyAggregates: { [key: string]: { income: number; expense: number } } = {};
-      const expenseByCategory: { [key: string]: number } = {};
+      setError(null);
 
       try {
+        let currentTotalIncome = 0;
+        let currentTotalExpenses = 0;
+        const monthlyAggregates: { [key: string]: { income: number; expense: number } } = {};
+        const expenseByCategory: { [key: string]: number } = {};
+        
         const endDate = new Date();
         const startDate = subMonths(endDate, 12);
 
@@ -99,39 +103,44 @@ export default function FinancialDashboardPage() {
         currentTotalIncome = Object.values(monthlyAggregates).reduce((sum, m) => sum + m.income, 0);
         currentTotalExpenses = Object.values(monthlyAggregates).reduce((sum, m) => sum + m.expense, 0);
 
-      } catch(err) {
-        console.error("Error fetching financial data:", err);
-      }
+        const currentNetProfitLoss = currentTotalIncome - currentTotalExpenses;
+        const currentProfitMargin = currentTotalIncome > 0 ? (currentNetProfitLoss / currentTotalIncome) * 100 : 0;
 
-      const currentNetProfitLoss = currentTotalIncome - currentTotalExpenses;
-      const currentProfitMargin = currentTotalIncome > 0 ? (currentNetProfitLoss / currentTotalIncome) * 100 : 0;
-
-      setTotalIncome(currentTotalIncome);
-      setTotalExpenses(currentTotalExpenses);
-      setNetProfitLoss(currentNetProfitLoss);
-      setProfitMargin(currentProfitMargin);
-      
-      const monthlyData = Object.entries(monthlyAggregates)
-        .map(([key, value]) => ({
-          month: format(parseISO(`${key}-01`), 'MMM yy'),
-          income: value.income,
-          expense: value.expense,
-        }))
-        .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+        setTotalIncome(currentTotalIncome);
+        setTotalExpenses(currentTotalExpenses);
+        setNetProfitLoss(currentNetProfitLoss);
+        setProfitMargin(currentProfitMargin);
         
-      const categoryData = Object.entries(expenseByCategory)
-        .map(([name, total], index) => ({ 
-          name, 
-          total,
-          percentage: currentTotalExpenses > 0 ? (total / currentTotalExpenses) * 100 : 0,
-          fill: PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
-        }))
-        .sort((a, b) => b.total - a.total);
-      
-      setMonthlyChartData(monthlyData);
-      setExpenseBreakdownData(categoryData);
-      
-      setIsLoading(false);
+        const monthlyData = Object.entries(monthlyAggregates)
+          .map(([key, value]) => ({
+            month: format(parseISO(`${key}-01`), 'MMM yy'),
+            income: value.income,
+            expense: value.expense,
+          }))
+          .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
+          
+        const categoryData = Object.entries(expenseByCategory)
+          .map(([name, total], index) => ({ 
+            name, 
+            total,
+            percentage: currentTotalExpenses > 0 ? (total / currentTotalExpenses) * 100 : 0,
+            fill: PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
+          }))
+          .sort((a, b) => b.total - a.total);
+        
+        setMonthlyChartData(monthlyData);
+        setExpenseBreakdownData(categoryData);
+
+      } catch(err: any) {
+        console.error("Error fetching financial data:", err);
+        let message = `Failed to load financial data. Please check your internet connection.`;
+        if (err.message && (err.message.toLowerCase().includes('requires an index') || err.message.toLowerCase().includes('permission-denied') || err.message.toLowerCase().includes('backend didn\'t respond'))) {
+            message = "Failed to load financial data. This is likely because a required Firestore index is missing or your internet connection is unstable. A missing index can cause queries to time out. Please check the developer console for a link to create it, or refer to the README for instructions on required indexes."
+        }
+        setError(message);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchAndProcessTransactions();
@@ -141,13 +150,24 @@ export default function FinancialDashboardPage() {
     return new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
   };
   
-  if (isProfileLoading || isLoading) {
+  if (isProfileLoading || (isLoading && !error)) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
         <Loader2 className="h-12 w-12 text-primary animate-spin" />
         <p className="ml-3 text-lg text-muted-foreground">Loading financial summary...</p>
       </div>
     );
+  }
+
+  if (error) {
+     return (
+        <div className="container mx-auto py-10">
+         <Card className="w-full max-w-xl mx-auto text-center shadow-lg">
+            <CardHeader><CardTitle className="flex items-center justify-center text-xl text-destructive"><AlertTriangle className="mr-2 h-6 w-6" /> Financial Report Error</CardTitle></CardHeader>
+            <CardContent><p className="text-muted-foreground mb-2">{error}</p></CardContent>
+         </Card>
+        </div>
+     );
   }
 
   return (
