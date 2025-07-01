@@ -55,10 +55,12 @@ service cloud.firestore {
                     );
 
       // Who can read a user document?
-      // 1. The user themselves.
-      // 2. An Admin, Manager, or HRManager viewing users on the same farm.
-      // 3. An AEO reading a profile of a farmer they manage.
+      // 1. An Admin needs to be able to read all user profiles for management.
+      // 2. The user themselves.
+      // 3. An Admin, Manager, or HRManager viewing users on the same farm.
+      // 4. An AEO reading a profile of a farmer they manage.
       allow read: if request.auth != null && (
+                    isUserAdmin() ||
                     request.auth.uid == userId ||
                     isFarmManager(resource.data.farmId) ||
                     (isUserAEO() && resource.data.managedByAEO == request.auth.uid)
@@ -204,5 +206,6 @@ You can create these by following the link provided in the console error, or by 
     *   **Query scope:** Collection
 
     
+
 
 
