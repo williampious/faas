@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CloudSun, Thermometer, Droplets, Wind, MapPin, RefreshCw } from 'lucide-react';
+import { useUserProfile } from '@/contexts/user-profile-context';
 
 interface WeatherData {
   location: string;
@@ -27,7 +28,7 @@ interface WeatherData {
 const getMockWeatherData = (location: string): WeatherData => {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
   return {
-    location: location || "Default Farm Location",
+    location: location || "Your Location",
     current: {
       temp: `${Math.floor(Math.random() * 15 + 15)}°C`, // 15-30°C
       description: ["Sunny", "Partly Cloudy", "Cloudy", "Light Rain"][Math.floor(Math.random() * 4)],
@@ -44,20 +45,22 @@ const getMockWeatherData = (location: string): WeatherData => {
 
 
 export default function WeatherMonitoringPage() {
-  const [locationInput, setLocationInput] = useState('My Farm');
+  const { userProfile } = useUserProfile();
+  const [locationInput, setLocationInput] = useState('');
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
-    // Load initial weather data for default/stored location
-    const storedLocation = localStorage.getItem('weatherLocation') || 'My Farm';
-    setLocationInput(storedLocation);
-    fetchWeatherData(storedLocation);
+    const storedLocation = localStorage.getItem('weatherLocation');
+    if (storedLocation) {
+        setLocationInput(storedLocation);
+    }
   }, []);
 
   const fetchWeatherData = (loc: string) => {
+    if (!loc) return;
     setIsLoading(true);
     // Simulate API call
     setTimeout(() => {
@@ -84,40 +87,41 @@ export default function WeatherMonitoringPage() {
       <PageHeader
         title="Weather Monitoring"
         icon={CloudSun}
-        description="Track weather forecasts specific to your farm's location."
+        description="Get weather forecasts for any location. Data shown is for demonstration purposes."
       />
 
       <Card className="mb-6 shadow-lg">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-grow">
-              <Label htmlFor="location" className="font-semibold">Farm Location</Label>
+              <Label htmlFor="location" className="font-semibold">Enter a Location</Label>
               <Input
                 id="location"
                 type="text"
                 value={locationInput}
                 onChange={(e) => setLocationInput(e.target.value)}
-                placeholder="Enter farm location (e.g., City, State or Coordinates)"
+                placeholder="e.g., Accra, Ghana"
                 className="mt-1"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleLocationChange(); }}
               />
             </div>
-            <Button onClick={handleLocationChange} disabled={isLoading} className="w-full sm:w-auto">
+            <Button onClick={handleLocationChange} disabled={isLoading || !locationInput} className="w-full sm:w-auto">
               {isLoading ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <MapPin className="mr-2 h-4 w-4" />}
-              {isLoading ? 'Loading...' : 'Update Location'}
+              {isLoading ? 'Loading...' : 'Get Weather'}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {isLoading && !weatherData && (
+      {isLoading && (
          <div className="text-center py-10">
             <RefreshCw className="mx-auto h-12 w-12 text-primary animate-spin" />
             <p className="mt-2 text-muted-foreground">Loading weather data...</p>
         </div>
       )}
 
-      {weatherData && (
-        <div className="space-y-6">
+      {!isLoading && weatherData && (
+        <div className="space-y-6 animate-in fade-in-50 duration-500">
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="font-headline text-xl">Current Weather: {weatherData.location}</CardTitle>
@@ -174,6 +178,14 @@ export default function WeatherMonitoringPage() {
           </Card>
         </div>
       )}
+
+      {!isLoading && !weatherData && (
+        <div className="text-center py-10">
+            <CloudSun className="mx-auto h-16 w-16 text-muted-foreground" />
+            <p className="mt-4 text-lg text-muted-foreground">Enter a location above to see the weather forecast.</p>
+        </div>
+      )}
+
     </div>
   );
 }
