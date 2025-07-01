@@ -71,7 +71,7 @@ service cloud.firestore {
       allow update: if request.auth != null && (
                       request.auth.uid == userId ||
                       isUserAdmin() ||
-                      (isUserAEO() && resource.data.managedByAEO == request.auth.uid)
+                      (isUserAEO() && request.resource.data.managedByAEO == request.auth.uid)
                     );
 
       // Only admins can delete user profiles.
@@ -148,7 +148,7 @@ service cloud.firestore {
 
     match /tasks/{taskId} {
       allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
+      allow read, update, delete: if isFarmMember(request.resource.data.farmId);
     }
 
     match /farmEvents/{eventId} {
@@ -182,7 +182,7 @@ You can create these by following the link provided in the console error, or by 
 1.  **For the Financial Dashboard:**
     *   **Collection ID:** `transactions`
     *   **Fields:** `farmId` (Ascending), `date` (Ascending)
-    *   **Query scope:** Collection group
+    *   **Query scope:** Collection
 
 2.  **For the AEO Farmer Directory:**
     *   **Collection ID:** `users`
@@ -205,3 +205,4 @@ You can create these by following the link provided in the console error, or by 
     *   **Query scope:** Collection
 
     
+
