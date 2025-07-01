@@ -92,8 +92,7 @@ service cloud.firestore {
 
     // Rules for Multi-Tenant Data Collections
     match /plots/{plotId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
+      allow create, read, update, delete: if isFarmMember(request.resource.data.farmId);
     }
     
     match /landPreparationActivities/{activityId} {
@@ -132,8 +131,8 @@ service cloud.firestore {
     }
     
     match /payrollRecords/{recordId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
+      // Only Admins or HRManagers can manage payroll records
+      allow create, read, update, delete: if isFarmManager(resource.data.farmId);
     }
 
     match /resources/{resourceId} {
@@ -142,13 +141,13 @@ service cloud.firestore {
     }
     
     match /budgets/{budgetId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
+        // Only Admins or HRManagers (or Managers) can manage budgets
+      allow create, read, update, delete: if isFarmManager(resource.data.farmId);
     }
 
     match /tasks/{taskId} {
       allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
 
     match /farmEvents/{eventId} {
@@ -205,4 +204,5 @@ You can create these by following the link provided in the console error, or by 
     *   **Query scope:** Collection
 
     
+
 
