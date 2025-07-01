@@ -41,6 +41,7 @@ const resourceItemFormSchema = z.object({
     z.number().min(0, "Cost cannot be negative.").optional()
   ),
   paymentSource: z.enum(paymentSources, { required_error: "Payment source is required if cost is entered." }).optional(),
+  notes: z.string().max(500).optional(),
 }).refine(data => {
     if ((data.costPerUnit || 0) > 0 && (data.quantity || 0) > 0) {
         return !!data.paymentSource;
@@ -138,7 +139,7 @@ export default function ResourceInventoryPage() {
       farmId: userProfile.farmId,
       ...data,
       totalCost,
-      updatedAt: serverTimestamp(),
+      notes: data.notes || '',
     };
 
     const batch = writeBatch(db);
@@ -148,7 +149,7 @@ export default function ResourceInventoryPage() {
       if (editingItem) {
         resourceId = editingItem.id;
         const resourceRef = doc(db, RESOURCES_COLLECTION, resourceId);
-        batch.update(resourceRef, resourceData);
+        batch.update(resourceRef, { ...resourceData, updatedAt: serverTimestamp() });
         
         const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", resourceId));
         const oldTransSnap = await getDocs(transQuery);
@@ -157,7 +158,7 @@ export default function ResourceInventoryPage() {
       } else {
         const resourceRef = doc(collection(db, RESOURCES_COLLECTION));
         resourceId = resourceRef.id;
-        batch.set(resourceRef, { ...resourceData, createdAt: serverTimestamp() });
+        batch.set(resourceRef, { ...resourceData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       }
 
       if (totalCost > 0) {
@@ -180,11 +181,21 @@ export default function ResourceInventoryPage() {
       await batch.commit();
 
       if (editingItem) {
-        const updatedItemForState = { ...editingItem, ...resourceData, totalCost };
+        const updatedItemForState: ResourceItem = {
+           ...editingItem,
+           ...data,
+           totalCost,
+           updatedAt: new Date().toISOString(),
+        };
         setItems(items.map(item => item.id === editingItem.id ? updatedItemForState : item));
         toast({ title: "Resource Updated", description: `"${data.name}" has been updated.` });
       } else {
-        const newItemForState = { ...resourceData, id: crypto.randomUUID(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), totalCost };
+        const newItemForState: ResourceItem = {
+            ...resourceData,
+            id: resourceId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
         setItems(prev => [...prev, newItemForState]);
         toast({ title: "Resource Added", description: `"${data.name}" has been added to inventory.` });
       }
