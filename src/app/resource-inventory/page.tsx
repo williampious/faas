@@ -40,15 +40,14 @@ const resourceItemFormSchema = z.object({
     (val) => val === "" ? undefined : parseFloat(String(val)),
     z.number().min(0, "Cost cannot be negative.").optional()
   ),
-  paymentSource: z.enum(paymentSources).optional(),
-  notes: z.string().max(500).optional(),
+  paymentSource: z.enum(paymentSources, { required_error: "Payment source is required if cost is entered." }).optional(),
 }).refine(data => {
     if ((data.costPerUnit || 0) > 0 && (data.quantity || 0) > 0) {
         return !!data.paymentSource;
     }
     return true;
 }, {
-    message: "Payment source is required when cost is entered.",
+    message: "Payment Source is required when cost is entered.",
     path: ["paymentSource"],
 });
 
@@ -245,8 +244,9 @@ export default function ResourceInventoryPage() {
         icon={Archive}
         description="View and manage your stock of farm resources like seeds, fertilizers, and equipment parts."
         action={
-          <Button onClick={() => handleOpenModal()}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New Resource
+          <Button onClick={() => handleOpenModal()} disabled={isProfileLoading}>
+            {isProfileLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+             Add New Resource
           </Button>
         }
       />
