@@ -36,6 +36,12 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.farmId == farmId;
     }
 
+    // New helper function to check for manager-level roles within a farm
+    function isFarmManager(farmId) {
+      return isFarmMember(farmId) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Manager', 'HRManager']);
+    }
+
     // User Profile Rules
     match /users/{userId} {
       // Who can create a user document?
@@ -50,11 +56,11 @@ service cloud.firestore {
 
       // Who can read a user document?
       // 1. The user themselves.
-      // 2. An Admin.
+      // 2. An Admin, Manager, or HRManager viewing users on the same farm.
       // 3. An AEO reading a profile of a farmer they manage.
       allow read: if request.auth != null && (
                     request.auth.uid == userId ||
-                    isUserAdmin() ||
+                    isFarmManager(resource.data.farmId) ||
                     (isUserAEO() && resource.data.managedByAEO == request.auth.uid)
                   );
 
@@ -124,6 +130,11 @@ service cloud.firestore {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
+    
+    match /payrollRecords/{recordId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
 
     match /resources/{resourceId} {
       allow create: if isFarmMember(request.resource.data.farmId);
@@ -177,13 +188,18 @@ You can create these by following the link provided in the console error, or by 
     *   **Collection ID:** `users`
     *   **Fields:** `managedByAEO` (Ascending), `fullName` (Ascending)
     *   **Query scope:** Collection
+    
+3.  **For the HR Employee Directory:**
+    *   **Collection ID:** `users`
+    *   **Fields:** `farmId` (Ascending), `fullName` (Ascending)
+    *   **Query scope:** Collection
 
-3.  **For the Budgeting Module:**
+4.  **For the Budgeting Module:**
     *   **Collection ID:** `transactions`
     *   **Fields:** `farmId` (Ascending), `type` (Ascending), `date` (Ascending)
     *   **Query scope:** Collection
     
-4.  **For AI Planting Advice History:**
+5.  **For AI Planting Advice History:**
     *   **Collection ID:** `plantingAdviceRecords`
     *   **Fields:** `farmId` (Ascending), `createdAt` (Descending)
     *   **Query scope:** Collection
