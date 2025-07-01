@@ -59,7 +59,7 @@ export default function SetupPage() {
     setIsSubmitting(true);
     
     // Generate a new ID for the farm client-side
-    const farmRef = doc(db, 'farms', doc(db, 'farms', 'dummy-id-to-get-ref').id);
+    const farmRef = doc(db, 'farms', doc(collection(db, 'farms')).id);
     const userRef = doc(db, 'users', user.uid);
 
     const newFarm: Omit<Farm, 'createdAt'|'updatedAt'> = {
@@ -81,8 +81,11 @@ export default function SetupPage() {
         updatedAt: serverTimestamp(),
       });
       
-      // 2. Update the user's profile with the new farmId
-      batch.update(userRef, { farmId: farmRef.id });
+      // 2. Update the user's profile with the new farmId and grant Admin role
+      batch.update(userRef, { 
+        farmId: farmRef.id,
+        role: ['Admin'] 
+      });
 
       await batch.commit();
       

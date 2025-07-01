@@ -61,27 +61,17 @@ export default function RegisterPage() {
     let firebaseUser: User | null = null;
 
     try {
-      // Check if this will be the first user in the database.
-      const usersRef = collection(db, usersCollectionName);
-      const q = query(usersRef, limit(1));
-      const querySnapshot = await getDocs(q);
-      const isFirstUser = querySnapshot.empty;
-
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       firebaseUser = userCredential.user;
       console.log('User registered with Firebase Auth:', firebaseUser.uid);
 
-      // Conditionally assign role: 'Admin' for the first user, 'Farmer' for all others.
-      const userRoles: UserRole[] = isFirstUser ? ['Admin'] : ['Farmer'];
-      console.log(`Assigning role(s) to new user (UID: ${firebaseUser.uid}): ${userRoles.join(', ')}. First user: ${isFirstUser}`);
-
-
+      // New users are created without a role. The Admin role is granted upon farm setup.
       const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
         userId: firebaseUser.uid,
         firebaseUid: firebaseUser.uid,
         fullName: data.fullName,
         emailAddress: firebaseUser.email || data.email,
-        role: userRoles,
+        role: [], // Role is assigned upon completing farm setup
         accountStatus: 'Active',
         registrationDate: new Date().toISOString(),
         phoneNumber: '',
@@ -91,7 +81,7 @@ export default function RegisterPage() {
       };
       
       await setDoc(doc(db, usersCollectionName, firebaseUser.uid), profileForFirestore);
-      console.log('User profile created in Firestore for user:', firebaseUser.uid, 'with roles:', userRoles);
+      console.log('User profile created in Firestore for user:', firebaseUser.uid);
 
 
     } catch (registrationError: any) {
@@ -134,9 +124,9 @@ export default function RegisterPage() {
            <Link href="/" className="flex justify-center mb-4">
               <Image src="/agrifaas-logo.png" alt="AgriFAAS Connect Logo" width={280} height={84} data-ai-hint="logo agriculture" objectFit="contain" />
           </Link>
-          <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create Account</CardTitle>
+          <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create an Account</CardTitle>
           <CardDescription className="text-muted-foreground">
-            The first user to register becomes the farm's administrator. Subsequent registrations via this page will be assigned a default 'Farmer' role and require an Admin to assign further permissions.
+            Create your administrator account. After registration, you will be guided to set up your new, private farm environment. To join an existing farm, you must be invited by its administrator.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8 grid gap-6">
