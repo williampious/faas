@@ -61,13 +61,20 @@ export default function RegisterPage() {
     let firebaseUser: User | null = null;
 
     try {
+      // Check if this will be the first user in the database.
+      const usersRef = collection(db, usersCollectionName);
+      const q = query(usersRef, limit(1));
+      const querySnapshot = await getDocs(q);
+      const isFirstUser = querySnapshot.empty;
+
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       firebaseUser = userCredential.user;
       console.log('User registered with Firebase Auth:', firebaseUser.uid);
 
-      // Assign 'Admin' role to all new users by default
-      const userRoles: UserRole[] = ['Admin'];
-      console.log(`Assigning default 'Admin' role to new user (UID: ${firebaseUser.uid}).`);
+      // Conditionally assign role: 'Admin' for the first user, 'Farmer' for all others.
+      const userRoles: UserRole[] = isFirstUser ? ['Admin'] : ['Farmer'];
+      console.log(`Assigning role(s) to new user (UID: ${firebaseUser.uid}): ${userRoles.join(', ')}. First user: ${isFirstUser}`);
+
 
       const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
         userId: firebaseUser.uid,
@@ -129,7 +136,7 @@ export default function RegisterPage() {
           </Link>
           <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create Account</CardTitle>
           <CardDescription className="text-muted-foreground">
-            New users registering on this public page are automatically assigned an 'Admin' role with full access.
+            The first user to register becomes the farm's administrator. Subsequent registrations via this page will be assigned a default 'Farmer' role and require an Admin to assign further permissions.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8 grid gap-6">
