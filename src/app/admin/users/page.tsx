@@ -38,7 +38,7 @@ type InviteUserFormValues = z.infer<typeof inviteUserFormSchema>;
 
 
 export default function AdminUsersPage() {
-  const { isAdmin: currentUserIsAdmin, isLoading: isAuthLoading } = useUserProfile();
+  const { userProfile, isAdmin: currentUserIsAdmin, isLoading: isAuthLoading } = useUserProfile();
   const { toast } = useToast();
   const [users, setUsers] = useState<AgriFAASUserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -176,6 +176,11 @@ export default function AdminUsersPage() {
         setInviteUserError("Firebase is not configured correctly. Cannot invite user.");
         return;
     }
+    if (!userProfile?.farmId) {
+      setInviteUserError("Your admin profile is missing a farm ID. Cannot invite users to a farm.");
+      return;
+    }
+
     setIsInvitingUser(true);
     setInviteUserError(null);
     setGeneratedInviteLink(null);
@@ -196,6 +201,7 @@ export default function AdminUsersPage() {
     try {
         const newUserProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt' | 'firebaseUid'> & { createdAt: any, updatedAt: any } = {
             userId: temporaryUserId,
+            farmId: userProfile.farmId, // Critical Fix: Associate user with the admin's farm
             fullName: data.fullName,
             emailAddress: data.email,
             role: (data.roles as UserRole[]) || ['Farmer'],
@@ -587,7 +593,6 @@ export default function AdminUsersPage() {
             <CardTitle className="text-base font-semibold text-muted-foreground">Admin User Management Notes</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; <strong>Why you see all users:</strong> As an Admin, this page lists all user profiles stored in the central application database (Firestore) to allow you to manage them. Regular users cannot see this page.</p>
             <p>&bull; Use "Add New User" to invite users. An invitation link will be generated for you to share with them.</p>
             <p>&bull; Invited users will have an 'Invited' status until they complete registration using the link. They will set their own password.</p>
             <p>&bull; You can manage roles and account status for existing 'Active', 'Suspended', or 'Deactivated' users using the 'Manage' button.</p>
