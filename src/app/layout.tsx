@@ -117,7 +117,8 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
-  const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features', '/installation-guide', '/pricing'].includes(pathname);
+  const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features', '/installation-guide', '/pricing', '/partners'].includes(pathname);
+
 
   useEffect(() => {
     setIsClient(true);
@@ -139,15 +140,21 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
     const isSetupPage = pathname.startsWith('/setup');
 
     if (user) { // User is authenticated
-      // After profile is loaded, check for farm setup
-      if (userProfile && !userProfile.farmId && !isSetupPage) {
+      // After profile is loaded, check for setup completion.
+      // A user is considered "set up" if they have a farm OR if they have the AEO role.
+      if (userProfile && !userProfile.farmId && !userProfile.role?.includes('Agric Extension Officer') && !isSetupPage) {
         router.replace('/setup');
         return; // Redirect to setup and stop further processing
       }
       
       // If user is set up and tries to go to an auth page, redirect to dashboard
       if (isAuthPage) {
-        router.replace('/dashboard');
+        // AEOs should go to their specific dashboard
+        if (userProfile?.role?.includes('Agric Extension Officer')) {
+            router.replace('/aeo/dashboard');
+        } else {
+            router.replace('/dashboard');
+        }
       }
     } else { // User is NOT authenticated
       // If user is not logged in, they can only access public landing and auth pages
@@ -156,6 +163,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
       }
     }
   }, [user, userProfile, isLoading, pathname, router, isClient, isPublicUnauthenticatedArea]);
+
 
   if (!isClient || isLoading) {
     return (
@@ -230,7 +238,11 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
 
   const isAuthPage = pathname.startsWith('/auth/');
   const isSetupPage = pathname.startsWith('/setup');
-  const showAppShell = user && userProfile?.farmId && !isAuthPage && !isSetupPage;
+  
+  // A user is considered "set up" and can see the app shell if they have a farm ID OR they have the AEO role.
+  const isSetUp = userProfile?.farmId || userProfile?.role?.includes('Agric Extension Officer');
+  const showAppShell = user && isSetUp && !isAuthPage && !isSetupPage;
+
 
   if (showAppShell) {
     return <AppShell>{children}</AppShell>;

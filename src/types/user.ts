@@ -162,6 +162,7 @@ export interface AgriFAASUserProfile {
   nationalId?: string; // Ghana Card Number
   avatarUrl?: string;
   primaryLanguage?: string; // e.g., 'en', 'twi', 'ewe'
+  organization?: string; // e.g., Name of the Cooperative or NGO for an AEO
 
   // 2. Contact & Login Info
   phoneNumber?: string;
