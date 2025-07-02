@@ -15,7 +15,7 @@ import { Loader2, UserCheck, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, collection, getDocs, query, where, updateDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import type { AgriFAASUserProfile } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
@@ -126,23 +126,43 @@ export default function CompleteRegistrationPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const firebaseUser = userCredential.user;
 
-      // 2. Update user profile in Firestore
-      const userDocRef = doc(db, usersCollectionName, invitedUserData.userId); // Use original document ID
-      await updateDoc(userDocRef, {
-        firebaseUid: firebaseUser.uid,
-        fullName: data.fullName, // Allow user to confirm/update full name
-        accountStatus: 'Active',
-        invitationToken: null, // Clear the token
-        updatedAt: serverTimestamp(),
-        registrationDate: new Date().toISOString(), // Set actual registration completion date
-      });
+      // 2. Use a batch write to atomically create the new user doc and delete the old invitation doc.
+      const batch = writeBatch(db);
+      
+      const newUserDocRef = doc(db, usersCollectionName, firebaseUser.uid);
+      const oldUserDocRef = doc(db, usersCollectionName, invitedUserData.userId);
+
+      // Prepare the final user profile data, merging invitation data with registration form data
+      const finalUserProfileData = {
+          ...invitedUserData,
+          userId: firebaseUser.uid,
+          firebaseUid: firebaseUser.uid,
+          fullName: data.fullName,
+          accountStatus: 'Active' as const, // Set status to Active
+          invitationToken: null, // Ensure the token is cleared
+          updatedAt: serverTimestamp(),
+          registrationDate: new Date().toISOString(), // Set final registration date
+      };
+      
+      // The invitation document's 'createdAt' shouldn't be copied. 
+      // It will be set by `setDoc` if creating a new doc, or preserved if merging. Let's just create it fresh.
+      const { createdAt, ...profileToWrite } = finalUserProfileData;
+
+      // Create the new document with the Firebase Auth UID as its ID
+      batch.set(newUserDocRef, { ...profileToWrite, createdAt: serverTimestamp() });
+      
+      // Delete the original temporary invitation document
+      batch.delete(oldUserDocRef);
+
+      // Commit the atomic operations
+      await batch.commit();
       
       toast({
         title: "Registration Complete!",
         description: "Your account has been successfully created. You are now being logged in.",
       });
-      // Firebase Auth automatically signs in the user. Redirection will be handled by root layout.
-      // router.push('/dashboard'); // Explicit redirect if needed, but UserProfileProvider should handle it
+      // Firebase Auth automatically signs in the user. The UserProfileProvider will now find the correct document.
+      
     } catch (registrationError: any) {
       console.error('Registration Completion Error:', registrationError);
       let displayError = `Registration failed: ${registrationError.message || 'An unknown error occurred.'}`;
