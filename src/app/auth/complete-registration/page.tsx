@@ -13,12 +13,13 @@ import { z } from 'zod';
 import { useState, useEffect } from 'react';
 import { Loader2, UserCheck, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
-import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, serverTimestamp, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, writeBatch } from 'firebase/firestore';
 import type { AgriFAASUserProfile } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
+import { validateInvitationToken } from './actions';
 
 
 const completeRegistrationSchema = z.object({
@@ -59,50 +60,33 @@ export default function CompleteRegistrationPage() {
   });
 
   useEffect(() => {
-    const validateToken = async () => {
+    const processTokenValidation = async () => {
       if (!token) {
         setValidationMessage("Invitation token is missing or invalid. Please use the link provided in your invitation.");
         setIsTokenValidationLoading(false);
         setIsValidToken(false);
         return;
       }
-
-      if (!isFirebaseClientConfigured || !db) {
-        setValidationMessage("System configuration error. Cannot validate token. Please contact support.");
-        setIsTokenValidationLoading(false);
-        setIsValidToken(false);
-        return;
-      }
       
       setIsTokenValidationLoading(true);
-      try {
-        const usersRef = collection(db, usersCollectionName);
-        const q = query(usersRef, where("invitationToken", "==", token), where("accountStatus", "==", "Invited"));
-        const querySnapshot = await getDocs(q);
 
-        if (querySnapshot.empty) {
-          setValidationMessage("This invitation link is invalid, has expired, or has already been used. Please request a new invitation if needed.");
-          setIsValidToken(false);
-        } else {
-          // Assuming token is unique, so only one doc should be found
-          const userDoc = querySnapshot.docs[0];
-          const userData = { userId: userDoc.id, ...userDoc.data() } as AgriFAASUserProfile;
-          setInvitedUserData(userData);
-          form.setValue('email', userData.emailAddress || '');
-          form.setValue('fullName', userData.fullName || '');
-          setIsValidToken(true);
-          setValidationMessage(null); // Clear any previous error
-        }
-      } catch (err: any) {
-        console.error("Error validating token:", err);
-        setValidationMessage("An error occurred while validating your invitation. Please try again or contact support.");
+      const result = await validateInvitationToken(token);
+
+      if (result.success && result.userData) {
+        setInvitedUserData(result.userData.profileData);
+        form.setValue('email', result.userData.emailAddress || '');
+        form.setValue('fullName', result.userData.fullName || '');
+        setIsValidToken(true);
+        setValidationMessage(null);
+      } else {
+        setValidationMessage(result.message || "An unknown validation error occurred.");
         setIsValidToken(false);
-      } finally {
-        setIsTokenValidationLoading(false);
+        setInvitedUserData(null);
       }
+      setIsTokenValidationLoading(false);
     };
 
-    validateToken();
+    processTokenValidation();
   }, [token, form]);
 
 
