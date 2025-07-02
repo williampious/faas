@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy, Trash2 } from 'lucide-react';
+import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy, Trash2, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { AgriFAASUserProfile, UserRole, AccountStatus } from '@/types/user';
 import { db, isFirebaseClientConfigured } from '@/lib/firebase';
@@ -70,6 +70,9 @@ export default function AdminUsersPage() {
       roles: ['Farmer'],
     },
   });
+  
+  const watchedRoles = inviteUserForm.watch('roles');
+  const isAeoSelectedInForm = watchedRoles?.includes('Agric Extension Officer');
 
 
   useEffect(() => {
@@ -415,6 +418,15 @@ export default function AdminUsersPage() {
                                   </FormItem>
                                 )} />
                             </div>
+                            {isAeoSelectedInForm && (
+                              <Alert className="mt-2">
+                                <Info className="h-4 w-4" />
+                                <AlertTitle>AEO Role Selected</AlertTitle>
+                                <ShadcnAlertDescription>
+                                  Users with the 'Agric Extension Officer' role are independent and will NOT be linked to your farm.
+                                </ShadcnAlertDescription>
+                              </Alert>
+                            )}
                           </>
                         )}
                     </form>
