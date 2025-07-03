@@ -251,6 +251,14 @@ export default function LandingPage() {
               <LinkIcon className="mr-2 h-4 w-4" /> Website (Cure Technologies): <a href="https://www.curetechnologies.org" target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline ml-1">www.curetechnologies.org</a>
             </p>
           </div>
+          
+          <div className="flex justify-center gap-x-6 gap-y-2 flex-wrap mb-6">
+            <Link href="/features" className="text-sm text-muted-foreground hover:text-primary">Features</Link>
+            <Link href="/pricing" className="text-sm text-muted-foreground hover:text-primary">Pricing</Link>
+            <Link href="/partners" className="text-sm text-muted-foreground hover:text-primary">Partners</Link>
+            <Link href="/faq" className="text-sm text-muted-foreground hover:text-primary">FAQ</Link>
+            <Link href="/help" className="text-sm text-muted-foreground hover:text-primary">Help Center</Link>
+          </div>
 
           <p className="text-xs text-muted-foreground/80">
             Copyright ©2025 Cure Technologies Support Group (CTSG Ventures)

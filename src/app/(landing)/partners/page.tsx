@@ -42,13 +42,14 @@ export default function PartnersPage() {
         <div className="flex justify-center">
           {partners.map((partner, index) => (
             <Card key={index} className="flex flex-col overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 max-w-sm w-full">
-              <CardHeader className="p-0">
+              <CardHeader className="p-0 bg-white">
                 <div className="relative aspect-video">
                   <Image
                     src={partner.logo}
                     alt={`${partner.name} Logo`}
                     fill
                     objectFit="contain"
+                    className="p-4"
                   />
                 </div>
               </CardHeader>
