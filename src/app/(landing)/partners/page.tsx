@@ -10,47 +10,12 @@ import { ArrowLeft, ExternalLink, Handshake } from 'lucide-react';
 // Partner data is stored here for easy updates.
 const partners = [
   {
-    name: "AgriTech Innovators",
+    name: "ALX Africa",
     logo: "https://placehold.co/400x200.png",
-    website: "https://example.com",
-    description: "Pioneering new technologies in sustainable agriculture to improve crop yields and reduce environmental impact.",
-    logoHint: "technology innovation"
-  },
-  {
-    name: "Green Fields Foundation",
-    logo: "https://placehold.co/400x200.png",
-    website: "https://example.com",
-    description: "A non-profit organization dedicated to supporting smallholder farmers through education, resources, and community building.",
-    logoHint: "green field"
-  },
-  {
-    name: "Global Harvest Logistics",
-    logo: "https://placehold.co/400x200.png",
-    website: "https://example.com",
-    description: "Providing state-of-the-art supply chain solutions to ensure fresh produce reaches markets efficiently and safely.",
-    logoHint: "logistics truck"
-  },
-  {
-    name: "CropScience Solutions",
-    logo: "https://placehold.co/400x200.png",
-    website: "https://example.com",
-    description: "Developing advanced, eco-friendly crop protection and enhancement products for modern farming.",
-    logoHint: "science laboratory"
-  },
-  {
-    name: "Farm-to-Table Co-op",
-    logo: "https://placehold.co/400x200.png",
-    website: "https://example.com",
-    description: "Connecting local farmers directly with consumers and restaurants to promote fresh, locally-sourced food.",
-    logoHint: "market stall"
-  },
-  {
-    name: "AquaFarm Systems",
-    logo: "https://placehold.co/400x200.png",
-    website: "https://example.com",
-    description: "Specialists in aquaponics and hydroponics systems, enabling year-round cultivation with minimal water usage.",
-    logoHint: "water farming"
-  },
+    website: "https://alx-ventures.com/",
+    description: "Helping us TRANSFORM OUR IDEAS INTO ACTION.",
+    logoHint: "alx ventures"
+  }
 ];
 
 export default function PartnersPage() {
@@ -68,22 +33,22 @@ export default function PartnersPage() {
             />
           </Link>
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-primary font-headline flex items-center justify-center">
-            <Handshake className="mr-3 h-10 w-10" /> Our Valued Partners
+            <Handshake className="mr-3 h-10 w-10" /> Our Key Partner
           </h1>
           <p className="mt-3 text-lg sm:text-xl text-foreground/80 max-w-2xl mx-auto">
-            We are proud to collaborate with leading organizations to drive innovation in agriculture.
+            We are proud to collaborate with ALX Africa to help transform our ideas into action.
           </p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="flex justify-center">
           {partners.map((partner, index) => (
-            <Card key={index} className="flex flex-col overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300">
+            <Card key={index} className="flex flex-col overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 max-w-sm w-full">
               <CardHeader className="p-0">
                 <div className="relative aspect-video">
                   <Image
                     src={partner.logo}
                     alt={`${partner.name} Logo`}
-                    layout="fill"
+                    fill
                     objectFit="cover"
                     data-ai-hint={partner.logoHint}
                   />
