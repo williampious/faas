@@ -11,10 +11,9 @@ import { ArrowLeft, ExternalLink, Handshake } from 'lucide-react';
 const partners = [
   {
     name: "ALX Africa",
-    logo: "https://placehold.co/400x200.png",
+    logo: "/alx-logo.png", // Path to the logo in the /public directory
     website: "https://alx-ventures.com/",
     description: "Helping us TRANSFORM OUR IDEAS INTO ACTION.",
-    logoHint: "alx ventures"
   }
 ];
 
@@ -49,8 +48,7 @@ export default function PartnersPage() {
                     src={partner.logo}
                     alt={`${partner.name} Logo`}
                     fill
-                    objectFit="cover"
-                    data-ai-hint={partner.logoHint}
+                    objectFit="contain"
                   />
                 </div>
               </CardHeader>
