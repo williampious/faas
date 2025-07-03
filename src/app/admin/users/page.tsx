@@ -60,7 +60,7 @@ export default function AdminUsersPage() {
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
 
-  const availableRoles: UserRole[] = ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Investor', 'Farm Staff', 'Agric Extension Officer'];
+  const availableRoles: UserRole[] = ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Investor', 'Farm Staff'];
 
   const inviteUserForm = useForm<InviteUserFormValues>({
     resolver: zodResolver(inviteUserFormSchema),
@@ -70,28 +70,22 @@ export default function AdminUsersPage() {
       roles: ['Farmer'],
     },
   });
-  
-  const watchedRoles = inviteUserForm.watch('roles');
-  const isAeoSelectedInForm = watchedRoles?.includes('Agric Extension Officer');
-
 
   useEffect(() => {
     const fetchUsers = async () => {
-      if (!currentUserIsAdmin && !isAuthLoading) {
-         setError("You do not have permission to view this page.");
+      // Wait until the profile (which contains farmId) is loaded
+      if (isAuthLoading || !userProfile) return;
+
+      // Ensure the user is an admin and has a farmId
+      if (!currentUserIsAdmin || !userProfile.farmId) {
+         setError("You do not have permission to view this page or your user profile is missing farm information.");
          setIsLoading(false);
          return;
       }
-      if (isAuthLoading) return;
 
       setIsLoading(true);
       setError(null);
 
-      if (!isFirebaseClientConfigured) {
-        setError("Firebase client configuration is missing. Cannot fetch users.");
-        setIsLoading(false);
-        return;
-      }
       if (!db) {
         setError("Firestore database is not available. Cannot fetch users.");
         setIsLoading(false);
@@ -99,23 +93,32 @@ export default function AdminUsersPage() {
       }
 
       try {
-        const usersQuery = query(collection(db, usersCollectionName), orderBy("fullName"));
+        // Correctly query for users ONLY within the admin's farm
+        const usersQuery = query(
+          collection(db, usersCollectionName), 
+          where("farmId", "==", userProfile.farmId),
+          orderBy("fullName")
+        );
         const querySnapshot = await getDocs(usersQuery);
         const fetchedUsers = querySnapshot.docs.map(docSnapshot => ({
           ...docSnapshot.data(),
           userId: docSnapshot.id,
         })) as AgriFAASUserProfile[];
         setUsers(fetchedUsers);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching users: ", err);
-        setError(err instanceof Error ? `Failed to fetch users: ${err.message}` : "An unknown error occurred while fetching users.");
+        let message = `Failed to fetch users: ${err.message}`;
+        if (err.message?.includes('requires an index')) {
+          message += " This commonly happens if a required Firestore index is missing. Please check the browser console for a link to create it, or refer to the README for instructions."
+        }
+        setError(message);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchUsers();
-  }, [currentUserIsAdmin, isAuthLoading]);
+  }, [currentUserIsAdmin, isAuthLoading, userProfile]);
 
   const handleOpenEditModal = (userToEdit: AgriFAASUserProfile) => {
     setEditingUser(userToEdit);
@@ -202,7 +205,6 @@ export default function AdminUsersPage() {
     const temporaryUserId = uuidv4();
     
     const selectedRoles = (data.roles as UserRole[]) || ['Farmer'];
-    const isAEOInvite = selectedRoles.includes('Agric Extension Officer');
     
     const newUserProfile: Partial<AgriFAASUserProfile> & { createdAt: any, updatedAt: any } = {
         userId: temporaryUserId,
@@ -215,11 +217,8 @@ export default function AdminUsersPage() {
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        farmId: userProfile.farmId, // Always assign to admin's farm
     };
-
-    if (!isAEOInvite) {
-        newUserProfile.farmId = userProfile.farmId;
-    }
 
 
     try {
@@ -236,7 +235,7 @@ export default function AdminUsersPage() {
         } as AgriFAASUserProfile;
         setUsers(prevUsers => [...prevUsers, displayProfile].sort((a,b) => (a.fullName || '').localeCompare(b.fullName || '')));
 
-        toast({title: "User Added", description: `${data.fullName} has been invited. Share the invitation link with them to complete registration.`});
+        toast({title: "User Invited", description: `${data.fullName} has been invited to your farm. Share the invitation link with them to complete registration.`});
 
     } catch (err: any) {
         console.error("Error inviting new user:", err);
@@ -285,7 +284,7 @@ export default function AdminUsersPage() {
     return (
       <div className="flex justify-center items-center py-10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-2 text-muted-foreground">Loading user data...</p>
+        <p className="ml-2 text-muted-foreground">Loading farm user data...</p>
       </div>
     );
   }
@@ -318,9 +317,9 @@ export default function AdminUsersPage() {
   return (
     <div>
       <PageHeader
-        title="User Management"
+        title="Farm User Management"
         icon={UsersRound}
-        description="View, manage roles, add new users via invitation, and manage user profiles in AgriFAAS Connect."
+        description="View, manage roles, and invite new users to your farm."
         action={
           <Button onClick={() => { 
             inviteUserForm.reset({ fullName: '', email: '', roles: ['Farmer'] }); 
@@ -328,7 +327,7 @@ export default function AdminUsersPage() {
             setGeneratedInviteLink(null); 
             setIsInviteUserModalOpen(true); 
           }}>
-            <UserPlus className="mr-2 h-4 w-4" /> Add New User
+            <UserPlus className="mr-2 h-4 w-4" /> Invite New User
           </Button>
         }
       />
@@ -344,8 +343,8 @@ export default function AdminUsersPage() {
       }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
             <DialogHeader>
-                <DialogTitle className="flex items-center"><UserPlus className="mr-2 h-5 w-5" />Add New User</DialogTitle>
-                <DialogDescription>Enter the user's details to generate an invitation link. They will use this link to set their own password.</DialogDescription>
+                <DialogTitle className="flex items-center"><UserPlus className="mr-2 h-5 w-5" />Invite New User to Your Farm</DialogTitle>
+                <DialogDescription>Enter the user's details to generate an invitation link. They will use this link to set their own password and join your farm.</DialogDescription>
             </DialogHeader>
             <div className="flex-grow overflow-y-auto pr-2 py-4">
                 <Form {...inviteUserForm}>
@@ -374,7 +373,7 @@ export default function AdminUsersPage() {
                                inviteUserForm.reset({ fullName: '', email: '', roles: ['Farmer'] }); 
                                setInviteUserError(null); 
                                setGeneratedInviteLink(null); 
-                             }}>Add Another User</Button>
+                             }}>Invite Another User</Button>
                           </div>
                         ) : (
                           <>
@@ -418,15 +417,6 @@ export default function AdminUsersPage() {
                                   </FormItem>
                                 )} />
                             </div>
-                            {isAeoSelectedInForm && (
-                              <Alert className="mt-2">
-                                <Info className="h-4 w-4" />
-                                <AlertTitle>AEO Role Selected</AlertTitle>
-                                <ShadcnAlertDescription>
-                                  Users with the 'Agric Extension Officer' role are independent and will NOT be linked to your farm.
-                                </ShadcnAlertDescription>
-                              </Alert>
-                            )}
                           </>
                         )}
                     </form>
@@ -555,7 +545,7 @@ export default function AdminUsersPage() {
       <Card className="shadow-lg">
         <CardContent className="pt-6">
           <Table>
-            {users.length === 0 && !isLoading && <TableCaption>No users found. Invited users will appear here once the invitation is generated.</TableCaption>}
+            <TableCaption>{users.length === 0 ? "No other users found on your farm." : "A list of all users on your farm."}</TableCaption>
             <TableHeader>
               <TableRow>
                 <TableHead>Full Name</TableHead>
@@ -612,8 +602,8 @@ export default function AdminUsersPage() {
             <CardTitle className="text-base font-semibold text-muted-foreground">Admin User Management Notes</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; Use "Add New User" to generate an invitation link. Invited users will set their own password.</p>
-            <p>&bull; When inviting a user, they will be automatically linked to your farm, unless their role is set to 'Agric Extension Officer', in which case they will be created as an independent user without a farm association.</p>
+            <p>&bull; This page lists all users associated with **your farm**.</p>
+            <p>&bull; Use "Invite New User" to generate an invitation link for a new team member to join your farm.</p>
             <p>&bull; For users with 'Invited' status, you can copy their invitation link again if needed. Their roles/status cannot be edited until they complete registration.</p>
             <p>&bull; <strong>Profile Deletion:</strong> The "Delete" button removes the user's data from Firestore only. It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. This action is primarily for cleaning up test data or revoking invitations.</p>
         </CardContent>
