@@ -126,7 +126,7 @@ export default function RegisterPage() {
           </Link>
           <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create an Account</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Register for an account. After registering, you will be guided to set up your own private farm, where you will be the administrator. To join an existing farm, you must be invited by its administrator instead.
+            Create your AgriFAAS Connect account. After registering, you will be guided to choose your role and set up your workspace—either as a new Farm Administrator or an Extension Officer.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-8 grid gap-6">
