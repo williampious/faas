@@ -550,6 +550,7 @@ export default function UserProfilePage() {
                 <InfoItem label="Last Updated" value={formatTimestamp(currentProfile.updatedAt)} />
                 <InfoItem label="User ID" value={currentProfile.userId} className="text-xs break-all" />
                 <InfoItem label="Firebase UID" value={currentProfile.firebaseUid} className="text-xs break-all" />
+                {currentProfile.farmId && <InfoItem label="Farm ID" value={currentProfile.farmId} className="text-xs break-all" />}
               </CardContent>
             </Card>
             
