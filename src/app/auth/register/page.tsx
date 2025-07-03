@@ -15,7 +15,7 @@ import { Loader2, UserPlus } from 'lucide-react';
 import Image from 'next/image';
 import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, collection, getDocs, query, limit } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, getDocs, query, limit, where } from 'firebase/firestore';
 import type { AgriFAASUserProfile, UserRole } from '@/types/user';
 
 const registerSchema = z.object({
@@ -56,6 +56,30 @@ export default function RegisterPage() {
       setError("Firebase authentication or database service is not available. This could be due to a network issue or Firebase services not being fully enabled in your project console. Please check your setup and internet connection.");
       setIsLoading(false);
       return;
+    }
+    
+    // Proactively check if a user document with this email already exists in Firestore.
+    // This provides better user feedback than just waiting for the auth error.
+    try {
+        const usersRef = collection(db, usersCollectionName);
+        const q = query(usersRef, where("emailAddress", "==", data.email), limit(1));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            const existingUser = querySnapshot.docs[0].data();
+            if (existingUser.accountStatus === 'Invited') {
+                setError("This email address has a pending invitation. Please use the invitation link sent to you to complete your registration.");
+            } else {
+                setError("This email address is already associated with an account. Please sign in or use a different email address.");
+            }
+            setIsLoading(false);
+            return;
+        }
+    } catch (firestoreError: any) {
+        console.error("Error checking for existing user in Firestore:", firestoreError);
+        setError("An error occurred while verifying your email. Please try again.");
+        setIsLoading(false);
+        return;
     }
 
     let firebaseUser: User | null = null;
