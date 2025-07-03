@@ -140,22 +140,27 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
     const isSetupPage = pathname.startsWith('/setup');
 
     if (user) { // User is authenticated
-      // After profile is loaded, check for setup completion.
-      // A user is considered "set up" if they have a farm OR if they have the AEO role.
-      if (userProfile && !userProfile.farmId && !userProfile.role?.includes('Agric Extension Officer') && !isSetupPage) {
-        router.replace('/setup');
-        return; // Redirect to setup and stop further processing
-      }
-      
-      // If user is set up and tries to go to an auth page, redirect to dashboard
-      if (isAuthPage) {
-        // AEOs should go to their specific dashboard
-        if (userProfile?.role?.includes('Agric Extension Officer')) {
-            router.replace('/aeo/dashboard');
-        } else {
-            router.replace('/dashboard');
+      if (userProfile) { // Profile is loaded
+        // After profile is loaded, check for setup completion.
+        // A user is considered "set up" if they have a farm OR if they have the AEO role.
+        if (!userProfile.farmId && !userProfile.role?.includes('Agric Extension Officer') && !isSetupPage) {
+          router.replace('/setup');
+          return; // Redirect to setup and stop further processing
+        }
+        
+        // If user is set up and tries to go to an auth page, redirect to dashboard
+        if (isAuthPage) {
+          // AEOs should go to their specific dashboard
+          if (userProfile.role?.includes('Agric Extension Officer')) {
+              router.replace('/aeo/dashboard');
+          } else {
+              router.replace('/dashboard');
+          }
         }
       }
+      // If user is authenticated but profile is not yet loaded, DO NOTHING.
+      // The `isLoading` state will show the loading screen, and this `useEffect`
+      // will re-run once `userProfile` is available.
     } else { // User is NOT authenticated
       // If user is not logged in, they can only access public landing and auth pages
       if (!isAuthPage && !isPublicUnauthenticatedArea) {
