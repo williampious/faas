@@ -12,14 +12,9 @@ export default function LandingLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // This layout is now minimal. The root layout (src/app/layout.tsx) handles
-  // <html>, <body>, UserProfileProvider etc.
-  // This component will be rendered as children inside the root layout's structure
-  // when the user is on the landing page and unauthenticated.
-  // Specific styling for the landing page body (like gradients) should be handled
-  // by the LandingPage component itself or a wrapper div here.
+  // This layout applies the gradient background and basic structure for the public-facing pages.
   return (
-    <div className="font-body antialiased" suppressHydrationWarning={true}>
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12" suppressHydrationWarning={true}>
       {children}
     </div>
   );

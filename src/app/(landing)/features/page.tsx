@@ -3,9 +3,9 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, LayoutList, CheckCircle, Construction, Cloud, Users, Beef, Tractor } from 'lucide-react';
-import Image from 'next/image';
+import { LandingPageHeader } from '@/components/layout/landing-page-header';
 
 export default function FeaturesPage() {
   const featureCategories = [
@@ -81,61 +81,47 @@ export default function FeaturesPage() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12">
-      <div className="container mx-auto px-4">
-        <header className="mb-10 text-center">
-          <Link href="/">
-            <Image
-              src="/agrifaas-logo.png"
-              alt="AgriFAAS Connect Logo"
-              width={200}
-              height={67}
-              objectFit="contain"
-            />
-          </Link>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-primary font-headline flex items-center justify-center">
-            <LayoutList className="mr-3 h-10 w-10" /> AgriFAAS Connect Features
-          </h1>
-          <p className="mt-3 text-lg sm:text-xl text-foreground/80 max-w-2xl mx-auto">
-            Discover the capabilities of our collaborative, cloud-based farm management platform.
-          </p>
-        </header>
+    <div className="container mx-auto px-4">
+      <LandingPageHeader
+        title="AgriFAAS Connect Features"
+        description="Discover the capabilities of our collaborative, cloud-based farm management platform."
+        icon={LayoutList}
+      />
 
-        <div className="space-y-10">
-          {featureCategories.map((category, catIndex) => (
-            <Card key={catIndex} className="w-full max-w-4xl mx-auto shadow-xl">
-              <CardHeader className="bg-primary/5">
-                <CardTitle className="text-2xl text-primary flex items-center">
-                  <category.icon className="mr-3 h-6 w-6" />
-                  {category.categoryTitle}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-4">
-                {category.features.map((feature, featIndex) => (
-                  <div key={featIndex} className="p-3 border-b last:border-b-0">
-                    <h3 className="text-lg font-semibold text-foreground/90 flex items-center">
-                        {feature.comingSoon ? (
-                            <Construction className="mr-2 h-5 w-5 text-amber-600" />
-                        ) : (
-                            <CheckCircle className="mr-2 h-5 w-5 text-green-600" />
-                        )}
-                        {feature.name}
-                    </h3>
-                    <p className="text-muted-foreground text-sm ml-7">{feature.description}</p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        
-        <div className="text-center mt-12">
-            <Link href="/">
-                <Button size="lg">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-                </Button>
-            </Link>
-        </div>
+      <div className="space-y-10">
+        {featureCategories.map((category, catIndex) => (
+          <Card key={catIndex} className="w-full max-w-4xl mx-auto shadow-xl">
+            <CardHeader className="bg-primary/5">
+              <CardTitle className="text-2xl text-primary flex items-center">
+                <category.icon className="mr-3 h-6 w-6" />
+                {category.categoryTitle}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              {category.features.map((feature, featIndex) => (
+                <div key={featIndex} className="p-3 border-b last:border-b-0">
+                  <h3 className="text-lg font-semibold text-foreground/90 flex items-center">
+                      {feature.comingSoon ? (
+                          <Construction className="mr-2 h-5 w-5 text-amber-600" />
+                      ) : (
+                          <CheckCircle className="mr-2 h-5 w-5 text-green-600" />
+                      )}
+                      {feature.name}
+                  </h3>
+                  <p className="text-muted-foreground text-sm ml-7">{feature.description}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      
+      <div className="text-center mt-12">
+          <Link href="/">
+              <Button size="lg">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+              </Button>
+          </Link>
       </div>
     </div>
   );

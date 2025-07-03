@@ -4,9 +4,9 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle, Zap, DollarSign, Award, Star, Gem, Rocket } from 'lucide-react';
-import Image from 'next/image';
+import { ArrowLeft, CheckCircle, DollarSign, Award, Star, Gem, Rocket } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LandingPageHeader } from '@/components/layout/landing-page-header';
 
 interface TierFeature {
   text: string;
@@ -107,72 +107,58 @@ const pricingTiers: PricingTier[] = [
 
 export default function PricingPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12">
-      <div className="container mx-auto px-4">
-        <header className="mb-10 text-center">
-          <Link href="/">
-            <Image
-              src="/agrifaas-logo.png"
-              alt="AgriFAAS Connect Logo"
-              width={200}
-              height={67}
-              objectFit="contain"
-            />
-          </Link>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-primary font-headline flex items-center justify-center">
-            <DollarSign className="mr-3 h-10 w-10" /> AgriFAAS Connect Pricing
-          </h1>
-          <p className="mt-3 text-lg sm:text-xl text-foreground/80 max-w-2xl mx-auto">
-            Choose the perfect plan to grow your farm and business. Simple, transparent pricing.
-          </p>
-        </header>
+    <div className="container mx-auto px-4">
+      <LandingPageHeader
+        title="AgriFAAS Connect Pricing"
+        description="Choose the perfect plan to grow your farm and business. Simple, transparent pricing."
+        icon={DollarSign}
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 items-stretch">
-          {pricingTiers.map((tier) => (
-            <Card 
-              key={tier.id} 
-              className={cn(
-                "flex flex-col shadow-xl hover:shadow-2xl transition-shadow duration-300",
-                tier.highlight && "border-primary border-2 ring-4 ring-primary/20"
-              )}
-            >
-              <CardHeader className={cn("text-center pb-4", tier.highlight && "bg-primary/5")}>
-                <tier.icon className={cn("h-12 w-12 mx-auto mb-3", tier.highlight ? "text-primary" : "text-muted-foreground")} />
-                <CardTitle className="text-2xl font-semibold">{tier.name}</CardTitle>
-                <p className="text-3xl font-bold text-primary mt-2">{tier.price}</p>
-                <CardDescription>{tier.priceDescription}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow pt-4 space-y-3">
-                <ul className="space-y-2 text-sm">
-                  {tier.features.map((feature, index) => (
-                    <li key={index} className={cn("flex items-start", !feature.included && "text-muted-foreground line-through")}>
-                      <CheckCircle className={cn("h-4 w-4 mr-2 mt-0.5 shrink-0", feature.included ? "text-green-600" : "text-muted-foreground/50")} />
-                      <span>{feature.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-              <CardFooter className="mt-auto p-6">
-                <Link href={tier.href} className="w-full">
-                  <Button size="lg" variant={tier.buttonVariant} className="w-full">
-                    {tier.buttonText}
-                  </Button>
-                </Link>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-        
-        <div className="text-center mt-12">
-          <p className="text-muted-foreground mb-4">
-            Need a custom solution or have questions? <Link href="/#contact-us" className="text-primary hover:underline">Contact us</Link>.
-          </p>
-          <Link href="/">
-            <Button variant="outline" size="lg">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-            </Button>
-          </Link>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 items-stretch">
+        {pricingTiers.map((tier) => (
+          <Card 
+            key={tier.id} 
+            className={cn(
+              "flex flex-col shadow-xl hover:shadow-2xl transition-shadow duration-300",
+              tier.highlight && "border-primary border-2 ring-4 ring-primary/20"
+            )}
+          >
+            <CardHeader className={cn("text-center pb-4", tier.highlight && "bg-primary/5")}>
+              <tier.icon className={cn("h-12 w-12 mx-auto mb-3", tier.highlight ? "text-primary" : "text-muted-foreground")} />
+              <CardTitle className="text-2xl font-semibold">{tier.name}</CardTitle>
+              <p className="text-3xl font-bold text-primary mt-2">{tier.price}</p>
+              <CardDescription>{tier.priceDescription}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow pt-4 space-y-3">
+              <ul className="space-y-2 text-sm">
+                {tier.features.map((feature, index) => (
+                  <li key={index} className={cn("flex items-start", !feature.included && "text-muted-foreground line-through")}>
+                    <CheckCircle className={cn("h-4 w-4 mr-2 mt-0.5 shrink-0", feature.included ? "text-green-600" : "text-muted-foreground/50")} />
+                    <span>{feature.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+            <CardFooter className="mt-auto p-6">
+              <Link href={tier.href} className="w-full">
+                <Button size="lg" variant={tier.buttonVariant} className="w-full">
+                  {tier.buttonText}
+                </Button>
+              </Link>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+      
+      <div className="text-center mt-12">
+        <p className="text-muted-foreground mb-4">
+          Need a custom solution or have questions? <Link href="/#contact-us" className="text-primary hover:underline">Contact us</Link>.
+        </p>
+        <Link href="/">
+          <Button variant="outline" size="lg">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+          </Button>
+        </Link>
       </div>
     </div>
   );

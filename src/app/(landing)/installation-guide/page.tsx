@@ -3,9 +3,9 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, DownloadCloud, Smartphone, MonitorSmartphone } from 'lucide-react';
-import Image from 'next/image';
+import { LandingPageHeader } from '@/components/layout/landing-page-header';
 
 export default function InstallationGuidePage() {
   const installationSteps = [
@@ -46,61 +46,47 @@ export default function InstallationGuidePage() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12">
-      <div className="container mx-auto px-4">
-        <header className="mb-10 text-center">
-          <Link href="/">
-            <Image
-              src="/agrifaas-logo.png"
-              alt="AgriFAAS Connect Logo"
-              width={200}
-              height={67}
-              objectFit="contain"
-            />
-          </Link>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-primary font-headline flex items-center justify-center">
-            <DownloadCloud className="mr-3 h-10 w-10" /> Installing AgriFAAS Connect
-          </h1>
-          <p className="mt-3 text-lg sm:text-xl text-foreground/80 max-w-2xl mx-auto">
-            Follow these simple steps to install AgriFAAS Connect on your device for easy access.
-          </p>
-        </header>
+    <div className="container mx-auto px-4">
+      <LandingPageHeader
+        title="Installing AgriFAAS Connect"
+        description="Follow these simple steps to install AgriFAAS Connect on your device for easy access."
+        icon={DownloadCloud}
+      />
 
-        <div className="space-y-8">
-          {installationSteps.map((section, index) => (
-            <Card key={index} className="w-full max-w-3xl mx-auto shadow-xl">
-              <CardHeader className="bg-primary/5">
-                <CardTitle className="text-2xl text-primary flex items-center">
-                  <section.icon className="mr-3 h-7 w-7" />
-                  Install on {section.platform}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <ol className="list-decimal list-outside space-y-3 pl-5 text-muted-foreground">
-                  {section.steps.map((step, stepIndex) => (
-                    <li key={stepIndex} className="pl-2">{step}</li>
-                  ))}
-                </ol>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        
-        <div className="text-center mt-12">
-            <p className="text-muted-foreground mb-2">Having trouble?</p>
-            <p className="text-sm text-muted-foreground mb-4 max-w-xl mx-auto">
-              Ensure your browser is up-to-date. PWA installation features are standard in modern versions of Chrome, Edge, and Safari.
-              The availability of the 'Install' option can sometimes depend on how frequently you visit the site or specific browser criteria.
-            </p>
-            <Link href="/help">
-                <Button variant="outline" className="mr-2">Visit Help Center</Button>
-            </Link>
-             <Link href="/">
-                <Button>
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-                </Button>
-            </Link>
-        </div>
+      <div className="space-y-8">
+        {installationSteps.map((section, index) => (
+          <Card key={index} className="w-full max-w-3xl mx-auto shadow-xl">
+            <CardHeader className="bg-primary/5">
+              <CardTitle className="text-2xl text-primary flex items-center">
+                <section.icon className="mr-3 h-7 w-7" />
+                Install on {section.platform}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <ol className="list-decimal list-outside space-y-3 pl-5 text-muted-foreground">
+                {section.steps.map((step, stepIndex) => (
+                  <li key={stepIndex} className="pl-2">{step}</li>
+                ))}
+              </ol>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      
+      <div className="text-center mt-12">
+          <p className="text-muted-foreground mb-2">Having trouble?</p>
+          <p className="text-sm text-muted-foreground mb-4 max-w-xl mx-auto">
+            Ensure your browser is up-to-date. PWA installation features are standard in modern versions of Chrome, Edge, and Safari.
+            The availability of the 'Install' option can sometimes depend on how frequently you visit the site or specific browser criteria.
+          </p>
+          <Link href="/help">
+              <Button variant="outline" className="mr-2">Visit Help Center</Button>
+          </Link>
+           <Link href="/">
+              <Button>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+              </Button>
+          </Link>
       </div>
     </div>
   );

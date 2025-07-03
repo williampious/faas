@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { MessageCircleQuestion, ArrowLeft } from 'lucide-react';
-import Image from 'next/image';
+import { LandingPageHeader } from '@/components/layout/landing-page-header';
 
 export default function FaqPage() {
   const faqItems = [
@@ -45,60 +45,46 @@ export default function FaqPage() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50 py-8 sm:py-12">
-      <div className="container mx-auto px-4">
-        <header className="mb-10 text-center">
-          <Link href="/">
-            <Image
-              src="/agrifaas-logo.png"
-              alt="AgriFAAS Connect Logo"
-              width={200}
-              height={67}
-              objectFit="contain"
-            />
+    <div className="container mx-auto px-4">
+      <LandingPageHeader
+        title="Frequently Asked Questions"
+        description="Find quick answers to common questions about AgriFAAS Connect."
+        icon={MessageCircleQuestion}
+      />
+
+      <Card className="w-full max-w-3xl mx-auto shadow-xl mb-12">
+        <CardHeader>
+          <CardTitle className="text-2xl">Common Questions</CardTitle>
+          <CardDescription>
+            If you don't find your answer here, please visit our Help Center or contact support.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Accordion type="single" collapsible className="w-full">
+            {faqItems.map((item, index) => (
+              <AccordionItem value={`item-${index}`} key={index}>
+                <AccordionTrigger className="text-left hover:no-underline">
+                  <span className="font-semibold text-primary/90">{item.question}</span>
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground whitespace-pre-line">
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </CardContent>
+      </Card>
+
+      <div className="text-center">
+          <p className="text-muted-foreground mb-4">Still have questions?</p>
+          <Link href="/help">
+              <Button variant="outline" className="mr-2">Visit our Help Center</Button>
           </Link>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-primary font-headline flex items-center justify-center">
-            <MessageCircleQuestion className="mr-3 h-10 w-10" /> Frequently Asked Questions
-          </h1>
-          <p className="mt-3 text-lg sm:text-xl text-foreground/80 max-w-2xl mx-auto">
-            Find quick answers to common questions about AgriFAAS Connect.
-          </p>
-        </header>
-
-        <Card className="w-full max-w-3xl mx-auto shadow-xl mb-12">
-          <CardHeader>
-            <CardTitle className="text-2xl">Common Questions</CardTitle>
-            <CardDescription>
-              If you don't find your answer here, please visit our Help Center or contact support.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              {faqItems.map((item, index) => (
-                <AccordionItem value={`item-${index}`} key={index}>
-                  <AccordionTrigger className="text-left hover:no-underline">
-                    <span className="font-semibold text-primary/90">{item.question}</span>
-                  </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground whitespace-pre-line">
-                    {item.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </CardContent>
-        </Card>
-
-        <div className="text-center">
-            <p className="text-muted-foreground mb-4">Still have questions?</p>
-            <Link href="/help">
-                <Button variant="outline" className="mr-2">Visit our Help Center</Button>
-            </Link>
-             <Link href="/">
-                <Button>
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-                </Button>
-            </Link>
-        </div>
+           <Link href="/">
+              <Button>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+              </Button>
+          </Link>
       </div>
     </div>
   );

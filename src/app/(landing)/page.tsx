@@ -101,8 +101,8 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-900/50">
-      <div className="container mx-auto px-4 py-8 sm:py-12 flex flex-col items-center">
+    <>
+      <div className="container mx-auto px-4 flex flex-col items-center">
         <header className="mb-12 text-center pt-8">
             <Link href="/">
               <Image
@@ -268,6 +268,6 @@ export default function LandingPage() {
           </p>
         </div>
       </footer>
-    </div>
+    </>
   );
 }
