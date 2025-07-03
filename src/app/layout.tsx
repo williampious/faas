@@ -18,6 +18,7 @@ import {
 import { AppLogo } from '@/components/layout/app-logo';
 import { MainNav } from '@/components/layout/main-nav';
 import { Toaster } from "@/components/ui/toaster";
+import { ToastAction } from "@/components/ui/toast";
 import { Button } from '@/components/ui/button';
 import { UserCircle, LogOut, Loader2, AlertTriangle } from 'lucide-react';
 import { auth } from '@/lib/firebase';
@@ -130,8 +131,27 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
         .catch(error => {
           console.error('[ServiceWorker] Registration failed: ', error);
         });
+
+      const handleControllerChange = () => {
+        toast({
+            title: "App Updated",
+            description: "A new version of AgriFAAS Connect is available. Reload to apply the latest updates.",
+            action: (
+              <ToastAction altText="Reload" onClick={() => window.location.reload()}>
+                Reload
+              </ToastAction>
+            ),
+            duration: Infinity, // Keep the toast until user interacts
+        });
+      };
+      
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+
+      return () => {
+          navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      };
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (!isClient || isLoading) return; 
