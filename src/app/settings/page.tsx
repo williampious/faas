@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/layout/page-header';
@@ -27,10 +26,10 @@ function SettingsItem({ title, description, icon: Icon, href, disabled = false }
     >
       <Icon className="h-8 w-8 text-primary" />
       <div className="flex-1">
-        <p className="font-semibold flex items-center gap-2">
+        <div className="font-semibold flex items-center gap-2">
           {title}
           {disabled && <Badge variant="outline">Coming Soon</Badge>}
-        </p>
+        </div>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       {!disabled && <ChevronRight className="h-5 w-5 text-muted-foreground" />}
