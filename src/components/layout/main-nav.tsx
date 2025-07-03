@@ -28,6 +28,7 @@ import {
   LayoutGrid, // For Plot/Field Management
   Layers, // For Soil & Water Management
   Beef, // For Animal Production
+  Settings, // For Settings page
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -62,7 +63,6 @@ const baseNavItems: NavItem[] = [
   { href: '/resource-inventory', label: 'Inventory', icon: Archive, roles: ['Admin', 'Manager', 'Farmer', 'Farm Staff'] },
   { href: '/weather-monitoring', label: 'Weather', icon: CloudSun, roles: ['Admin', 'Manager', 'FieldOfficer', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
   { href: '/planting-advice', label: 'AI Advice', icon: BrainCircuit, roles: ['Admin', 'Manager', 'Farmer', 'Agric Extension Officer'] },
-  { href: '/profile', label: 'My Profile', icon: UserCircle, roles: ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Agric Extension Officer', 'Investor', 'Farm Staff'] },
 ];
 
 // Role-specific items or sections
@@ -89,6 +89,10 @@ const aeoNavItems: NavItem[] = [
   { href: '/aeo/farmer-directory', label: 'Farmer Directory', icon: Users, roles: ['Agric Extension Officer', 'Admin'] },
 ];
 
+const systemNavItems: NavItem[] = [
+  { href: '/settings', label: 'Settings', icon: Settings, roles: ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Agric Extension Officer', 'Investor', 'Farm Staff'] },
+];
+
 
 export function MainNav() {
   const pathname = usePathname();
@@ -99,7 +103,7 @@ export function MainNav() {
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
-    if (['/dashboard', '/admin/dashboard', '/aeo/dashboard', '/hr/dashboard', '/reports/financial-dashboard'].includes(href)) {
+    if (['/dashboard', '/admin/dashboard', '/aeo/dashboard', '/hr/dashboard', '/reports/financial-dashboard', '/settings'].includes(href)) {
         return pathname === href;
     }
     if (href === '/farm-management' && pathname.startsWith('/farm-management')) return true;
@@ -134,7 +138,8 @@ export function MainNav() {
     ...fieldOfficerNavItems,
     ...hrManagerNavItems,
     ...aeoNavItems, 
-    ...adminSystemNavItems 
+    ...adminSystemNavItems,
+    ...systemNavItems
   ];
 
   const uniqueNavItems = allNavItems.reduce((acc, current) => {
@@ -153,10 +158,11 @@ export function MainNav() {
 
   const visibleNavItems = uniqueNavItems.filter(canViewItem);
 
-  const generalItems = visibleNavItems.filter(item => !item.group && !item.adminOnly && !item.href.startsWith('/aeo/') && !item.href.startsWith('/hr/'));
+  const generalItems = visibleNavItems.filter(item => !item.group && !item.adminOnly && !item.href.startsWith('/aeo/') && !item.href.startsWith('/hr/') && !item.href.startsWith('/settings'));
   const reportItems = visibleNavItems.filter(item => item.group === 'Reports');
   const hrItems = visibleNavItems.filter(item => item.href.startsWith('/hr/'));
   const aeoItemsFiltered = visibleNavItems.filter(item => item.href.startsWith('/aeo/'));
+  const systemItemsFiltered = visibleNavItems.filter(item => item.href.startsWith('/settings'));
   const adminItemsFiltered = visibleNavItems.filter(item => item.adminOnly);
 
 
@@ -230,11 +236,12 @@ export function MainNav() {
         </>
       )}
 
-      {isActualAdmin && adminItemsFiltered.length > 0 && (
+      {(adminItemsFiltered.length > 0 || systemItemsFiltered.length > 0) && (
         <>
           <SidebarSeparator className="my-2" />
-           <SidebarGroupLabel className="px-2 group-data-[collapsible=icon]:hidden">System Admin</SidebarGroupLabel>
+           <SidebarGroupLabel className="px-2 group-data-[collapsible=icon]:hidden">System</SidebarGroupLabel>
           {adminItemsFiltered.map(renderNavItem)}
+          {systemItemsFiltered.map(renderNavItem)}
         </>
       )}
     </SidebarMenu>
