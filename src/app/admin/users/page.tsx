@@ -74,10 +74,16 @@ export default function AdminUsersPage() {
   useEffect(() => {
     const fetchUsers = async () => {
       // Wait until the profile (which contains farmId) is loaded
-      if (isAuthLoading || !userProfile) return;
+      if (isAuthLoading || !userProfile) {
+        if (!isAuthLoading) { // If not loading and no profile, clear data
+            setUsers([]);
+            setIsLoading(false);
+        }
+        return;
+      }
 
       // Ensure the user is an admin and has a farmId
-      if (!currentUserIsAdmin || !userProfile.farmId) {
+      if (!currentUserIsAdmin || !userProfile?.farmId) {
          setError("You do not have permission to view this page or your user profile is missing farm information.");
          setIsLoading(false);
          return;

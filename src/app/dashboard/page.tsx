@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,6 +59,7 @@ export default function DashboardPage() {
     if (isProfileLoading) return;
     if (!userProfile?.farmId) {
       setIsFarmLoading(false);
+      setFarmProfile(null);
       return;
     }
     
@@ -84,7 +86,10 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (isProfileLoading || !userProfile?.farmId) {
-        if (!isProfileLoading) setIsSummaryLoading(false);
+        if (!isProfileLoading) {
+            setSummaryData({ upcomingTasks: '0', eventsToday: '0', totalResources: '0' });
+            setIsSummaryLoading(false);
+        }
         return;
     }
 
