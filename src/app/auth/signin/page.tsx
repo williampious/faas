@@ -129,7 +129,7 @@ export default function SignInPage() {
           </form>
         </CardContent>
         <CardFooter className="p-8 pt-0 flex flex-col items-center gap-4">
-          <Link href="#" className="text-sm text-primary hover:underline">
+          <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
               Forgot your password?
           </Link>
           <p className="text-sm text-muted-foreground">
