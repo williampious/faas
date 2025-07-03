@@ -17,6 +17,7 @@ export interface Farm {
   city?: string;
   farmEmail?: string;
   farmPhone?: string;
+  farmWebsite?: string;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
   ownerId: string; // The userId of the user who created the farm

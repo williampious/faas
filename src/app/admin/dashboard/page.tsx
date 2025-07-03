@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/layout/page-header';
@@ -30,17 +29,19 @@ export default function AdminDashboardPage() {
           </Card>
         </Link>
 
-        <Card className="shadow-lg opacity-50 cursor-not-allowed">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-lg font-medium">Application Settings</CardTitle>
-            <Settings className="h-6 w-6 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Configure global application settings (coming soon).
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/admin/farm-settings" passHref>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium">Farm Settings</CardTitle>
+              <Settings className="h-6 w-6 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Update your farm's name, contact details, and other settings.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
         {/* Add more admin-specific cards here as features are developed */}
       </div>
