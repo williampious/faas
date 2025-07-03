@@ -15,7 +15,7 @@ export default function FeaturesPage() {
       features: [
         { name: "Cloud-Based Data Sync", description: "All your farm data is stored securely in the cloud, enabling real-time collaboration for your entire team. Access up-to-date information from any device." },
         { name: "Role-Based Access Control", description: "Navigation and features adapt based on assigned user roles (Admin, Manager, Farmer, AEO, etc.), ensuring users only see what they need." },
-        { name: "Progressive Web App (PWA)", description: "Installable on mobile devices for an app-like experience with offline capabilities for cached assets." },
+        { name: "Progressive Web App (PWA)", description: "Installable on mobile devices for an app-like experience. Includes an in-app notification when a new version is ready to be installed." },
       ]
     },
     {
@@ -23,18 +23,18 @@ export default function FeaturesPage() {
       icon: Tractor,
       features: [
         { name: "Dashboard Overview", description: "At-a-glance summary of farm activities, calendar events, and key alerts." },
-        { name: "Land Preparation Tracking", description: "Log activities like clearing, ploughing, and harrowing, with detailed cost tracking that feeds the financial dashboard." },
-        { name: "Planting Records", description: "Record crop types, varieties, planting dates, and all associated costs in a central database." },
+        { name: "Land Preparation Tracking", description: "Log activities like clearing and ploughing in a central database, with detailed cost tracking that feeds the financial dashboard." },
+        { name: "Planting Records", description: "Record crop types, varieties, planting dates, and all associated costs in a central database, visible to your team." },
         { name: "Crop Maintenance Logs", description: "Track irrigation, fertilization, pest/disease control, and other maintenance activities with integrated costing." },
         { name: "Harvesting & Post-Harvest", description: "Log yield data, quality, storage, sales, and costs. Sales data automatically feeds into the financial dashboard as income." },
-        { name: "Plot/Field Management", description: "Define and manage individual farm plots or fields, including size, soil type, and location." },
+        { name: "Plot/Field Management", description: "Define and manage individual farm plots or fields, including size, soil type, and location, visible to all farm members." },
       ]
     },
     {
       categoryTitle: "Livestock Production",
       icon: Beef,
       features: [
-        { name: "Livestock Focus Setup", description: "Define primary animal type (e.g., Poultry, Cattle) and management system to tailor the modules." },
+        { name: "Livestock Focus Setup", description: "Define primary animal type (e.g., Poultry, Cattle) and management system to tailor the available modules." },
         { name: "Housing & Infrastructure Management", description: "Log housing units (barns, pens), capacity, and track setup/maintenance costs centrally." },
         { name: "Health Care & Biosecurity", description: "Log vaccinations, health monitoring, and medication. Costs are automatically integrated with the financial ledger." },
         { name: "Feeding & Nutrition", description: "Track feed types, schedules, inventory, and dietary needs.", comingSoon: true },
@@ -45,20 +45,20 @@ export default function FeaturesPage() {
       categoryTitle: "Planning & Support Tools",
       icon: CheckCircle,
       features: [
-        { name: "Collaborative Farm Calendar", description: "Schedule and view tasks and important events on a shared team calendar." },
-        { name: "Team Task Management", description: "Kanban-style board to manage tasks through To Do, In Progress, and Done stages with drag-and-drop functionality, visible to the whole team." },
+        { name: "Collaborative Farm Calendar", description: "Schedule and view tasks and important events on a shared team calendar. All data is stored centrally and synced in real-time." },
+        { name: "Team Task Management", description: "Kanban-style board to manage tasks through To Do, In Progress, and Done stages. All data is centrally stored, allowing for real-time team collaboration." },
         { name: "Centralized Resource Inventory", description: "Track stock levels of resources like seeds and fertilizers. Purchases are logged as expenses automatically." },
         { name: "Weather Monitoring", description: "View mock weather data for a specified location to aid in planning." },
-        { name: "AI Planting Advice", description: "Get AI-generated recommendations for planting schedules and fertilization (powered by Google's AI)." },
+        { name: "AI Planting Advice", description: "Get AI-generated recommendations for planting schedules and fertilization. All advice is saved to a shared farm history." },
       ]
     },
     {
       categoryTitle: "User & System Management",
       icon: Users,
       features: [
-        { name: "Admin User Management", description: "Admins can view all users, manage roles, and add new team members via a secure invitation link system." },
+        { name: "Admin User Management", description: "Admins can view all users on their farm, manage roles, and add new team members via a secure invitation link system." },
         { name: "User Profile Management", description: "Users can view and update their personal and contact information." },
-        { name: "Secure Farm Setup", description: "The first user sets up the farm, becoming the owner and administrator for the new, isolated farm environment." },
+        { name: "Secure Setup Flow", description: "A new user is guided to either set up their own private farm (becoming the admin) or configure their profile as an Agric Extension Officer." },
       ]
     },
     {

@@ -4,19 +4,19 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, BookOpen, LifeBuoy } from 'lucide-react';
+import { ArrowLeft, BookOpen, LifeBuoy, DownloadCloud } from 'lucide-react';
 import { LandingPageHeader } from '@/components/layout/landing-page-header';
 
 export default function HelpPage() {
   const helpTopics = [
     {
       title: "Getting Started Guide",
-      description: "Learn how to register as the first admin, set up your farm, and invite your team members.",
+      description: "Learn how to register, choose your role (Farm Admin or AEO), set up your workspace, and invite team members.",
       link: "#getting-started"
     },
     {
       title: "Admin: User Management",
-      description: "A guide for Admins on how to use the User Management dashboard to invite new users and manage roles.",
+      description: "A guide for Farm Admins on how to use the User Management dashboard to invite new users and manage roles within their farm.",
       link: "#user-management"
     },
     {
@@ -31,23 +31,24 @@ export default function HelpPage() {
     },
     {
       title: "Using Collaborative Tools",
-      description: "Tips for using the shared Farm Calendar and team-based Task Management board effectively.",
+      description: "Tips for using the shared Farm Calendar and team-based Task Management board. All data is synced in real-time.",
       link: "#planning-tools"
     },
     {
       title: "Financials & Budgeting",
-      description: "Understand the live Financial Dashboard, track income/expenses, and create collaborative budgets.",
+      description: "Understand the live Financial Dashboard, track income/expenses, and create collaborative budgets for your farm.",
       link: "#financials"
     },
     {
       title: "Using AEO Tools",
-      description: "A guide for Agric Extension Officers on managing their Farmer Directory, adding farmers, and viewing profiles.",
+      description: "A guide for Agric Extension Officers on managing their Farmer Directory, adding new farmers, and viewing their profiles.",
       link: "#aeo-tools"
     },
     {
-      title: "Profile & Settings",
-      description: "How to update your personal information and preferences.",
-      link: "#account-settings"
+      title: "Installation & App Updates",
+      description: "Learn how to install AgriFAAS Connect on your mobile or desktop device and how app updates work.",
+      link: "/installation-guide",
+      isExternal: true,
     }
   ];
 
@@ -71,9 +72,17 @@ export default function HelpPage() {
             <div key={index} id={topic.link.substring(1)} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
               <h3 className="text-xl font-semibold text-primary mb-1">{topic.title}</h3>
               <p className="text-muted-foreground text-sm mb-3">{topic.description}</p>
-              <Button variant="link" className="p-0 h-auto text-primary">
-                Learn more (Coming Soon) <BookOpen className="ml-2 h-4 w-4" />
-              </Button>
+              {topic.isExternal ? (
+                  <Link href={topic.link}>
+                      <Button variant="link" className="p-0 h-auto text-primary">
+                          View Installation Guide <DownloadCloud className="ml-2 h-4 w-4" />
+                      </Button>
+                  </Link>
+              ) : (
+                  <Button variant="link" className="p-0 h-auto text-primary">
+                      Learn more (Coming Soon) <BookOpen className="ml-2 h-4 w-4" />
+                  </Button>
+              )}
             </div>
           ))}
         </CardContent>

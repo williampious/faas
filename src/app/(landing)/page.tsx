@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Settings2, Brain, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon, LayoutList, DownloadCloud, LifeBuoy, HelpCircle, Handshake } from 'lucide-react';
+import { ArrowRight, Settings2, BrainCircuit, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon, LayoutList, DownloadCloud, LifeBuoy, HelpCircle, Handshake, GitFork } from 'lucide-react';
 
 interface BenefitCardProps {
   icon: React.ElementType;
@@ -75,28 +75,28 @@ export default function LandingPage() {
   const appSteps = [
     {
       icon: UserPlus,
-      title: "Personalized Setup",
-      description: "Register easily and tailor your experience based on your unique farming role in the agricultural ecosystem.",
+      title: "Register Your Account",
+      description: "Create your free, secure, and private user account in a few simple steps.",
+    },
+    {
+      icon: GitFork,
+      title: "Choose Your Path",
+      description: "Set up your private farm workspace as an Admin or configure your profile as an Agric Extension Officer (AEO).",
     },
     {
       icon: Tractor,
-      title: "Full Farm Management",
-      description: "Access a comprehensive suite to manage every stage, from detailed land preparation to efficient harvesting, all in one place.",
+      title: "Manage Operations",
+      description: "Log all farm and livestock activities—from planting and harvesting to animal health—in a central, cloud-based system.",
     },
     {
-      icon: CalendarCheck,
-      title: "Precision Planning",
-      description: "Organize all your activities effectively with an integrated farm calendar and a robust task management system.",
+      icon: Users,
+      title: "Collaborate With Your Team",
+      description: "Invite your team members to your farm or manage your directory of farmers as an AEO.",
     },
     {
-      icon: Brain,
-      title: "Smart Decisions",
-      description: "Leverage AI planting advice, location-specific weather forecasts, and resource tracking for optimal results.",
-    },
-    {
-      icon: Settings2,
-      title: "Centralized Control",
-      description: "Get a clear dashboard overview of key farm aspects, and for admins, access tools for effective user management.",
+      icon: BrainCircuit,
+      title: "Gain Key Insights",
+      description: "Use the financial dashboard, budgeting tools, and AI-powered advice to make smarter, data-driven decisions.",
     },
   ];
 
