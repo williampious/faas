@@ -5,13 +5,6 @@ import { cn } from "@/lib/utils"
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
-    // Sanitize the value only if it's explicitly passed as NaN.
-    // This prevents React errors with controlled number inputs when they are empty,
-    // without interfering with uncontrolled inputs from react-hook-form's `register`.
-    if (typeof props.value === 'number' && isNaN(props.value)) {
-      props.value = '';
-    }
-
     return (
       <input
         type={type}

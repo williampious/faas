@@ -30,20 +30,16 @@ import { v4 as uuidv4 } from 'uuid';
 const activityTypes = ['Field Clearing', 'Weeding', 'Ploughing', 'Harrowing', 'Levelling', 'Manure Spreading', 'Herbicide Application'] as const;
 type LandPreparationActivityType = typeof activityTypes[number];
 
+const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
+
 const costItemSchema = z.object({
   id: z.string().optional(),
   description: z.string().min(1, "Description is required.").max(100),
   category: z.enum(costCategories, { required_error: "Category is required."}),
   paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
-  quantity: z.preprocess(
-    (val) => parseFloat(String(val)),
-    z.number().min(0.01, "Quantity must be greater than 0.")
-  ),
-  unitPrice: z.preprocess(
-    (val) => parseFloat(String(val)),
-    z.number().min(0.01, "Unit price must be greater than 0.")
-  ),
+  quantity: z.preprocess(safeParseFloat, z.number().min(0.01, "Quantity must be greater than 0.")),
+  unitPrice: z.preprocess(safeParseFloat, z.number().min(0.01, "Unit price must be greater than 0.")),
   total: z.number().optional(),
 });
 
@@ -348,7 +344,7 @@ export default function LandPreparationPage() {
                 <section className="space-y-4 p-4 border rounded-lg">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-primary">Cost Items</h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: 'Labor', paymentSource: 'Cash', unit: '', quantity: 1, unitPrice: 0 })}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: 'Labor', paymentSource: 'Cash', unit: '', quantity: undefined, unitPrice: undefined })}>
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item
                     </Button>
                   </div>
@@ -377,10 +373,10 @@ export default function LandPreparationPage() {
                             <FormItem><FormLabel>Unit*</FormLabel><FormControl><Input placeholder="e.g., Liters, Days" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
                           <FormField control={form.control} name={`costItems.${index}.quantity`} render={({ field: f }) => (
-                            <FormItem><FormLabel>Quantity*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`costItems.${index}.total`, parseFloat(e.target.value) * (form.getValues(`costItems.${index}.unitPrice`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)}
+                            <FormItem><FormLabel>Quantity*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
                            <FormField control={form.control} name={`costItems.${index}.unitPrice`} render={({ field: f }) => (
-                            <FormItem><FormLabel>Unit Price*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} onChange={e => {f.onChange(parseFloat(e.target.value)); form.setValue(`costItems.${index}.total`, parseFloat(e.target.value) * (form.getValues(`costItems.${index}.quantity`) || 0) ) }} /></FormControl><FormMessage /></FormItem>)}
+                            <FormItem><FormLabel>Unit Price*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} /></FormControl><FormMessage /></FormItem>)}
                           />
                           <div>
                             <Label>Item Total</Label>
