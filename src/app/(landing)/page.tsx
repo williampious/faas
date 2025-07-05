@@ -104,7 +104,7 @@ export default function LandingPage() {
     <>
       <div className="container mx-auto px-4 flex flex-col items-center">
         <header className="mb-12 text-center pt-8">
-            <Link href="/">
+            <Link href="/" className="flex justify-center mb-4">
               <Image
                 src="/agrifaas-logo.png"
                 alt="AgriFAAS Connect Logo"
