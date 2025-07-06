@@ -52,6 +52,8 @@ export interface HousingRecord {
   notes?: string;
   costItems: CostItem[]; 
   totalHousingCost: number;
+  farmingYearId?: string;
+  farmingSeasonId?: string;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
@@ -71,6 +73,8 @@ export interface HealthRecord {
   notes?: string;
   costItems: CostItem[];
   totalActivityCost: number;
+  farmingYearId?: string;
+  farmingSeasonId?: string;
   createdAt: string; // ISO datetime string
   updatedAt: string; // ISO datetime string
 }
@@ -79,6 +83,7 @@ export interface HealthRecord {
 // Future types for feeding, etc. will go here
 // e.g.,
 // export interface FeedingSchedule { ... }
+
 
 
 

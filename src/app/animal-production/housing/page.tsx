@@ -26,7 +26,8 @@ import { costCategories, paymentSources } from '@/types/finance';
 import type { OperationalTransaction } from '@/types/finance';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
+import type { FarmingYear } from '@/types/season';
 
 
 const costItemSchema = z.object({
@@ -61,12 +62,15 @@ const housingRecordFormSchema = z.object({
   predatorProtection: z.string().max(500).optional(),
   notes: z.string().max(1000).optional(),
   costItems: z.array(costItemSchema).optional(),
+  farmingYearId: z.string().min(1, "Farming Year selection is required."),
+  farmingSeasonId: z.string().min(1, "Farming Season selection is required."),
 });
 
 type HousingRecordFormValues = z.infer<typeof housingRecordFormSchema>;
 
 const RECORDS_COLLECTION = 'animalHousingRecords';
 const TRANSACTIONS_COLLECTION = 'transactions';
+const FARMING_YEARS_COLLECTION = 'farmingYears';
 const ACTIVITY_FORM_ID = 'housing-record-form';
 
 export default function HousingInfrastructurePage() {
@@ -78,6 +82,7 @@ export default function HousingInfrastructurePage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+  const [farmingYears, setFarmingYears] = useState<FarmingYear[]>([]);
 
   const form = useForm<HousingRecordFormValues>({
     resolver: zodResolver(housingRecordFormSchema),
@@ -94,6 +99,7 @@ export default function HousingInfrastructurePage() {
   });
 
   const watchedCostItems = form.watch("costItems");
+  const watchedFarmingYearId = form.watch("farmingYearId");
 
   const calculateTotalCost = (items: CostItemFormValues[] | undefined) => {
     if (!items) return 0;
@@ -113,10 +119,17 @@ export default function HousingInfrastructurePage() {
       setError(null);
       try {
         if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
-        const q = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId));
-        const querySnapshot = await getDocs(q);
-        const fetchedRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as HousingRecord[];
+
+        const recordsQuery = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const recordsSnapshot = await getDocs(recordsQuery);
+        const fetchedRecords = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as HousingRecord[];
         setRecords(fetchedRecords);
+        
+        const yearsQuery = query(collection(db, FARMING_YEARS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("startDate", "desc"));
+        const yearsSnapshot = await getDocs(yearsQuery);
+        const fetchedYears = yearsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FarmingYear));
+        setFarmingYears(fetchedYears);
+
       } catch (err: any) {
         console.error("Error fetching housing records:", err);
         setError(`Failed to fetch data: ${err.message}`);
@@ -147,6 +160,7 @@ export default function HousingInfrastructurePage() {
         name: '', housingType: undefined, capacity: 0, capacityUnit: 'birds', dateEstablished: '',
         ventilationDetails: '', lightingDetails: '', shelterDetails: '', biosecurityMeasures: '',
         predatorProtection: '', notes: '', costItems: [],
+        farmingYearId: undefined, farmingSeasonId: undefined,
       });
     }
     setIsModalOpen(true);
@@ -306,6 +320,10 @@ export default function HousingInfrastructurePage() {
               <form id={ACTIVITY_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Housing Unit Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField control={form.control} name="farmingYearId" render={({ field }) => (<FormItem><FormLabel>Farming Year*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Year" /></SelectTrigger></FormControl><SelectContent>{farmingYears.map(year => <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="farmingSeasonId" render={({ field }) => (<FormItem><FormLabel>Farming Season*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!watchedFarmingYearId}><FormControl><SelectTrigger><SelectValue placeholder="Select Season" /></SelectTrigger></FormControl><SelectContent>{farmingYears.find(y => y.id === watchedFarmingYearId)?.seasons.map(season => <SelectItem key={season.id} value={season.id}>{season.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                  </div>
                   <FormField control={form.control} name="name" render={({ field }) => (
                     <FormItem><FormLabel>Name/Identifier*</FormLabel><FormControl><Input placeholder="e.g., Broiler House 1, Pen Alpha" {...field} /></FormControl><FormMessage /></FormItem>)}
                   />
