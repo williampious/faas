@@ -17,6 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 const TRANSACTIONS_COLLECTION = 'transactions';
+type SortableKeys = 'date' | 'category' | 'linkedModule' | 'amount';
+
 
 export default function TransactionsLedgerPage() {
   const router = useRouter();
@@ -24,7 +26,7 @@ export default function TransactionsLedgerPage() {
   const [transactions, setTransactions] = useState<OperationalTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: keyof OperationalTransaction | 'description', direction: OrderByDirection }>({ key: 'date', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState<{ key: SortableKeys, direction: OrderByDirection }>({ key: 'date', direction: 'desc' });
 
   useEffect(() => {
     if (isProfileLoading) return;
@@ -51,7 +53,11 @@ export default function TransactionsLedgerPage() {
         setTransactions(fetchedTransactions);
       } catch (err: any) {
         console.error("Error fetching transactions:", err);
-        setError(`Failed to fetch transactions: ${err.message}. This may be a permissions issue or require a Firestore index.`);
+        let message = `Failed to fetch transactions. This may be a permissions issue.`;
+        if (err.message && err.message.toLowerCase().includes('requires an index')) {
+          message = `Failed to sort transactions. This is because a required Firestore index is missing. Please add the index for sorting by '${sortConfig.key}' as specified in the README.md file, or check your browser's developer console for a direct link to create it.`
+        }
+        setError(message);
       } finally {
         setIsLoading(false);
       }
@@ -59,7 +65,7 @@ export default function TransactionsLedgerPage() {
     fetchTransactions();
   }, [userProfile, isProfileLoading, sortConfig]);
   
-  const handleSort = (key: keyof OperationalTransaction | 'description') => {
+  const handleSort = (key: SortableKeys) => {
     let direction: OrderByDirection = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -67,7 +73,7 @@ export default function TransactionsLedgerPage() {
     setSortConfig({ key, direction });
   };
 
-  const getSortIcon = (key: keyof OperationalTransaction | 'description') => {
+  const getSortIcon = (key: SortableKeys) => {
     if (sortConfig.key !== key) return null;
     return sortConfig.direction === 'asc' ? <ArrowUp className="h-4 w-4 ml-2" /> : <ArrowDown className="h-4 w-4 ml-2" />;
   };
@@ -82,7 +88,7 @@ export default function TransactionsLedgerPage() {
     );
   }
 
-  if (error) {
+  if (error && !isLoading) { // Show error only when not loading
     return (
       <div className="container mx-auto py-10">
         <Card className="w-full max-w-lg mx-auto text-center shadow-lg">
