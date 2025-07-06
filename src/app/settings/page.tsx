@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from '@/components/layout/page-header';
@@ -45,7 +46,7 @@ function SettingsItem({ title, description, icon: Icon, href, disabled = false }
 
 
 export default function SettingsPage() {
-  const appVersion = "1.0.0"; // Placeholder version
+  const appVersion = "1.1.0";
 
   const settingsItems = [
     {

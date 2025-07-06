@@ -200,7 +200,8 @@ export default function UserProfilePage() {
   
   const handleResetLocalData = () => {
     const keysToRemove = [
-      'farmTasks_v2', 'weatherLocation', 'farmEvents'
+      'weatherLocation',
+      'livestockProductionFocus_v1'
     ];
 
     keysToRemove.forEach(key => {
@@ -209,7 +210,7 @@ export default function UserProfilePage() {
 
     toast({
       title: "Local Data Reset",
-      description: "Remaining local data has been cleared from your browser. The page will now reload.",
+      description: "Local browser settings have been cleared. The page will now reload.",
     });
 
     // Reload the page to reflect the cleared state
@@ -631,26 +632,26 @@ export default function UserProfilePage() {
                     <AlertTriangle className="mr-2 h-5 w-5" /> Advanced Settings
                     </CardTitle>
                     <CardDescription>
-                    These are destructive actions. Use with caution.
+                    These are developer-focused actions. Use with caution.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive">Reset Local Data</Button>
+                        <Button variant="destructive">Reset Local Settings</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action will permanently delete any remaining operational data stored only in your browser, such as Tasks and Calendar Events. It will NOT delete any data from the central database (Users, Plots, Budgets, etc.).
+                            This action will clear locally-stored browser settings, such as your saved weather location and livestock focus. It will not delete any of your farm's central data (like Plots, Financials, Tasks, etc.).
                             <br/><br/>
-                            This cannot be undone.
+                            This is useful for troubleshooting display issues. This action cannot be undone.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleResetLocalData}>Yes, Reset Data</AlertDialogAction>
+                        <AlertDialogAction onClick={handleResetLocalData}>Yes, Reset Local Settings</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                     </AlertDialog>
