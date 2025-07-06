@@ -352,9 +352,11 @@ export default function FarmerDirectoryPage() {
                           <Eye className="h-3.5 w-3.5 mr-1" /> View
                         </Button>
                       </Link>
-                      <Button variant="outline" size="sm" disabled> 
-                        <Edit className="h-3.5 w-3.5 mr-1" /> Edit
-                      </Button>
+                      <Link href={`/aeo/farmer-profile/${farmer.userId}/edit`}>
+                        <Button variant="outline" size="sm">
+                          <Edit className="h-3.5 w-3.5 mr-1" /> Edit
+                        </Button>
+                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}

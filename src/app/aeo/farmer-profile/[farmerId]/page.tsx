@@ -17,6 +17,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 interface InfoItemProps {
   icon?: React.ElementType;
@@ -178,9 +179,11 @@ export default function FarmerProfilePage() {
             <Button variant="outline" onClick={() => router.push('/aeo/farmer-directory')}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Directory
             </Button>
-            <Button disabled> {/* Placeholder for Edit */}
-              <Edit className="mr-2 h-4 w-4" /> Edit Profile (Soon)
-            </Button>
+            <Link href={`/aeo/farmer-profile/${farmer.userId}/edit`}>
+              <Button>
+                <Edit className="mr-2 h-4 w-4" /> Edit Profile
+              </Button>
+            </Link>
           </div>
         }
       />
