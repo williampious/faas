@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { DollarSign, TrendingUp, TrendingDown, FileText, BarChart2, Percent, PieChartIcon, Loader2, AlertTriangle, Filter, ClipboardList } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, FileText, BarChart2, Percent, PieChartIcon, Loader2, AlertTriangle, Filter, ClipboardList, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import type { OperationalTransaction } from '@/types/finance';
@@ -227,8 +227,11 @@ export default function FinancialDashboardPage() {
         description={`Displaying financial performance for: ${getSelectedPeriodDescription()}`}
         action={
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => router.push('/reports/transactions')}>
+             <Button variant="outline" onClick={() => router.push('/reports/transactions')}>
                 <ClipboardList className="mr-2 h-4 w-4" /> View Ledger
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/reports/profitability')}>
+                <ClipboardCheck className="mr-2 h-4 w-4" /> Profitability Report
             </Button>
             <Button onClick={() => router.push('/reports/budgeting')}>Manage Budgets</Button>
           </div>

@@ -209,3 +209,11 @@ You can create these by following the link provided in the console error, or by 
 
 6.  **For Farming Years & Seasons:**
     *   Collection: `farmingYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
+    
+7.  **For the Profitability Report:**
+    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `dateHarvested` (Desc), Scope: Collection
+    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `cropType` (Asc), Scope: Collection
+    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalSalesIncome` (Asc), Scope: Collection
+    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalHarvestCost` (Asc), Scope: Collection
+
+```
