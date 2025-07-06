@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState, type ReactNode } from 'react';
 import { Loader2, LogIn } from 'lucide-react';
-import { auth, isFirebaseClientConfigured } from '@/lib/firebase'; // Added isFirebaseClientConfigured
+import { auth, isFirebaseClientConfigured } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const signInSchema = z.object({
@@ -58,8 +58,11 @@ export default function SignInPage() {
       // router.push('/dashboard'); 
     } catch (firebaseError: any) {
       console.error('Firebase Sign In Error:', firebaseError);
-      let errorMessage: ReactNode = "Invalid credentials or an error occurred. Please try again.";
-      if (firebaseError.code === 'auth/user-not-found' || firebaseError.code === 'auth/wrong-password' || firebaseError.code === 'auth/invalid-credential') {
+      let errorMessage: ReactNode = "An unknown error occurred during sign-in. Please try again.";
+
+      // Modern Firebase returns 'auth/invalid-credential' for both wrong password and user not found
+      // to prevent email enumeration attacks.
+      if (firebaseError.code === 'auth/invalid-credential') {
         errorMessage = (
           <span>
             Invalid email or password. Please try again or{' '}
@@ -70,9 +73,9 @@ export default function SignInPage() {
           </span>
         );
       } else if (firebaseError.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many sign-in attempts. Please try again later.';
+        errorMessage = 'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.';
       } else if (firebaseError.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error: Could not connect to authentication servers. Please check your internet connection and ensure Firebase configuration (especially authDomain) is correct.';
+        errorMessage = 'Network error: Could not connect to authentication servers. Please check your internet connection.';
       }
       setError(errorMessage);
     } finally {
