@@ -58,30 +58,6 @@ export default function RegisterPage() {
       return;
     }
     
-    // Proactively check if a user document with this email already exists in Firestore.
-    // This provides better user feedback than just waiting for the auth error.
-    try {
-        const usersRef = collection(db, usersCollectionName);
-        const q = query(usersRef, where("emailAddress", "==", data.email), limit(1));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-            const existingUser = querySnapshot.docs[0].data();
-            if (existingUser.accountStatus === 'Invited') {
-                setError("This email address has a pending invitation. Please use the invitation link sent to you to complete your registration.");
-            } else {
-                setError("This email address is already associated with an account. Please sign in or use a different email address.");
-            }
-            setIsLoading(false);
-            return;
-        }
-    } catch (firestoreError: any) {
-        console.error("Error checking for existing user in Firestore:", firestoreError);
-        setError("An error occurred while verifying your email. Please try again.");
-        setIsLoading(false);
-        return;
-    }
-
     let firebaseUser: User | null = null;
 
     try {
