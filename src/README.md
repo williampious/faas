@@ -185,47 +185,27 @@ You can create these by following the link provided in the console error, or by 
 
 ### Required Indexes:
 
-1.  **For the Financial Dashboard:**
-    *   **Collection ID:** `transactions`
-    *   **Fields:** `farmId` (Ascending), `date` (Ascending)
-    *   **Query scope:** Collection
+1.  **For Financials (Dashboard & Ledger):**
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Asc), Scope: Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Desc), Scope: Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `category` (Asc), Scope: Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `category` (Desc), Scope: Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `linkedModule` (Asc), Scope: Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `linkedModule` (Desc), Scope: Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `amount` (Asc), Scope: Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `amount` (Desc), Scope: Collection
 
 2.  **For the AEO Farmer Directory:**
-    *   **Collection ID:** `users`
-    *   **Fields:** `managedByAEO` (Ascending), `fullName` (Ascending)
-    *   **Query scope:** Collection
+    *   Collection: `users`, Fields: `managedByAEO` (Asc), `fullName` (Asc), Scope: Collection
     
 3.  **For the HR Employee Directory:**
-    *   **Collection ID:** `users`
-    *   **Fields:** `farmId` (Ascending), `fullName` (Ascending)
-    *   **Query scope:** Collection
+    *   Collection: `users`, Fields: `farmId` (Asc), `fullName` (Asc), Scope: Collection
 
 4.  **For the Budgeting Module:**
-    *   **Collection ID:** `transactions`
-    *   **Fields:** `farmId` (Ascending), `type` (Ascending), `date` (Ascending)
-    *   **Query scope:** Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `type` (Asc), `date` (Asc), Scope: Collection
     
 5.  **For AI Planting Advice History:**
-    *   **Collection ID:** `plantingAdviceRecords`
-    *   **Fields:** `farmId` (Ascending), `createdAt` (Descending)
-    *   **Query scope:** Collection
+    *   Collection: `plantingAdviceRecords`, Fields: `farmId` (Asc), `createdAt` (Desc), Scope: Collection
 
 6.  **For Farming Years & Seasons:**
-    *   **Collection ID:** `farmingYears`
-    *   **Fields:** `farmId` (Ascending), `startDate` (Descending)
-    *   **Query scope:** Collection
-
-7.  **For Transaction Ledger Sorting:**
-    *   **Collection ID:** `transactions`, **Fields:** `farmId` (Asc), `category` (Asc), **Query scope:** Collection
-    *   **Collection ID:** `transactions`, **Fields:** `farmId` (Asc), `linkedModule` (Asc), **Query scope:** Collection
-    *   **Collection ID:** `transactions`, **Fields:** `farmId` (Asc), `amount` (Asc), **Query scope:** Collection
-
-
-
-
-
-
-
-
-
-```
+    *   Collection: `farmingYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
