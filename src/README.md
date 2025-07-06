@@ -215,7 +215,10 @@ You can create these by following the link provided in the console error, or by 
     *   **Fields:** `farmId` (Ascending), `startDate` (Descending)
     *   **Query scope:** Collection
 
-    
+7.  **For Transaction Ledger Sorting:**
+    *   **Collection ID:** `transactions`, **Fields:** `farmId` (Asc), `category` (Asc), **Query scope:** Collection
+    *   **Collection ID:** `transactions`, **Fields:** `farmId` (Asc), `linkedModule` (Asc), **Query scope:** Collection
+    *   **Collection ID:** `transactions`, **Fields:** `farmId` (Asc), `amount` (Asc), **Query scope:** Collection
 
 
 
@@ -223,3 +226,6 @@ You can create these by following the link provided in the console error, or by 
 
 
 
+
+
+```
