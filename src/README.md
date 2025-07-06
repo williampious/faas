@@ -146,6 +146,11 @@ service cloud.firestore {
         // Only Admins or HRManagers (or Managers) can manage budgets
       allow create, read, update, delete: if isFarmManager(resource.data.farmId);
     }
+    
+    match /farmingYears/{yearId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
 
     match /tasks/{taskId} {
       allow create: if isFarmMember(request.resource.data.farmId);
@@ -205,7 +210,13 @@ You can create these by following the link provided in the console error, or by 
     *   **Fields:** `farmId` (Ascending), `createdAt` (Descending)
     *   **Query scope:** Collection
 
+6.  **For Farming Years & Seasons:**
+    *   **Collection ID:** `farmingYears`
+    *   **Fields:** `farmId` (Ascending), `startDate` (Descending)
+    *   **Query scope:** Collection
+
     
+
 
 
 
