@@ -1,6 +1,8 @@
 
 import type { Metadata } from 'next';
 import '../globals.css';
+import Image from 'next/image';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'AgriFAAS Connect - Authentication',
@@ -12,19 +14,26 @@ export default function AuthLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // This layout is now minimal. The root layout (src/app/layout.tsx) handles
-  // <html>, <body>, UserProfileProvider etc.
-  // This component will be rendered as children inside the root layout's structure
-  // when the user is on an auth page and unauthenticated.
-  // Specific styling for the auth pages (like gradients) should be handled
-  // by the SignInPage/RegisterPage components themselves or a wrapper div here.
   return (
     <div 
-      className="font-body antialiased flex items-center justify-center min-h-screen p-4" 
+      className="font-body antialiased flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-950 p-4" 
       suppressHydrationWarning={true}
     >
-      {/* The background gradient is now applied by the individual auth page components */}
-      {children}
+      <header className="mb-8">
+        <Link href="/">
+          <Image
+            src="/agrifaas-logo.png"
+            alt="AgriFAAS Connect Logo"
+            width={280}
+            height={84}
+            objectFit="contain"
+            priority
+          />
+        </Link>
+      </header>
+      <main className="w-full">
+        {children}
+      </main>
     </div>
   );
 }

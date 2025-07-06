@@ -142,82 +142,77 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="w-full bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-950">
-      <Card className="w-full max-w-md shadow-2xl mx-auto my-auto">
-        <CardHeader className="space-y-1 text-center p-8">
-           <Link href="/" className="flex justify-center mb-4">
-              <Image src="/agrifaas-logo.png" alt="AgriFAAS Connect Logo" width={280} height={84} data-ai-hint="logo agriculture" objectFit="contain" />
+    <Card className="w-full max-w-md shadow-2xl mx-auto my-auto">
+      <CardHeader className="space-y-1 text-center p-8">
+        <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create an Account</CardTitle>
+        <CardDescription className="text-muted-foreground">
+          Create your secure, private AgriFAAS Connect account. Immediately after registering, you will enter a private setup process to create your own isolated farm workspace or configure your role as an Extension Officer. Your data will not be linked to any other users until you choose to invite them.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-8 grid gap-6">
+        {error && (
+          <div className="bg-destructive/10 p-3 rounded-md text-center text-sm text-destructive">
+            {error}
+          </div>
+        )}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="fullName">Full Name</Label>
+            <Input
+              id="fullName"
+              type="text"
+              placeholder="John Doe"
+              {...form.register('fullName')}
+              disabled={isLoading}
+            />
+            {form.formState.errors.fullName && (
+              <p className="text-sm text-destructive">{form.formState.errors.fullName.message}</p>
+            )}
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="your@email.com"
+              {...form.register('email')}
+              disabled={isLoading}
+            />
+            {form.formState.errors.email && (
+              <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+            )}
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              {...form.register('password')}
+              disabled={isLoading}
+            />
+            {form.formState.errors.password && (
+              <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
+            )}
+          </div>
+          <Button type="submit" className="w-full text-lg py-6 mt-2" disabled={isLoading}>
+            {isLoading ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <UserPlus className="mr-2 h-5 w-5" />
+            )}
+            {isLoading ? 'Creating Account...' : 'Register'}
+          </Button>
+        </form>
+      </CardContent>
+      <CardFooter className="p-8 pt-0 text-center">
+        <p className="text-sm text-muted-foreground">
+          Already have an account?{' '}
+          <Link href="/auth/signin" className="font-semibold text-primary hover:underline">
+            Sign In here
           </Link>
-          <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create an Account</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Create your secure, private AgriFAAS Connect account. Immediately after registering, you will enter a private setup process to create your own isolated farm workspace or configure your role as an Extension Officer. Your data will not be linked to any other users until you choose to invite them.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-8 grid gap-6">
-          {error && (
-            <div className="bg-destructive/10 p-3 rounded-md text-center text-sm text-destructive">
-              {error}
-            </div>
-          )}
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="John Doe"
-                {...form.register('fullName')}
-                disabled={isLoading}
-              />
-              {form.formState.errors.fullName && (
-                <p className="text-sm text-destructive">{form.formState.errors.fullName.message}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                {...form.register('email')}
-                disabled={isLoading}
-              />
-              {form.formState.errors.email && (
-                <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
-              )}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                {...form.register('password')}
-                disabled={isLoading}
-              />
-              {form.formState.errors.password && (
-                <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
-              )}
-            </div>
-            <Button type="submit" className="w-full text-lg py-6 mt-2" disabled={isLoading}>
-              {isLoading ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <UserPlus className="mr-2 h-5 w-5" />
-              )}
-              {isLoading ? 'Creating Account...' : 'Register'}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="p-8 pt-0 text-center">
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link href="/auth/signin" className="font-semibold text-primary hover:underline">
-              Sign In here
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
-    </div>
+        </p>
+      </CardFooter>
+    </Card>
   );
 }

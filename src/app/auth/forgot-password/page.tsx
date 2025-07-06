@@ -51,58 +51,53 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="w-full bg-gradient-to-br from-background to-green-50 dark:from-slate-900 dark:to-green-950">
-      <Card className="w-full max-w-md shadow-2xl mx-auto my-auto">
-        <CardHeader className="space-y-1 text-center p-8">
-           <Link href="/" className="flex justify-center mb-4">
-              <Image src="/agrifaas-logo.png" alt="AgriFAAS Connect Logo" width={280} height={84} objectFit="contain" />
-          </Link>
-          <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Forgot Password</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Enter your email address and we'll send you a link to reset your password.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-8 grid gap-6">
-          {resultMessage && (
-            <Alert variant={resultMessage.type === 'error' ? 'destructive' : 'default'} className={resultMessage.type === 'success' ? 'bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-700' : ''}>
-              <AlertTitle>{resultMessage.type === 'success' ? 'Check Your Email' : 'Error'}</AlertTitle>
-              <AlertDescription>{resultMessage.message}</AlertDescription>
-            </Alert>
-          )}
+    <Card className="w-full max-w-md shadow-2xl mx-auto my-auto">
+      <CardHeader className="space-y-1 text-center p-8">
+        <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Forgot Password</CardTitle>
+        <CardDescription className="text-muted-foreground">
+          Enter your email address and we'll send you a link to reset your password.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-8 grid gap-6">
+        {resultMessage && (
+          <Alert variant={resultMessage.type === 'error' ? 'destructive' : 'default'} className={resultMessage.type === 'success' ? 'bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-700' : ''}>
+            <AlertTitle>{resultMessage.type === 'success' ? 'Check Your Email' : 'Error'}</AlertTitle>
+            <AlertDescription>{resultMessage.message}</AlertDescription>
+          </Alert>
+        )}
 
-          {!resultMessage?.success && (
-            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  {...form.register('email')}
-                  disabled={isLoading}
-                />
-                {form.formState.errors.email && (
-                  <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
-                )}
-              </div>
-              <Button type="submit" className="w-full text-lg py-6 mt-2" disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                  <Mail className="mr-2 h-5 w-5" />
-                )}
-                {isLoading ? 'Sending...' : 'Send Reset Link'}
-              </Button>
-            </form>
-          )}
-        </CardContent>
-        <CardFooter className="p-8 pt-0 flex justify-center">
-          <Link href="/auth/signin" className="font-semibold text-primary hover:underline flex items-center">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Sign In
-          </Link>
-        </CardFooter>
-      </Card>
-    </div>
+        {!resultMessage?.success && (
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                {...form.register('email')}
+                disabled={isLoading}
+              />
+              {form.formState.errors.email && (
+                <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+              )}
+            </div>
+            <Button type="submit" className="w-full text-lg py-6 mt-2" disabled={isLoading}>
+              {isLoading ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <Mail className="mr-2 h-5 w-5" />
+              )}
+              {isLoading ? 'Sending...' : 'Send Reset Link'}
+            </Button>
+          </form>
+        )}
+      </CardContent>
+      <CardFooter className="p-8 pt-0 flex justify-center">
+        <Link href="/auth/signin" className="font-semibold text-primary hover:underline flex items-center">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Sign In
+        </Link>
+      </CardFooter>
+    </Card>
   );
 }
