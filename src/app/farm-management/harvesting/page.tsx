@@ -20,15 +20,17 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
-import type { PaymentSource, CostCategory, OperationalTransaction } from '@/types/finance';
+import type { PaymentSource, CostCategory, OperationalTransaction, CostItem } from '@/types/finance';
 import { paymentSources, costCategories } from '@/types/finance';
-import type { HarvestingRecord, CostItem, SaleItem, YieldUnit } from '@/types/harvesting';
+import type { HarvestingRecord, SaleItem, YieldUnit } from '@/types/harvesting';
 import { yieldUnits } from '@/types/harvesting';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import type { FarmingYear } from '@/types/season';
+import { v4 as uuidv4 } from 'uuid';
 
+const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
 const costItemSchema = z.object({
   id: z.string().optional(),
@@ -36,8 +38,8 @@ const costItemSchema = z.object({
   category: z.enum(costCategories, { required_error: "Category is required."}),
   paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
-  quantity: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Quantity must be greater than 0.")),
-  unitPrice: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Unit price must be greater than 0.")),
+  quantity: z.preprocess(safeParseFloat, z.number().min(0.01, "Quantity must be greater than 0.")),
+  unitPrice: z.preprocess(safeParseFloat, z.number().min(0.01, "Unit price must be greater than 0.")),
   total: z.number().optional(),
 });
 
@@ -46,9 +48,9 @@ type CostItemFormValues = z.infer<typeof costItemSchema>;
 const saleItemSchema = z.object({
   id: z.string().optional(),
   buyer: z.string().min(1, "Buyer name is required.").max(100),
-  quantitySold: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Quantity sold must be greater than 0.")),
+  quantitySold: z.preprocess(safeParseFloat, z.number().min(0.01, "Quantity sold must be greater than 0.")),
   unitOfSale: z.string().min(1, "Unit of sale is required.").max(50),
-  pricePerUnit: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Price per unit must be greater than 0.")),
+  pricePerUnit: z.preprocess(safeParseFloat, z.number().min(0.01, "Price per unit must be greater than 0.")),
   saleDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid sale date is required." }),
   paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   totalSaleAmount: z.number().optional(),
@@ -61,7 +63,7 @@ const harvestRecordFormSchema = z.object({
   variety: z.string().max(100).optional(),
   dateHarvested: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid date is required." }),
   areaHarvested: z.string().min(1, { message: "Area harvested is required." }).max(100),
-  yieldQuantity: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Yield quantity must be greater than 0.")),
+  yieldQuantity: z.preprocess(safeParseFloat, z.number().min(0.01, "Yield quantity must be greater than 0.")),
   yieldUnit: z.enum(yieldUnits, { required_error: "Yield unit is required." }),
   qualityGrade: z.string().max(50).optional(),
   postHarvestActivities: z.string().max(500).optional(),
@@ -148,8 +150,8 @@ export default function HarvestingPage() {
         ...recordToEdit, notes: recordToEdit.notes || '', variety: recordToEdit.variety || '',
         qualityGrade: recordToEdit.qualityGrade || '', postHarvestActivities: recordToEdit.postHarvestActivities || '',
         storageLocation: recordToEdit.storageLocation || '',
-        costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID()})) || [],
-        salesDetails: recordToEdit.salesDetails?.map(si => ({...si, id: si.id || crypto.randomUUID()})) || [],
+        costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || uuidv4()})) || [],
+        salesDetails: recordToEdit.salesDetails?.map(si => ({...si, id: si.id || uuidv4()})) || [],
       });
     } else {
       setEditingRecord(null);
@@ -167,10 +169,10 @@ export default function HarvestingPage() {
       return;
     }
     
-    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({ ...ci, id: ci.id || crypto.randomUUID(), category: ci.category, paymentSource: ci.paymentSource, quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice), total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0) }));
+    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({ ...ci, id: ci.id || uuidv4(), category: ci.category, paymentSource: ci.paymentSource, quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice), total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0) }));
     const totalHarvestCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
 
-    const processedSaleItems: SaleItem[] = (data.salesDetails || []).map(si => ({ ...si, id: si.id || crypto.randomUUID(), quantitySold: Number(si.quantitySold), pricePerUnit: Number(si.pricePerUnit), totalSaleAmount: (Number(si.quantitySold) || 0) * (Number(si.pricePerUnit) || 0) }));
+    const processedSaleItems: SaleItem[] = (data.salesDetails || []).map(si => ({ ...si, id: si.id || uuidv4(), quantitySold: Number(si.quantitySold), pricePerUnit: Number(si.pricePerUnit), totalSaleAmount: (Number(si.quantitySold) || 0) * (Number(si.pricePerUnit) || 0) }));
     const totalSalesIncome = processedSaleItems.reduce((sum, item) => sum + item.totalSaleAmount, 0);
 
     const recordData = {

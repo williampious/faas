@@ -20,11 +20,12 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
-import type { PaymentSource, CostCategory, OperationalTransaction } from '@/types/finance';
+import type { PaymentSource, CostCategory, OperationalTransaction, CostItem } from '@/types/finance';
 import { paymentSources, costCategories } from '@/types/finance';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid';
 
 
 const maintenanceActivityTypes = [
@@ -40,6 +41,7 @@ const maintenanceActivityTypes = [
 ] as const;
 type CropMaintenanceActivityType = typeof maintenanceActivityTypes[number];
 
+const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
 const costItemSchema = z.object({
   id: z.string().optional(),
@@ -48,22 +50,17 @@ const costItemSchema = z.object({
   paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
   quantity: z.preprocess(
-    (val) => parseFloat(String(val)),
+    safeParseFloat,
     z.number().min(0.01, "Quantity must be greater than 0.")
   ),
   unitPrice: z.preprocess(
-    (val) => parseFloat(String(val)),
+    safeParseFloat,
     z.number().min(0.01, "Unit price must be greater than 0.")
   ),
   total: z.number().optional(),
 });
 
 type CostItemFormValues = z.infer<typeof costItemSchema>;
-
-interface CostItem extends CostItemFormValues {
-  id: string;
-  total: number;
-}
 
 interface CropMaintenanceActivity {
   id: string;
@@ -154,7 +151,7 @@ export default function CropMaintenancePage() {
       form.reset({
         ...activityToEdit,
         activityDetails: activityToEdit.activityDetails || '', notes: activityToEdit.notes || '',
-        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID()})) || [],
+        costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || uuidv4()})) || [],
       });
     } else {
       setEditingActivity(null);
@@ -177,7 +174,7 @@ export default function CropMaintenancePage() {
       costItems: (data.costItems || []).map(ci => ({
         ...ci,
         total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
-        id: ci.id || crypto.randomUUID(),
+        id: ci.id || uuidv4(),
       })),
       updatedAt: serverTimestamp(),
     };

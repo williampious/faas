@@ -26,15 +26,21 @@ import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, s
 import type { OperationalTransaction } from '@/types/finance';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
+
 const payrollFormSchema = z.object({
   userId: z.string().min(1, "Employee selection is required."),
   payPeriod: z.string().min(3, "Pay period is required (e.g., 'October 2024')."),
   paymentDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid payment date is required." }),
-  grossAmount: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Gross amount must be greater than 0.")),
-  deductions: z.preprocess((val) => parseFloat(String(val)), z.number().min(0, "Deductions cannot be negative.")),
+  grossAmount: z.preprocess(safeParseFloat, z.number().min(0.01, "Gross amount must be greater than 0.")),
+  deductions: z.preprocess(safeParseFloat, z.number().min(0, "Deductions cannot be negative.")),
   paymentMethod: z.enum(paymentMethods, { required_error: "Payment method is required." }),
   notes: z.string().max(500).optional(),
-}).refine(data => data.grossAmount >= data.deductions, {
+}).refine(data => {
+    const gross = data.grossAmount || 0;
+    const deductions = data.deductions || 0;
+    return gross >= deductions;
+}, {
   message: "Deductions cannot be greater than the gross amount.",
   path: ["deductions"],
 });
@@ -59,7 +65,7 @@ export default function PayrollPage() {
 
   const form = useForm<PayrollFormValues>({
     resolver: zodResolver(payrollFormSchema),
-    defaultValues: { userId: '', payPeriod: '', paymentDate: '', grossAmount: 0, deductions: 0, paymentMethod: undefined, notes: '' },
+    defaultValues: { userId: '', payPeriod: '', paymentDate: '', grossAmount: undefined, deductions: undefined, paymentMethod: undefined, notes: '' },
   });
   
   const watchedGrossAmount = form.watch("grossAmount");
@@ -116,7 +122,7 @@ export default function PayrollPage() {
       });
     } else {
       setEditingRecord(null);
-      form.reset({ userId: '', payPeriod: '', paymentDate: '', grossAmount: 0, deductions: 0, paymentMethod: undefined, notes: '' });
+      form.reset({ userId: '', payPeriod: '', paymentDate: '', grossAmount: undefined, deductions: undefined, paymentMethod: undefined, notes: '' });
     }
     setIsModalOpen(true);
   };
@@ -133,11 +139,15 @@ export default function PayrollPage() {
       return;
     }
 
-    const netAmount = data.grossAmount - data.deductions;
+    const grossAmount = data.grossAmount || 0;
+    const deductions = data.deductions || 0;
+    const netAmount = grossAmount - deductions;
 
     const recordData = {
       farmId: userProfile.farmId,
       ...data,
+      grossAmount,
+      deductions,
       userName: employee.fullName,
       netAmount,
       updatedAt: serverTimestamp(),
@@ -168,7 +178,7 @@ export default function PayrollPage() {
         farmId: userProfile.farmId,
         date: data.paymentDate,
         description: `Payroll for ${employee.fullName} - ${data.payPeriod}`,
-        amount: data.grossAmount,
+        amount: grossAmount,
         type: 'Expense',
         category: 'Payroll',
         paymentSource: data.paymentMethod,

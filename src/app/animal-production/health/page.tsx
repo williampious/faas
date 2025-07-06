@@ -20,15 +20,17 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
-import type { PaymentSource, CostCategory, OperationalTransaction } from '@/types/finance';
+import type { PaymentSource, CostCategory, OperationalTransaction, CostItem } from '@/types/finance';
 import { paymentSources, costCategories } from '@/types/finance';
-import type { CostItem, HealthRecord, HealthActivityType } from '@/types/livestock';
+import type { HealthRecord, HealthActivityType } from '@/types/livestock';
 import { healthActivityTypes } from '@/types/livestock';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import type { FarmingYear } from '@/types/season';
+import { v4 as uuidv4 } from 'uuid';
 
+const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
 const costItemSchema = z.object({
   id: z.string().optional(),
@@ -37,11 +39,11 @@ const costItemSchema = z.object({
   paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
   quantity: z.preprocess(
-    (val) => parseFloat(String(val)),
+    safeParseFloat,
     z.number().min(0.01, "Quantity must be greater than 0.")
   ),
   unitPrice: z.preprocess(
-    (val) => parseFloat(String(val)),
+    safeParseFloat,
     z.number().min(0.01, "Unit price must be greater than 0.")
   ),
   total: z.number().optional(),
@@ -144,7 +146,7 @@ export default function HealthCarePage() {
         dosage: recordToEdit.dosage || '',
         administeredBy: recordToEdit.administeredBy || '',
         notes: recordToEdit.notes || '',
-        costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID()})) || [],
+        costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || uuidv4()})) || [],
       });
     } else {
       setEditingRecord(null);
@@ -163,7 +165,7 @@ export default function HealthCarePage() {
       return;
     }
   
-    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({ ...ci, id: ci.id || crypto.randomUUID(), category: ci.category, paymentSource: ci.paymentSource, quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice), total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0) }));
+    const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({ ...ci, id: ci.id || uuidv4(), category: ci.category, paymentSource: ci.paymentSource, quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice), total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0) }));
     const totalActivityCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
 
     const recordData: any = {

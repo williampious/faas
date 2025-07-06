@@ -2,21 +2,10 @@
 /**
  * @fileOverview TypeScript type definitions for the Harvesting feature.
  */
-import type { CostCategory, PaymentSource } from './finance';
+import type { CostItem, PaymentSource } from './finance';
 
 export const yieldUnits = ['kg', 'bags (50kg)', 'bags (100kg)', 'crates', 'tons', 'bunches', 'pieces'] as const;
 export type YieldUnit = typeof yieldUnits[number];
-
-export interface CostItem {
-  id: string;
-  description: string;
-  category: CostCategory;
-  paymentSource: PaymentSource;
-  unit: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-}
 
 export interface SaleItem {
   id: string;

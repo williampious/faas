@@ -34,3 +34,14 @@ export interface OperationalTransaction {
   linkedActivityId: string; // ID of the parent activity (e.g., land prep record)
   linkedItemId: string; // ID of the specific cost/sale item
 }
+
+export interface CostItem {
+  id: string;
+  description: string;
+  category: CostCategory;
+  paymentSource: PaymentSource;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}

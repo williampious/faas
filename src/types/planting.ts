@@ -2,21 +2,10 @@
 /**
  * @fileOverview TypeScript type definitions for the Planting feature.
  */
-import type { CostCategory, PaymentSource } from './finance';
+import type { CostItem } from './finance';
 
 export const plantingMethods = ['Direct Sowing', 'Transplanting', 'Broadcasting', 'Drilling'] as const;
 export type PlantingMethod = typeof plantingMethods[number];
-
-export interface CostItem {
-  id: string;
-  description: string;
-  category: CostCategory;
-  paymentSource: PaymentSource;
-  unit: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-}
 
 export interface PlantingRecord {
   id: string;

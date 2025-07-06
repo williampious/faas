@@ -20,15 +20,17 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
-import type { PaymentSource, CostCategory, OperationalTransaction } from '@/types/finance';
+import type { PaymentSource, CostCategory, OperationalTransaction, CostItem } from '@/types/finance';
 import { paymentSources, costCategories } from '@/types/finance';
-import type { PlantingRecord, CostItem, PlantingMethod } from '@/types/planting';
+import type { PlantingRecord, PlantingMethod } from '@/types/planting';
 import { plantingMethods } from '@/types/planting';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import type { FarmingYear } from '@/types/season';
+import { v4 as uuidv4 } from 'uuid';
 
+const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
 const costItemSchema = z.object({
   id: z.string().optional(),
@@ -36,8 +38,8 @@ const costItemSchema = z.object({
   category: z.enum(costCategories, { required_error: "Category is required."}),
   paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   unit: z.string().min(1, "Unit is required.").max(20),
-  quantity: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Quantity must be greater than 0.")),
-  unitPrice: z.preprocess((val) => parseFloat(String(val)), z.number().min(0.01, "Unit price must be greater than 0.")),
+  quantity: z.preprocess(safeParseFloat, z.number().min(0.01, "Quantity must be greater than 0.")),
+  unitPrice: z.preprocess(safeParseFloat, z.number().min(0.01, "Unit price must be greater than 0.")),
   total: z.number().optional(),
 });
 
@@ -87,7 +89,7 @@ export default function PlantingPage() {
   const watchedFarmingYearId = form.watch("farmingYearId");
   const calculateTotalCost = (items: CostItemFormValues[] | undefined) => {
     if (!items) return 0;
-    return items.reduce((acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0);
+    return items.reduce((acc, item) => (acc + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)), 0);
   };
   
   useEffect(() => {
@@ -130,7 +132,7 @@ export default function PlantingPage() {
       form.reset({
         ...recordToEdit, notes: recordToEdit.notes || '', variety: recordToEdit.variety || '',
         seedSource: recordToEdit.seedSource || '',
-        costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || crypto.randomUUID()})) || [],
+        costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || uuidv4()})) || [],
       });
     } else {
       setEditingRecord(null);
@@ -153,7 +155,7 @@ export default function PlantingPage() {
       costItems: (data.costItems || []).map(ci => ({
         ...ci,
         total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0),
-        id: ci.id || crypto.randomUUID(),
+        id: ci.id || uuidv4(),
       })),
       updatedAt: serverTimestamp(),
     };

@@ -25,19 +25,20 @@ import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, s
 import type { OperationalTransaction } from '@/types/finance';
 import { paymentSources } from '@/types/finance';
 
+const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
 const resourceItemFormSchema = z.object({
   name: z.string().min(2, { message: "Resource name must be at least 2 characters." }).max(100),
   category: z.enum(resourceCategories, { required_error: "Category is required." }),
   quantity: z.preprocess(
-    (val) => parseFloat(String(val)),
+    safeParseFloat,
     z.number().min(0, "Quantity cannot be negative.")
   ),
   unit: z.string().min(1, { message: "Unit is required (e.g., kg, bags, liters)." }).max(50),
   supplier: z.string().max(100).optional(),
   purchaseDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid purchase date is required." }),
   costPerUnit: z.preprocess(
-    (val) => val === "" ? undefined : parseFloat(String(val)),
+    safeParseFloat,
     z.number().min(0, "Cost cannot be negative.").optional()
   ),
   paymentSource: z.enum(paymentSources, { required_error: "Payment source is required if cost is entered." }).optional(),

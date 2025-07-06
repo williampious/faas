@@ -3,7 +3,7 @@
  * @fileOverview TypeScript type definitions for the Livestock Production feature.
  */
 
-import type { CostCategory, PaymentSource } from './finance';
+import type { CostItem, CostCategory, PaymentSource } from './finance';
 
 export const animalTypes = ['Poultry', 'Cattle', 'Goats', 'Sheep', 'Pigs', 'Fish', 'Rabbits'] as const;
 export type AnimalType = typeof animalTypes[number];
@@ -18,18 +18,6 @@ export interface LivestockProductionFocus {
   animalType: AnimalType;
   managementSystem: ManagementSystem;
   lastUpdatedAt: string; // ISO datetime string
-}
-
-// --- Cost Item related types (can be shared or re-defined if specific adjustments are needed) ---
-export interface CostItem {
-  id: string;
-  description: string;
-  category: CostCategory;
-  paymentSource: PaymentSource;
-  unit: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
 }
 
 // --- Housing & Infrastructure Types ---
@@ -83,9 +71,3 @@ export interface HealthRecord {
 // Future types for feeding, etc. will go here
 // e.g.,
 // export interface FeedingSchedule { ... }
-
-
-
-
-
-
