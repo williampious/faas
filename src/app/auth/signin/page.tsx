@@ -10,9 +10,8 @@ import { Label } from '@/components/ui/label';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Loader2, LogIn } from 'lucide-react';
-import Image from 'next/image';
 import { auth, isFirebaseClientConfigured } from '@/lib/firebase'; // Added isFirebaseClientConfigured
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
@@ -25,7 +24,7 @@ type SignInFormValues = z.infer<typeof signInSchema>;
 
 export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReactNode | null>(null);
   const router = useRouter();
 
   const form = useForm<SignInFormValues>({
@@ -59,9 +58,17 @@ export default function SignInPage() {
       // router.push('/dashboard'); 
     } catch (firebaseError: any) {
       console.error('Firebase Sign In Error:', firebaseError);
-      let errorMessage = "Invalid credentials or an error occurred. Please try again.";
+      let errorMessage: ReactNode = "Invalid credentials or an error occurred. Please try again.";
       if (firebaseError.code === 'auth/user-not-found' || firebaseError.code === 'auth/wrong-password' || firebaseError.code === 'auth/invalid-credential') {
-        errorMessage = 'Invalid email or password. Please try again.';
+        errorMessage = (
+          <span>
+            Invalid email or password. Please try again or{' '}
+            <Link href="/auth/forgot-password" className="font-bold underline">
+              reset your password
+            </Link>
+            .
+          </span>
+        );
       } else if (firebaseError.code === 'auth/too-many-requests') {
         errorMessage = 'Too many sign-in attempts. Please try again later.';
       } else if (firebaseError.code === 'auth/network-request-failed') {
