@@ -25,9 +25,11 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import type { Task, TaskStatus, TaskPriority } from '@/types/task';
 import { taskStatuses, taskPriorities } from '@/types/task';
+import type { FarmingYear } from '@/types/season';
 
 const farmAreas = ["Main Field", "Greenhouse", "Orchard", "Barn", "Equipment Shed", "Irrigation System", "General Farm Operations"];
 const TASKS_COLLECTION = 'tasks';
+const FARMING_YEARS_COLLECTION = 'farmingYears';
 
 const taskFormSchema = z.object({
   name: z.string().min(2, { message: "Task name must be at least 2 characters." }),
@@ -39,6 +41,8 @@ const taskFormSchema = z.object({
   owner: z.string().max(100).optional(),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
+  farmingYearId: z.string().min(1, "Farming Year selection is required."),
+  farmingSeasonId: z.string().min(1, "Farming Season selection is required."),
 });
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
@@ -118,6 +122,7 @@ export default function TaskManagementPage() {
   const [error, setError] = useState<string | null>(null);
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const { toast } = useToast();
+  const [farmingYears, setFarmingYears] = useState<FarmingYear[]>([]);
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
@@ -126,6 +131,8 @@ export default function TaskManagementPage() {
       description: '', project: '', owner: '', startDate: '', dueDate: '',
     },
   });
+  
+  const watchedFarmingYearId = form.watch("farmingYearId");
 
   useEffect(() => {
     if (isProfileLoading) return;
@@ -135,23 +142,31 @@ export default function TaskManagementPage() {
       return;
     }
 
-    const fetchTasks = async () => {
+    const fetchInitialData = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const q = query(collection(db, TASKS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
-        const fetchedTasks = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Task[];
+        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
+        
+        const tasksQuery = query(collection(db, TASKS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("createdAt", "desc"));
+        const tasksSnapshot = await getDocs(tasksQuery);
+        const fetchedTasks = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Task[];
         setTasks(fetchedTasks);
+        
+        const yearsQuery = query(collection(db, FARMING_YEARS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("startDate", "desc"));
+        const yearsSnapshot = await getDocs(yearsQuery);
+        const fetchedYears = yearsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FarmingYear));
+        setFarmingYears(fetchedYears);
+
       } catch (err: any) {
-        console.error("Error fetching tasks:", err);
+        console.error("Error fetching data:", err);
         setError(`Failed to fetch tasks: ${err.message}`);
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchTasks();
+    fetchInitialData();
     
     if (typeof window !== 'undefined' && window.location.hash === '#add') {
       setIsModalOpen(true);
@@ -313,6 +328,12 @@ export default function TaskManagementPage() {
                 <form id="task-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Task Name*</FormLabel><FormControl><Input placeholder="e.g., Water crops" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="e.g., Water the tomato plants in greenhouse section A" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField control={form.control} name="farmingYearId" render={({ field }) => (<FormItem><FormLabel>Farming Year*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Year" /></SelectTrigger></FormControl><SelectContent>{farmingYears.map(year => <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="farmingSeasonId" render={({ field }) => (<FormItem><FormLabel>Farming Season*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!watchedFarmingYearId}><FormControl><SelectTrigger><SelectValue placeholder="Select Season" /></SelectTrigger></FormControl><SelectContent>{farmingYears.find(y => y.id === watchedFarmingYearId)?.seasons.map(season => <SelectItem key={season.id} value={season.id}>{season.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                   </div>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="assignedArea" render={({ field }) => (<FormItem><FormLabel>Assigned Area*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select area" /></SelectTrigger></FormControl><SelectContent>{farmAreas.map(area => <SelectItem key={area} value={area}>{area}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="project" render={({ field }) => (<FormItem><FormLabel>Project (Optional)</FormLabel><FormControl><Input placeholder="e.g., Q3 Tomato Planting" {...field} /></FormControl><FormMessage /></FormItem>)} />

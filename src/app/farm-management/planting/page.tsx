@@ -26,7 +26,8 @@ import type { PlantingRecord, CostItem, PlantingMethod } from '@/types/planting'
 import { plantingMethods } from '@/types/planting';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
+import type { FarmingYear } from '@/types/season';
 
 
 const costItemSchema = z.object({
@@ -51,6 +52,8 @@ const plantingRecordFormSchema = z.object({
   plantingMethod: z.enum(plantingMethods, { required_error: "Planting method is required." }),
   notes: z.string().max(500).optional(),
   costItems: z.array(costItemSchema).optional(),
+  farmingYearId: z.string().min(1, "Farming Year selection is required."),
+  farmingSeasonId: z.string().min(1, "Farming Season selection is required."),
 });
 
 type PlantingRecordFormValues = z.infer<typeof plantingRecordFormSchema>;
@@ -58,6 +61,7 @@ type PlantingRecordFormValues = z.infer<typeof plantingRecordFormSchema>;
 
 const RECORDS_COLLECTION = 'plantingRecords';
 const TRANSACTIONS_COLLECTION = 'transactions';
+const FARMING_YEARS_COLLECTION = 'farmingYears';
 const ACTIVITY_FORM_ID = 'planting-record-form';
 
 
@@ -70,6 +74,7 @@ export default function PlantingPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+  const [farmingYears, setFarmingYears] = useState<FarmingYear[]>([]);
 
 
   const form = useForm<PlantingRecordFormValues>({
@@ -79,6 +84,7 @@ export default function PlantingPage() {
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "costItems" });
   const watchedCostItems = form.watch("costItems");
+  const watchedFarmingYearId = form.watch("farmingYearId");
   const calculateTotalCost = (items: CostItemFormValues[] | undefined) => {
     if (!items) return 0;
     return items.reduce((acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0);
@@ -92,23 +98,30 @@ export default function PlantingPage() {
       return;
     }
 
-    const fetchRecords = async () => {
+    const fetchInitialData = async () => {
       setIsLoading(true);
       setError(null);
       try {
         if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
-        const q = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId));
-        const querySnapshot = await getDocs(q);
-        const fetchedRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PlantingRecord[];
+        
+        const recordsQuery = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const recordsSnapshot = await getDocs(recordsQuery);
+        const fetchedRecords = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PlantingRecord[];
         setRecords(fetchedRecords);
+        
+        const yearsQuery = query(collection(db, FARMING_YEARS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("startDate", "desc"));
+        const yearsSnapshot = await getDocs(yearsQuery);
+        const fetchedYears = yearsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FarmingYear));
+        setFarmingYears(fetchedYears);
+
       } catch (err: any) {
-        console.error("Error fetching planting records:", err);
+        console.error("Error fetching planting data:", err);
         setError(`Failed to fetch data: ${err.message}`);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchRecords();
+    fetchInitialData();
   }, [userProfile, isProfileLoading]);
 
   const handleOpenModal = (recordToEdit?: PlantingRecord) => {
@@ -285,6 +298,10 @@ export default function PlantingPage() {
               <form id={ACTIVITY_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Planting Details</h3>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField control={form.control} name="farmingYearId" render={({ field }) => (<FormItem><FormLabel>Farming Year*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Year" /></SelectTrigger></FormControl><SelectContent>{farmingYears.map(year => <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="farmingSeasonId" render={({ field }) => (<FormItem><FormLabel>Farming Season*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!watchedFarmingYearId}><FormControl><SelectTrigger><SelectValue placeholder="Select Season" /></SelectTrigger></FormControl><SelectContent>{farmingYears.find(y => y.id === watchedFarmingYearId)?.seasons.map(season => <SelectItem key={season.id} value={season.id}>{season.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                   </div>
                   <FormField control={form.control} name="cropType" render={({ field }) => (<FormItem><FormLabel>Crop Type*</FormLabel><FormControl><Input placeholder="e.g., Maize, Tomato" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="variety" render={({ field }) => (<FormItem><FormLabel>Variety (Optional)</FormLabel><FormControl><Input placeholder="e.g., Obaatanpa, Pectomech" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="datePlanted" render={({ field }) => (<FormItem><FormLabel>Date Planted*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -356,5 +373,3 @@ export default function PlantingPage() {
     </div>
   );
 }
-
-    

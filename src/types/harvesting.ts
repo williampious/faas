@@ -47,6 +47,8 @@ export interface HarvestingRecord {
   totalHarvestCost: number;
   salesDetails: SaleItem[];
   totalSalesIncome: number;
+  farmingYearId?: string;
+  farmingSeasonId?: string;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }

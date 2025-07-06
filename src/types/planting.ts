@@ -30,8 +30,8 @@ export interface PlantingRecord {
   notes?: string;
   costItems: CostItem[];
   totalPlantingCost: number;
+  farmingYearId?: string;
+  farmingSeasonId?: string;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
-
-    

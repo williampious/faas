@@ -21,6 +21,8 @@ export interface Task {
   owner?: string; // Assignee name
   startDate?: string; // ISO date string
   dueDate?: string; // ISO date string
+  farmingYearId?: string;
+  farmingSeasonId?: string;
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
