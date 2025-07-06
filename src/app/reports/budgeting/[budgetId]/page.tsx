@@ -18,7 +18,7 @@ import { Banknote, ArrowLeft, PlusCircle, Edit2, Trash2, FolderKanban, DollarSig
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { Budget, BudgetCategory } from '@/types/budget';
-import type { OperationalTransaction } from '@/types/finance';
+import type { OperationalTransaction, CostCategory } from '@/types/finance';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useUserProfile } from '@/contexts/user-profile-context';
@@ -90,6 +90,16 @@ export default function BudgetDetailPage() {
         
         const totalActualSpending = relevantExpenses.reduce((sum, t) => sum + (t.amount || 0), 0);
         const totalBudgeted = budgetData.categories.reduce((sum, cat) => sum + (cat.budgetedAmount || 0), 0);
+
+        // Calculate actual spending per category
+        budgetData.categories.forEach(category => {
+          const actualAmount = relevantExpenses
+            .filter(expense => expense.category === category.name)
+            .reduce((sum, expense) => sum + expense.amount, 0);
+          
+          category.actualAmount = actualAmount;
+          category.variance = category.budgetedAmount - actualAmount;
+        });
 
         budgetData.totalBudgetedAmount = totalBudgeted;
         budgetData.totalActualSpending = totalActualSpending;
@@ -256,13 +266,46 @@ export default function BudgetDetailPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Budget Categories</CardTitle>
-          <CardDescription>{budget.categories.length > 0 ? "Manage your budget categories. Actual spending per category is coming soon." : "No categories added yet. Click 'Add Category' to start."}</CardDescription>
+          <CardDescription>{budget.categories.length > 0 ? "Manage your budget categories and track actual spending against your budget." : "No categories added yet. Click 'Add Category' to start."}</CardDescription>
         </CardHeader>
         <CardContent>
           {budget.categories.length > 0 ? (
             <Table>
-              <TableHeader><TableRow><TableHead>Category Name</TableHead><TableHead className="text-right">Budgeted Amount</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-              <TableBody>{budget.categories.map((category) => (<TableRow key={category.id}><TableCell className="font-medium">{category.name}</TableCell><TableCell className="text-right">{formatCurrency(category.budgetedAmount)}</TableCell><TableCell className="text-right space-x-2"><Button variant="outline" size="sm" onClick={() => handleOpenCategoryModal(category)}><Edit2 className="h-3.5 w-3.5 mr-1" /> Edit</Button><Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category.id)}><Trash2 className="h-3.5 w-3.5 mr-1" /> Delete</Button></TableCell></TableRow>))}</TableBody>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category Name</TableHead>
+                  <TableHead className="text-right">Budgeted</TableHead>
+                  <TableHead className="text-right">Actual</TableHead>
+                  <TableHead className="text-right">Variance</TableHead>
+                  <TableHead>Utilization</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {budget.categories.map((category) => {
+                  const utilization = category.budgetedAmount > 0 ? ((category.actualAmount || 0) / category.budgetedAmount) * 100 : 0;
+                  return (
+                    <TableRow key={category.id}>
+                      <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(category.budgetedAmount)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(category.actualAmount || 0)}</TableCell>
+                      <TableCell className={`text-right font-semibold ${(category.variance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(category.variance || 0)}
+                      </TableCell>
+                       <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Progress value={utilization} className="w-24 h-2" />
+                          <span className="text-xs text-muted-foreground">{utilization.toFixed(0)}%</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenCategoryModal(category)}><Edit2 className="h-3.5 w-3.5 mr-1" /> Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category.id)}><Trash2 className="h-3.5 w-3.5 mr-1" /> Delete</Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
             </Table>
           ) : (
             <div className="text-center py-10">
@@ -275,11 +318,10 @@ export default function BudgetDetailPage() {
       </Card>
       
       <Card className="mt-6 bg-muted/30 p-4">
-        <CardHeader className="p-0 pb-2"><CardTitle className="text-base font-semibold text-muted-foreground">Future Enhancement: Per-Category Analysis</CardTitle></CardHeader>
+        <CardHeader className="p-0 pb-2"><CardTitle className="text-base font-semibold text-muted-foreground">How Category Spending is Calculated</CardTitle></CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; Currently, the dashboard shows the overall "Budget vs. Actual" for the entire budget period.</p>
-            <p>&bull; The next major enhancement will be to track actual spending against each specific category you define.</p>
-            <p>&bull; This will require a way to tag expenses from other modules to these specific budget categories when logging them.</p>
+            <p>&bull; The "Actual" spending for a category is the sum of all expenses in your Financial Ledger that have the same category name and fall within this budget's date range.</p>
+            <p>&bull; For this to work accurately, ensure the expense categories you use when logging costs (e.g., in Land Prep, Planting) match the names of your budget categories here.</p>
         </CardContent>
       </Card>
     </div>

@@ -60,8 +60,7 @@ export default function AEODashboardPage() {
       description: "Access farmer-level dashboards, generate regional summaries, and track key performance indicators.",
       icon: BarChart3,
       href: "/aeo/reports",
-      cta: "Generate Reports",
-      disabled: true
+      cta: "View Reports"
     },
     {
       title: "Knowledge Base",
