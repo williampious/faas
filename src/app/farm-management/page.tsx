@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tractor, Shovel, Sprout, ShieldAlert, Wheat, LayoutGrid, Layers } from 'lucide-react'; 
+import { Tractor, Shovel, Sprout, ShieldAlert, Wheat, LayoutGrid, Layers, CalendarClock } from 'lucide-react'; 
 import Link from 'next/link';
 
 export default function FarmManagementPage() {
@@ -17,6 +17,13 @@ export default function FarmManagementPage() {
       />
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <FeatureCard
+          title="Years & Seasons"
+          description="Define farming years and seasons to structure and organize all your operational data chronologically."
+          icon={CalendarClock}
+          href="/farm-management/years-seasons"
+          cta="Manage Years & Seasons"
+        />
         <FeatureCard
           title="Land Preparation"
           description="Tasks including field clearing, weeding, ploughing/tilling, harrowing, and levelling the land for planting."

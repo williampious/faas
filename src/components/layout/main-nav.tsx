@@ -102,19 +102,23 @@ export function MainNav() {
   const isActualAdmin = userRoles.includes('Admin'); 
 
   const isActive = (href: string) => {
+    // This function determines if a nav link is "active"
     if (href === '/') return pathname === '/';
+    
+    // Exact match for top-level dashboards or specific pages
     if (['/dashboard', '/admin/dashboard', '/aeo/dashboard', '/hr/dashboard', '/reports/financial-dashboard', '/settings'].includes(href)) {
         return pathname === href;
     }
+    
+    // For sections with sub-pages, check if the pathname starts with the href
     if (href === '/farm-management' && pathname.startsWith('/farm-management')) return true;
     if (href === '/animal-production' && pathname.startsWith('/animal-production')) return true;
     if (href === '/reports/budgeting' && pathname.startsWith('/reports/budgeting')) return true;
     
-    // Exact match for farmer directory
-    if (href === '/aeo/farmer-directory' && pathname.startsWith('/aeo/farmer-directory')) return true;
-    // Match for farmer profile sub-pages
-    if (href === '/aeo/farmer-directory' && pathname.startsWith('/aeo/farmer-profile')) return true;
+    // Special handling for AEO Farmer Directory and its sub-pages (profiles)
+    if (href === '/aeo/farmer-directory' && (pathname.startsWith('/aeo/farmer-directory') || pathname.startsWith('/aeo/farmer-profile'))) return true;
     
+    // General case for other potential top-level links
     return pathname.startsWith(href) && href.length > 1; // Avoids matching "/" for everything
   };
 
