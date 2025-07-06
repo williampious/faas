@@ -67,10 +67,10 @@ const baseNavItems: NavItem[] = [
 
 // Role-specific items or sections
 const managerNavItems: NavItem[] = [
-  { href: '/reports/financial-dashboard', label: 'Financial Reports', icon: FileText, group: 'Reports', roles: ['Admin', 'Manager', 'Investor'] },
-  { href: '/reports/yearly-cashflow', label: 'Yearly Cash Flow', icon: BarChart3, group: 'Reports', roles: ['Admin', 'Manager', 'Investor'] },
-  { href: '/reports/budgeting', label: 'Budgeting', icon: Banknote, group: 'Reports', roles: ['Admin', 'Manager', 'Investor'] },
-  { href: '/reports/transactions', label: 'Transaction Ledger', icon: ClipboardList, group: 'Reports', roles: ['Admin', 'Manager', 'Investor'] },
+  { href: '/reports/financial-dashboard', label: 'Financial Reports', icon: FileText, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer'] },
+  { href: '/reports/yearly-cashflow', label: 'Yearly Cash Flow', icon: BarChart3, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer'] },
+  { href: '/reports/budgeting', label: 'Budgeting', icon: Banknote, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer'] },
+  { href: '/reports/transactions', label: 'Transaction Ledger', icon: ClipboardList, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer'] },
 ];
 
 const fieldOfficerNavItems: NavItem[] = [];
