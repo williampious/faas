@@ -19,6 +19,7 @@ export type LinkedModule =
   | 'Animal Health'
   | 'Resource Inventory'
   | 'Payroll'
+  | 'Soil & Water Management'
   | 'Other';
 
 export interface OperationalTransaction {

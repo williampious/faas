@@ -65,7 +65,6 @@ export default function FarmManagementPage() {
           icon={Layers}
           href="/farm-management/soil-water-management"
           cta="Manage Soil & Water"
-          disabled={true}
         />
       </div>
 
