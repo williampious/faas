@@ -70,6 +70,7 @@ const managerNavItems: NavItem[] = [
   { href: '/reports/financial-dashboard', label: 'Financial Reports', icon: FileText, group: 'Reports', roles: ['Admin', 'Manager', 'Investor'] },
   { href: '/reports/yearly-cashflow', label: 'Yearly Cash Flow', icon: BarChart3, group: 'Reports', roles: ['Admin', 'Manager', 'Investor'] },
   { href: '/reports/budgeting', label: 'Budgeting', icon: Banknote, group: 'Reports', roles: ['Admin', 'Manager', 'Investor'] },
+  { href: '/reports/transactions', label: 'Transaction Ledger', icon: ClipboardList, group: 'Reports', roles: ['Admin', 'Manager', 'Investor'] },
 ];
 
 const fieldOfficerNavItems: NavItem[] = [];
@@ -116,6 +117,7 @@ export function MainNav() {
     if (href === '/animal-production' && pathname.startsWith('/animal-production')) return true;
     if (href === '/reports/budgeting' && pathname.startsWith('/reports/budgeting')) return true;
     if (href === '/reports/yearly-cashflow' && pathname.startsWith('/reports/yearly-cashflow')) return true;
+    if (href === '/reports/transactions' && pathname.startsWith('/reports/transactions')) return true;
     
     // Special handling for AEO Farmer Directory and its sub-pages (profiles)
     if (href === '/aeo/farmer-directory' && (pathname.startsWith('/aeo/farmer-directory') || pathname.startsWith('/aeo/farmer-profile'))) return true;
