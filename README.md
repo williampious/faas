@@ -191,6 +191,11 @@ service cloud.firestore {
       allow read, update, delete: if isOfficeManager(resource.data.farmId);
     }
 
+    match /recordsManagementRecords/{recordId} {
+      allow create: if isOfficeManager(request.resource.data.farmId);
+      allow read, update, delete: if isOfficeManager(resource.data.farmId);
+    }
+
     match /transactions/{transactionId} {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read: if isFarmMember(resource.data.farmId);
@@ -258,3 +263,6 @@ You can create these by following the link provided in the console error, or by 
 
 11. **Facility Management:**
     *   Collection: `facilityManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
+
+12. **Records Management:**
+    *   Collection: `recordsManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
