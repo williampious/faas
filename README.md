@@ -42,6 +42,12 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Manager', 'HRManager']);
     }
 
+    // New helper function for office management roles
+    function isOfficeManager(farmId) {
+      return isFarmMember(farmId) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'OfficeManager', 'FinanceManager']);
+    }
+
     // User Profile Rules
     match /users/{userId} {
       // Who can create a user document?
@@ -152,6 +158,11 @@ service cloud.firestore {
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
 
+    match /financialYears/{yearId} {
+      // Only users with office roles can manage financial years
+      allow create, read, update, delete: if isOfficeManager(request.resource.data.farmId);
+    }
+
     match /tasks/{taskId} {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read, update, delete: if isFarmMember(resource.data.farmId);
@@ -209,3 +220,4 @@ You can create these by following the link provided in the console error, or by 
 
 6.  **For Farming Years & Seasons:**
     *   Collection: `farmingYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
+

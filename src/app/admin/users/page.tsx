@@ -60,7 +60,7 @@ export default function AdminUsersPage() {
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
 
-  const availableRoles: UserRole[] = ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Investor', 'Farm Staff'];
+  const availableRoles: UserRole[] = ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'OfficeManager', 'FinanceManager', 'Farmer', 'Investor', 'Farm Staff'];
 
   const inviteUserForm = useForm<InviteUserFormValues>({
     resolver: zodResolver(inviteUserFormSchema),
