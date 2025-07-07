@@ -138,6 +138,11 @@ service cloud.firestore {
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
     
+    match /soilTestRecords/{recordId} {
+        allow create: if isFarmMember(request.resource.data.farmId);
+        allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
+    
     match /payrollRecords/{recordId} {
       // Only Admins or HRManagers can manage payroll records
       allow create, read, update, delete: if isFarmManager(resource.data.farmId);
@@ -200,7 +205,17 @@ You can create these by following the link provided in the console error, or by 
 
 ### Required Indexes:
 
-1.  **For Financials (Dashboard & Ledger):**
+#### For User and Directory Management:
+
+1.  **AEO Farmer Directory:**
+    *   Collection: `users`, Fields: `managedByAEO` (Asc), `fullName` (Asc), Scope: Collection
+    
+2.  **HR Employee Directory:**
+    *   Collection: `users`, Fields: `farmId` (Asc), `fullName` (Asc), Scope: Collection
+
+#### For Reports and Dashboards:
+
+3.  **Financial Dashboard & Ledger:**
     *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Asc), Scope: Collection
     *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Desc), Scope: Collection
     *   Collection: `transactions`, Fields: `farmId` (Asc), `category` (Asc), Scope: Collection
@@ -210,20 +225,25 @@ You can create these by following the link provided in the console error, or by 
     *   Collection: `transactions`, Fields: `farmId` (Asc), `amount` (Asc), Scope: Collection
     *   Collection: `transactions`, Fields: `farmId` (Asc), `amount` (Desc), Scope: Collection
 
-2.  **For the AEO Farmer Directory:**
-    *   Collection: `users`, Fields: `managedByAEO` (Asc), `fullName` (Asc), Scope: Collection
-    
-3.  **For the HR Employee Directory:**
-    *   Collection: `users`, Fields: `farmId` (Asc), `fullName` (Asc), Scope: Collection
-
-4.  **For the Budgeting Module:**
+4.  **Budgeting Module:**
     *   Collection: `transactions`, Fields: `farmId` (Asc), `type` (Asc), `date` (Asc), Scope: Collection
     
-5.  **For AI Planting Advice History:**
+5.  **Profitability Report (Sorting):**
+    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `dateHarvested` (Asc/Desc), Scope: Collection
+    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `cropType` (Asc/Desc), Scope: Collection
+    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalSalesIncome` (Asc/Desc), Scope: Collection
+    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalHarvestCost` (Asc/Desc), Scope: Collection
+    
+#### For Operational Modules:
+
+6.  **AI Planting Advice History:**
     *   Collection: `plantingAdviceRecords`, Fields: `farmId` (Asc), `createdAt` (Desc), Scope: Collection
 
-6.  **For Farming Years & Seasons:**
+7.  **Farming Years & Seasons:**
     *   Collection: `farmingYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
-7.  
-8.  **For Technology Management:**
-    * Collection: `technologyAssets`, Fields: `farmId` (Asc), `purchaseDate` (Desc), Scope: Collection
+    
+8.  **Soil & Water Management:**
+    *   Collection: `soilTestRecords`, Fields: `farmId` (Asc), `testDate` (Desc), Scope: Collection
+    
+9.  **Technology Management:**
+    *   Collection: `technologyAssets`, Fields: `farmId` (Asc), `purchaseDate` (Desc), Scope: Collection

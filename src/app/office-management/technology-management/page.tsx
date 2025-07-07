@@ -24,7 +24,7 @@ import { paymentSources } from '@/types/finance';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
 const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
@@ -79,11 +79,11 @@ export default function TechnologyManagementPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const q = query(collection(db, ASSETS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const q = query(collection(db, ASSETS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("purchaseDate", "desc"));
         const querySnapshot = await getDocs(q);
         setAssets(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TechnologyAsset)));
       } catch (e: any) {
-        setError("Failed to load assets: " + e.message);
+        setError("Failed to load assets: " + e.message + ". An index may be required. Please check the README file.");
       } finally {
         setIsLoading(false);
       }
@@ -166,7 +166,7 @@ export default function TechnologyManagementPage() {
       toast({ title: editingAsset ? "Asset Updated" : "Asset Created", description: `"${data.name}" has been saved.` });
       
       // Manually trigger a re-fetch after commit
-      const q = query(collection(db, ASSETS_COLLECTION), where("farmId", "==", userProfile.farmId));
+      const q = query(collection(db, ASSETS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("purchaseDate", "desc"));
       const querySnapshot = await getDocs(q);
       setAssets(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TechnologyAsset)));
       
