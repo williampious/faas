@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { AgriFAASUserProfile } from '@/types/user';
@@ -37,13 +36,18 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let unsubscribeProfile = () => {}; // Initialize a no-op unsubscribe function
+
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      unsubscribeProfile(); // Detach any existing profile listener on auth state change
+
       setUser(currentUser);
       if (currentUser) {
         setIsLoading(true);
         const userDocRef = doc(db, 'users', currentUser.uid);
         
-        const unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
+        // Re-assign the unsubscribe function with the new listener
+        unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
             const profileData = docSnap.data() as AgriFAASUserProfile;
             setUserProfile(profileData);
@@ -67,8 +71,8 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
           setIsAdmin(false);
           setIsLoading(false);
         });
-        return () => unsubscribeProfile(); 
       } else {
+        // User is signed out, clear everything
         setUserProfile(null);
         setIsAdmin(false);
         setIsLoading(false);
@@ -80,7 +84,11 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
     });
 
-    return () => unsubscribeAuth();
+    // Cleanup function for the main useEffect
+    return () => {
+      unsubscribeAuth();
+      unsubscribeProfile(); // Also clean up profile listener on component unmount
+    };
   }, []);
 
   return (

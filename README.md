@@ -55,9 +55,9 @@ service cloud.firestore {
       // 2. An Admin inviting a user.
       // 3. An AEO adding a farmer.
       allow create: if request.auth != null && (
-                      request.auth.uid == userId || 
-                      isUserAdmin() ||
-                      (isUserAEO() && request.resource.data.managedByAEO == request.auth.uid)
+                      (request.auth.uid == userId && request.resource.data.farmId == null) || // Public registration, no farmId initially
+                      isUserAdmin() || // Admin can invite anyone
+                      (isUserAEO() && request.resource.data.managedByAEO == request.auth.uid) // AEO adds a farmer
                     );
 
       // Who can read a user document?
@@ -253,5 +253,3 @@ You can create these by following the link provided in the console error, or by 
 
 10. **Facility Management:**
     *   Collection: `facilityManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
-
-```
