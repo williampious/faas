@@ -51,7 +51,7 @@ service cloud.firestore {
     // User Profile Rules
     match /users/{userId} {
       // Who can create a user document?
-      // 1. A user registering themselves via the main registration page.
+      // 1. A user registering themselves via the public registration page.
       // 2. An Admin inviting a user.
       // 3. An AEO adding a farmer.
       allow create: if request.auth != null && (
@@ -146,7 +146,7 @@ service cloud.firestore {
     
     match /payrollRecords/{recordId} {
       // Only Admins or HRManagers can manage payroll records
-      allow create, read, update, delete: if isFarmManager(resource.data.farmId);
+      allow create, read, update, delete: if isFarmManager(request.resource.data.farmId);
     }
 
     match /resources/{resourceId} {
@@ -156,7 +156,8 @@ service cloud.firestore {
     
     match /budgets/{budgetId} {
         // Only Admins or HRManagers (or Managers) can manage budgets
-      allow create, read, update, delete: if isFarmManager(resource.data.farmId);
+      allow create: if isFarmManager(request.resource.data.farmId);
+      allow read, update, delete: if isFarmManager(resource.data.farmId);
     }
     
     match /farmingYears/{yearId} {
@@ -166,7 +167,8 @@ service cloud.firestore {
 
     match /financialYears/{yearId} {
       // Only users with office roles can manage financial years
-      allow create, read, update, delete: if isOfficeManager(request.resource.data.farmId);
+      allow create: if isOfficeManager(request.resource.data.farmId);
+      allow read, update, delete: if isOfficeManager(resource.data.farmId);
     }
 
     match /tasks/{taskId} {
@@ -244,12 +246,15 @@ You can create these by following the link provided in the console error, or by 
 
 7.  **Farming Years & Seasons:**
     *   Collection: `farmingYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
-    
-8.  **Soil & Water Management:**
+
+8.  **Financial Years (Office Mgmt):**
+    *   Collection: `financialYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
+
+9.  **Soil & Water Management:**
     *   Collection: `soilTestRecords`, Fields: `farmId` (Asc), `testDate` (Desc), Scope: Collection
-    
-9.  **Technology Management:**
+
+10. **Technology Management:**
     *   Collection: `technologyAssets`, Fields: `farmId` (Asc), `purchaseDate` (Desc), Scope: Collection
 
-10. **Facility Management:**
+11. **Facility Management:**
     *   Collection: `facilityManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
