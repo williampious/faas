@@ -195,7 +195,7 @@ export default function FinancialDashboardPage() {
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
   
   const getSelectedPeriodDescription = () => {
-    let budgetDesc = '';
+    let budgetDesc = 'All Operations / ';
     if (budgetFilter === 'farmOps') budgetDesc = 'Farm Operations / ';
     if (budgetFilter === 'officeOps') budgetDesc = 'Office Operations / ';
 
