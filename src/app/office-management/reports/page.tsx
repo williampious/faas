@@ -31,7 +31,7 @@ export default function OfficeReportsPage() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Functionality to generate reports on spending by department, event cost summaries, and cash flow analysis will be implemented here.
+            Now that modules like Facility and Technology Management are being built, this area will be developed to generate specific reports on office spending, vendor contracts, asset depreciation, and more.
           </p>
         </CardContent>
       </Card>

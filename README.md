@@ -79,7 +79,7 @@ service cloud.firestore {
       allow update: if request.auth != null && (
                       request.auth.uid == userId ||
                       isUserAdmin() ||
-                      (isUserAEO() && request.resource.data.managedByAEO == request.auth.uid)
+                      (isUserAEO() && resource.data.managedByAEO == request.auth.uid)
                     );
 
       // Only admins can delete user profiles.
@@ -100,7 +100,8 @@ service cloud.firestore {
 
     // Rules for Multi-Tenant Data Collections
     match /plots/{plotId} {
-      allow create, read, update, delete: if isFarmMember(request.resource.data.farmId);
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
     
     match /landPreparationActivities/{activityId} {
@@ -179,7 +180,13 @@ service cloud.firestore {
     }
     
     match /technologyAssets/{assetId} {
-      allow create, read, update, delete: if isOfficeManager(request.resource.data.farmId);
+      allow create: if isOfficeManager(request.resource.data.farmId);
+      allow read, update, delete: if isOfficeManager(resource.data.farmId);
+    }
+
+    match /facilityManagementRecords/{recordId} {
+      allow create: if isOfficeManager(request.resource.data.farmId);
+      allow read, update, delete: if isOfficeManager(resource.data.farmId);
     }
 
     match /transactions/{transactionId} {
@@ -216,14 +223,10 @@ You can create these by following the link provided in the console error, or by 
 #### For Reports and Dashboards:
 
 3.  **Financial Dashboard & Ledger:**
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Asc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Desc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `category` (Asc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `category` (Desc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `linkedModule` (Asc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `linkedModule` (Desc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `amount` (Asc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `amount` (Desc), Scope: Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Asc/Desc), Scope: Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `category` (Asc/Desc), Scope: Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `linkedModule` (Asc/Desc), Scope: Collection
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `amount` (Asc/Desc), Scope: Collection
 
 4.  **Budgeting Module:**
     *   Collection: `transactions`, Fields: `farmId` (Asc), `type` (Asc), `date` (Asc), Scope: Collection
@@ -247,3 +250,8 @@ You can create these by following the link provided in the console error, or by 
     
 9.  **Technology Management:**
     *   Collection: `technologyAssets`, Fields: `farmId` (Asc), `purchaseDate` (Desc), Scope: Collection
+
+10. **Facility Management:**
+    *   Collection: `facilityManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
+
+```

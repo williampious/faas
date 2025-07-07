@@ -21,6 +21,7 @@ export type LinkedModule =
   | 'Payroll'
   | 'Soil & Water Management'
   | 'Technology Management'
+  | 'Facility Management'
   | 'Other';
 
 // Define which modules fall under which high-level budget type for filtering
@@ -38,6 +39,7 @@ export const FARM_OPS_MODULES: LinkedModule[] = [
 export const OFFICE_OPS_MODULES: LinkedModule[] = [
   'Payroll',
   'Technology Management',
+  'Facility Management',
   'Other' // 'Other' can be used for general office expenses not tied to a specific module
 ];
 
