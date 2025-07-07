@@ -69,11 +69,11 @@ const baseNavItems: NavItem[] = [
 
 // Role-specific items or sections
 const managerNavItems: NavItem[] = [
-  { href: '/reports/financial-dashboard', label: 'Financial Reports', icon: FileText, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager'] },
-  { href: '/reports/yearly-cashflow', label: 'Yearly Cash Flow', icon: BarChart3, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager'] },
-  { href: '/reports/profitability', label: 'Profitability Report', icon: ClipboardCheck, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager'] },
-  { href: '/reports/budgeting', label: 'Budgeting', icon: Banknote, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager'] },
-  { href: '/reports/transactions', label: 'Transaction Ledger', icon: ClipboardList, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager'] },
+  { href: '/reports/financial-dashboard', label: 'Financial Reports', icon: FileText, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager', 'OfficeManager'] },
+  { href: '/reports/yearly-cashflow', label: 'Yearly Cash Flow', icon: BarChart3, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager', 'OfficeManager'] },
+  { href: '/reports/profitability', label: 'Profitability Report', icon: ClipboardCheck, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager', 'OfficeManager'] },
+  { href: '/reports/budgeting', label: 'Budgeting', icon: Banknote, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager', 'OfficeManager'] },
+  { href: '/reports/transactions', label: 'Transaction Ledger', icon: ClipboardList, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager', 'OfficeManager'] },
 ];
 
 const fieldOfficerNavItems: NavItem[] = [];

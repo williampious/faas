@@ -53,7 +53,7 @@ function ModuleCard({ title, description, icon: Icon, href, disabled }: ModuleCa
 export default function OfficeManagementDashboardPage() {
   const modules = [
     { title: 'Financial Year', description: 'Define and manage financial years, the core of all office reporting.', icon: CalendarClock, href: '/office-management/financial-year' },
-    { title: 'Budgeting & Cash Flow', description: 'Set budgets per category, track spending, and forecast cash flow.', icon: Banknote, href: '/office-management/budgeting' },
+    { title: 'Budgeting & Cash Flow', description: 'Set budgets per category, track spending, and forecast cash flow.', icon: Banknote, href: '/reports/budgeting' },
     { title: 'Facility Management', description: 'Track rent, maintenance schedules, and vendor contracts.', icon: Building, href: '/office-management/facility-management', disabled: true },
     { title: 'Event Planning', description: 'Manage event budgets, vendor payments, and schedules.', icon: Calendar, href: '/office-management/event-planning', disabled: true },
     { title: 'Safety & Security', description: 'Log compliance costs, insurance, and security contracts.', icon: Shield, href: '/office-management/safety-security', disabled: true },
