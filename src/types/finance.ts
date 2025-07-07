@@ -22,6 +22,24 @@ export type LinkedModule =
   | 'Soil & Water Management'
   | 'Other';
 
+// Define which modules fall under which high-level budget type for filtering
+export const FARM_OPS_MODULES: LinkedModule[] = [
+  'Land Preparation', 
+  'Planting', 
+  'Crop Maintenance', 
+  'Harvesting',
+  'Animal Housing',
+  'Animal Health',
+  'Resource Inventory',
+  'Soil & Water Management'
+];
+
+export const OFFICE_OPS_MODULES: LinkedModule[] = [
+  'Payroll',
+  'Other' // 'Other' can be used for general office expenses not tied to a specific module
+];
+
+
 export interface OperationalTransaction {
   id: string; // a unique id for the transaction itself
   farmId: string; // Foreign key to the farm

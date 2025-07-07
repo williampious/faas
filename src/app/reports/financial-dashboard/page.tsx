@@ -8,12 +8,13 @@ import { DollarSign, TrendingUp, TrendingDown, FileText, BarChart2, Percent, Pie
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import type { OperationalTransaction } from '@/types/finance';
+import { FARM_OPS_MODULES, OFFICE_OPS_MODULES } from '@/types/finance';
 import { useRouter } from 'next/navigation';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { format, parseISO, subMonths } from 'date-fns';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, type QueryConstraint } from 'firebase/firestore';
 import type { FarmingYear } from '@/types/season';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -45,6 +46,7 @@ const PIE_CHART_COLORS = [
 
 const TRANSACTIONS_COLLECTION = 'transactions';
 const FARMING_YEARS_COLLECTION = 'farmingYears';
+type BudgetFilterType = 'all' | 'farmOps' | 'officeOps';
 
 export default function FinancialDashboardPage() {
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -62,6 +64,7 @@ export default function FinancialDashboardPage() {
   const [farmingYears, setFarmingYears] = useState<FarmingYear[]>([]);
   const [selectedYearId, setSelectedYearId] = useState<string>('last12months');
   const [selectedSeasonId, setSelectedSeasonId] = useState<string>('all');
+  const [budgetFilter, setBudgetFilter] = useState<BudgetFilterType>('all');
 
   useEffect(() => {
     if (!userProfile?.farmId) return;
@@ -99,34 +102,34 @@ export default function FinancialDashboardPage() {
         if (selectedYearId === 'last12months') {
             endDate = new Date();
             startDate = subMonths(endDate, 11);
-            startDate.setDate(1); // Start from the beginning of that month for a clean 12-month view
+            startDate.setDate(1); 
         } else {
             const selectedYear = farmingYears.find(y => y.id === selectedYearId);
-            if (!selectedYear) {
-                setIsLoading(false);
-                return; 
-            }
-
+            if (!selectedYear) { setIsLoading(false); return; }
             if (selectedSeasonId === 'all' || !selectedYear.seasons) {
                 startDate = parseISO(selectedYear.startDate);
                 endDate = parseISO(selectedYear.endDate);
             } else {
                 const selectedSeason = selectedYear.seasons.find(s => s.id === selectedSeasonId);
-                if (!selectedSeason) {
-                    setIsLoading(false);
-                    return; 
-                }
+                if (!selectedSeason) { setIsLoading(false); return; }
                 startDate = parseISO(selectedSeason.startDate);
                 endDate = parseISO(selectedSeason.endDate);
             }
         }
         
-        const transQuery = query(
-            collection(db, TRANSACTIONS_COLLECTION), 
+        const queryConstraints: QueryConstraint[] = [
             where("farmId", "==", userProfile.farmId),
             where("date", ">=", format(startDate, 'yyyy-MM-dd')),
             where("date", "<=", format(endDate, 'yyyy-MM-dd'))
-        );
+        ];
+
+        if (budgetFilter === 'farmOps') {
+            queryConstraints.push(where("linkedModule", "in", FARM_OPS_MODULES));
+        } else if (budgetFilter === 'officeOps') {
+            queryConstraints.push(where("linkedModule", "in", OFFICE_OPS_MODULES));
+        }
+
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), ...queryConstraints);
         const querySnapshot = await getDocs(transQuery);
         const transactions = querySnapshot.docs.map(doc => doc.data() as OperationalTransaction);
         
@@ -181,7 +184,7 @@ export default function FinancialDashboardPage() {
     };
 
     fetchAndProcessTransactions();
-  }, [userProfile, isProfileLoading, farmingYears, selectedYearId, selectedSeasonId]);
+  }, [userProfile, isProfileLoading, farmingYears, selectedYearId, selectedSeasonId, budgetFilter]);
 
   const handleYearChange = (yearId: string) => {
     setSelectedYearId(yearId);
@@ -192,11 +195,15 @@ export default function FinancialDashboardPage() {
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
   
   const getSelectedPeriodDescription = () => {
-    if (selectedYearId === 'last12months') return "Last 12 Months";
+    let budgetDesc = '';
+    if (budgetFilter === 'farmOps') budgetDesc = 'Farm Operations / ';
+    if (budgetFilter === 'officeOps') budgetDesc = 'Office Operations / ';
+
+    if (selectedYearId === 'last12months') return `${budgetDesc}Last 12 Months`;
     if (!selectedYearData) return "Selected Period";
-    if (selectedSeasonId === 'all') return selectedYearData.name;
+    if (selectedSeasonId === 'all') return `${budgetDesc}${selectedYearData.name}`;
     const season = selectedYearData.seasons.find(s => s.id === selectedSeasonId);
-    return season ? `${selectedYearData.name} - ${season.name}` : selectedYearData.name;
+    return season ? `${budgetDesc}${selectedYearData.name} - ${season.name}` : `${budgetDesc}${selectedYearData.name}`;
   };
 
   if (isProfileLoading) {
@@ -243,6 +250,17 @@ export default function FinancialDashboardPage() {
           <CardTitle className="text-lg flex items-center"><Filter className="mr-2 h-5 w-5"/>Filter Report</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col md:flex-row gap-4 pt-2">
+          <div className="flex-1">
+            <Label htmlFor="budget-filter">Budget Type</Label>
+            <Select value={budgetFilter} onValueChange={(value) => setBudgetFilter(value as BudgetFilterType)}>
+              <SelectTrigger id="budget-filter"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Transactions</SelectItem>
+                <SelectItem value="farmOps">Farm Operations</SelectItem>
+                <SelectItem value="officeOps">Office Management</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex-1">
             <Label htmlFor="year-filter">Farming Year</Label>
             <Select value={selectedYearId} onValueChange={handleYearChange}><SelectTrigger id="year-filter"><SelectValue /></SelectTrigger>
