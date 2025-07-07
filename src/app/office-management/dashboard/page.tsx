@@ -55,7 +55,7 @@ export default function OfficeManagementDashboardPage() {
     { title: 'Financial Year', description: 'Define and manage financial years, the core of all office reporting.', icon: CalendarClock, href: '/office-management/financial-year' },
     { title: 'Budgeting & Cash Flow', description: 'Set budgets per category, track spending, and forecast cash flow.', icon: Banknote, href: '/reports/budgeting' },
     { title: 'Facility Management', description: 'Track rent, maintenance schedules, and vendor contracts.', icon: Building, href: '/office-management/facility-management' },
-    { title: 'Event Planning', description: 'Manage event budgets, vendor payments, and schedules.', icon: Calendar, href: '/office-management/event-planning', disabled: true },
+    { title: 'Event Planning', description: 'Manage event budgets, vendor payments, and schedules.', icon: Calendar, href: '/office-management/event-planning' },
     { title: 'Safety & Security', description: 'Log compliance costs, insurance, and security contracts.', icon: Shield, href: '/office-management/safety-security', disabled: true },
     { title: 'Records Management', description: 'Handle licensing, filing systems, and audit trails.', icon: FileArchive, href: '/office-management/records-management' },
     { title: 'Technology Management', description: 'Oversee IT assets, software subscriptions, and support costs.', icon: Laptop, href: '/office-management/technology-management' },
