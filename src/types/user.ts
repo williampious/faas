@@ -8,6 +8,8 @@ export type UserRole =
   | 'Manager' // Access to full operations, task delegation, reports
   | 'FieldOfficer' // Limited to field data entry, task updates
   | 'HRManager' // Access to employee records, attendance, payroll
+  | 'OfficeManager' // Access to office operations and management
+  | 'FinanceManager' // Access to financial reports, budgeting, and office finances
   | 'Farmer' // General farmer role
   | 'Investor'
   | 'Farm Staff'

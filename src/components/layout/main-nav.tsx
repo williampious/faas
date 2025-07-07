@@ -22,7 +22,7 @@ import {
   BookOpenCheck,
   FileText,
   Banknote,
-  Briefcase, // For HR Manager
+  Briefcase, // For HR Manager & Office Management
   Settings2, // For Manager (Operations)
   ClipboardList, // For Field Officer (Data Entry/Tasks)
   LayoutGrid, // For Plot/Field Management
@@ -56,9 +56,10 @@ interface NavItem {
 
 // Define base navigation items available to most roles (or roles specified)
 const baseNavItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Agric Extension Officer', 'Investor', 'Farm Staff'] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Agric Extension Officer', 'Investor', 'Farm Staff', 'OfficeManager', 'FinanceManager'] },
   { href: '/farm-management', label: 'Farm Ops', icon: Tractor, roles: ['Admin', 'Manager', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
   { href: '/animal-production', label: 'Animal Prod.', icon: Beef, roles: ['Admin', 'Manager', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
+  { href: '/office-management/dashboard', label: 'Office Mgmt', icon: Briefcase, roles: ['Admin', 'OfficeManager', 'FinanceManager'] },
   { href: '/farm-calendar', label: 'Calendar', icon: CalendarDays, roles: ['Admin', 'Manager', 'FieldOfficer', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
   { href: '/task-management', label: 'Tasks', icon: ListChecks, roles: ['Admin', 'Manager', 'FieldOfficer', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
   { href: '/resource-inventory', label: 'Inventory', icon: Archive, roles: ['Admin', 'Manager', 'Farmer', 'Farm Staff'] },
@@ -68,11 +69,11 @@ const baseNavItems: NavItem[] = [
 
 // Role-specific items or sections
 const managerNavItems: NavItem[] = [
-  { href: '/reports/financial-dashboard', label: 'Financial Reports', icon: FileText, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer'] },
-  { href: '/reports/yearly-cashflow', label: 'Yearly Cash Flow', icon: BarChart3, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer'] },
-  { href: '/reports/profitability', label: 'Profitability Report', icon: ClipboardCheck, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer'] },
-  { href: '/reports/budgeting', label: 'Budgeting', icon: Banknote, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer'] },
-  { href: '/reports/transactions', label: 'Transaction Ledger', icon: ClipboardList, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer'] },
+  { href: '/reports/financial-dashboard', label: 'Financial Reports', icon: FileText, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager'] },
+  { href: '/reports/yearly-cashflow', label: 'Yearly Cash Flow', icon: BarChart3, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager'] },
+  { href: '/reports/profitability', label: 'Profitability Report', icon: ClipboardCheck, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager'] },
+  { href: '/reports/budgeting', label: 'Budgeting', icon: Banknote, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager'] },
+  { href: '/reports/transactions', label: 'Transaction Ledger', icon: ClipboardList, group: 'Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager'] },
 ];
 
 const fieldOfficerNavItems: NavItem[] = [];
@@ -94,7 +95,7 @@ const aeoNavItems: NavItem[] = [
 ];
 
 const systemNavItems: NavItem[] = [
-  { href: '/settings', label: 'Settings', icon: Settings, roles: ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Agric Extension Officer', 'Investor', 'Farm Staff'] },
+  { href: '/settings', label: 'Settings', icon: Settings, roles: ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'Farmer', 'Agric Extension Officer', 'Investor', 'Farm Staff', 'OfficeManager', 'FinanceManager'] },
 ];
 
 
@@ -110,13 +111,14 @@ export function MainNav() {
     if (href === '/') return pathname === '/';
     
     // Exact match for top-level dashboards or specific pages
-    if (['/dashboard', '/admin/dashboard', '/aeo/dashboard', '/hr/dashboard', '/reports/financial-dashboard', '/settings'].includes(href)) {
+    if (['/dashboard', '/admin/dashboard', '/aeo/dashboard', '/hr/dashboard', '/office-management/dashboard', '/reports/financial-dashboard', '/settings'].includes(href)) {
         return pathname === href;
     }
     
     // For sections with sub-pages, check if the pathname starts with the href
     if (href === '/farm-management' && pathname.startsWith('/farm-management')) return true;
     if (href === '/animal-production' && pathname.startsWith('/animal-production')) return true;
+    if (href === '/office-management/dashboard' && pathname.startsWith('/office-management')) return true;
     if (href === '/reports/budgeting' && pathname.startsWith('/reports/budgeting')) return true;
     if (href === '/reports/yearly-cashflow' && pathname.startsWith('/reports/yearly-cashflow')) return true;
     if (href === '/reports/transactions' && pathname.startsWith('/reports/transactions')) return true;
@@ -169,7 +171,8 @@ export function MainNav() {
 
   const visibleNavItems = uniqueNavItems.filter(canViewItem);
 
-  const generalItems = visibleNavItems.filter(item => !item.group && !item.adminOnly && !item.href.startsWith('/aeo/') && !item.href.startsWith('/hr/') && !item.href.startsWith('/settings'));
+  const generalItems = visibleNavItems.filter(item => !item.group && !item.adminOnly && !item.href.startsWith('/aeo/') && !item.href.startsWith('/hr/') && !item.href.startsWith('/office-management/') && !item.href.startsWith('/settings'));
+  const officeItems = visibleNavItems.filter(item => item.href.startsWith('/office-management/'));
   const reportItems = visibleNavItems.filter(item => item.group === 'Reports');
   const hrItems = visibleNavItems.filter(item => item.href.startsWith('/hr/'));
   const aeoItemsFiltered = visibleNavItems.filter(item => item.href.startsWith('/aeo/'));
@@ -230,7 +233,7 @@ export function MainNav() {
           {reportItems.map(renderNavItem)}
         </>
       )}
-      
+
       {hrItems.length > 0 && (
         <>
           <SidebarSeparator className="my-2" />
