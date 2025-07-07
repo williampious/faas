@@ -215,7 +215,7 @@ export default function BudgetDetailPage() {
       <PageHeader
         title={`Budget: ${budget.name}`}
         icon={FolderKanban}
-        description={`Manage categories for the period: ${format(parseISO(budget.startDate), 'PP')} - ${format(parseISO(budget.endDate), 'PP')}`}
+        description={`Manage categories for this ${budget.budgetType} budget. Period: ${format(parseISO(budget.startDate), 'PP')} - ${format(parseISO(budget.endDate), 'PP')}`}
         action={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push('/reports/budgeting')}><ArrowLeft className="mr-2 h-4 w-4" /> Back to Budgets List</Button>

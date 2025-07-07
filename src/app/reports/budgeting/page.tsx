@@ -16,15 +16,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PlusCircle, CalendarRange, Trash2, Banknote, ArrowLeft, Eye, Loader2, AlertTriangle } from 'lucide-react';
 import { format, parseISO, isValid, isAfter, isEqual } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import type { Budget } from '@/types/budget';
+import type { Budget, BudgetType } from '@/types/budget';
+import { budgetTypes } from '@/types/budget';
 import type { OperationalTransaction } from '@/types/finance';
 import { useRouter } from 'next/navigation';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 const budgetFormSchema = z.object({
   name: z.string().min(3, { message: "Budget name must be at least 3 characters." }).max(100),
+  budgetType: z.enum(budgetTypes, { required_error: "Budget type is required." }),
   startDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid start date is required." }),
   endDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid end date is required." }),
   notes: z.string().max(500).optional(),
@@ -55,7 +59,7 @@ export default function BudgetingPage() {
 
   const form = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetFormSchema),
-    defaultValues: { name: '', startDate: '', endDate: '', notes: '' },
+    defaultValues: { name: '', budgetType: 'Farm Operations', startDate: '', endDate: '', notes: '' },
   });
 
   useEffect(() => {
@@ -114,10 +118,10 @@ export default function BudgetingPage() {
   const handleOpenModal = (budgetToEdit?: Budget) => {
     if (budgetToEdit) {
       setEditingBudget(budgetToEdit);
-      form.reset({ name: budgetToEdit.name, startDate: budgetToEdit.startDate, endDate: budgetToEdit.endDate, notes: budgetToEdit.notes || '' });
+      form.reset({ name: budgetToEdit.name, budgetType: budgetToEdit.budgetType, startDate: budgetToEdit.startDate, endDate: budgetToEdit.endDate, notes: budgetToEdit.notes || '' });
     } else {
       setEditingBudget(null);
-      form.reset({ name: '', startDate: '', endDate: '', notes: '' });
+      form.reset({ name: '', budgetType: 'Farm Operations', startDate: '', endDate: '', notes: '' });
     }
     setIsModalOpen(true);
   };
@@ -228,6 +232,18 @@ export default function BudgetingPage() {
             <Form {...form}>
               <form id={BUDGET_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Budget Name*</FormLabel><FormControl><Input placeholder="e.g., 2024 Maize Season" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="budgetType" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Budget Type*</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select a budget type" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {budgetTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="startDate" render={({ field }) => (<FormItem><FormLabel>Start Date*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="endDate" render={({ field }) => (<FormItem><FormLabel>End Date*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -254,14 +270,24 @@ export default function BudgetingPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Budget Name</TableHead><TableHead>Period</TableHead><TableHead>Budgeted</TableHead>
-                  <TableHead>Actual</TableHead><TableHead>Variance</TableHead><TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Budget Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Period</TableHead>
+                  <TableHead>Budgeted</TableHead>
+                  <TableHead>Actual</TableHead>
+                  <TableHead>Variance</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {budgets.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((budget) => (
+                {budgets.sort((a,b) => (a.createdAt as any) - (b.createdAt as any)).map((budget) => (
                   <TableRow key={budget.id}>
                     <TableCell className="font-medium">{budget.name}</TableCell>
+                    <TableCell>
+                      <Badge variant={budget.budgetType === 'Office Management' ? 'secondary' : 'outline'}>
+                        {budget.budgetType}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       {isValid(parseISO(budget.startDate)) ? format(parseISO(budget.startDate), 'PP') : 'N/A'} - 
                       {isValid(parseISO(budget.endDate)) ? format(parseISO(budget.endDate), 'PP') : 'N/A'}

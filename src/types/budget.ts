@@ -3,6 +3,9 @@
  * @fileOverview TypeScript type definitions for the Budgeting feature.
  */
 
+export const budgetTypes = ['Farm Operations', 'Office Management'] as const;
+export type BudgetType = typeof budgetTypes[number];
+
 export interface BudgetLineItem {
   id: string;
   description: string;
@@ -24,6 +27,7 @@ export interface Budget {
   id: string;
   farmId: string;
   name: string; // e.g., "2024 Maize Season Budget", "Annual Farm Budget 2025"
+  budgetType: BudgetType;
   startDate: string; // ISO date string "yyyy-MM-dd"
   endDate: string; // ISO date string "yyyy-MM-dd"
   categories: BudgetCategory[];
