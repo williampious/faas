@@ -173,6 +173,10 @@ service cloud.firestore {
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
     
+    match /technologyAssets/{assetId} {
+      allow create, read, update, delete: if isOfficeManager(request.resource.data.farmId);
+    }
+
     match /transactions/{transactionId} {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read: if isFarmMember(resource.data.farmId);
@@ -220,4 +224,6 @@ You can create these by following the link provided in the console error, or by 
 
 6.  **For Farming Years & Seasons:**
     *   Collection: `farmingYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
-
+7.  
+8.  **For Technology Management:**
+    * Collection: `technologyAssets`, Fields: `farmId` (Asc), `purchaseDate` (Desc), Scope: Collection

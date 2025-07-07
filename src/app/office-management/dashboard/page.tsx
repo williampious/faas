@@ -58,7 +58,7 @@ export default function OfficeManagementDashboardPage() {
     { title: 'Event Planning', description: 'Manage event budgets, vendor payments, and schedules.', icon: Calendar, href: '/office-management/event-planning', disabled: true },
     { title: 'Safety & Security', description: 'Log compliance costs, insurance, and security contracts.', icon: Shield, href: '/office-management/safety-security', disabled: true },
     { title: 'Records Management', description: 'Handle licensing, filing systems, and audit trails.', icon: FileArchive, href: '/office-management/records-management', disabled: true },
-    { title: 'Technology Management', description: 'Oversee IT assets, software subscriptions, and support costs.', icon: Laptop, href: '/office-management/technology-management', disabled: true },
+    { title: 'Technology Management', description: 'Oversee IT assets, software subscriptions, and support costs.', icon: Laptop, href: '/office-management/technology-management' },
     { title: 'Office Reports', description: 'Generate financial and operational reports for the office.', icon: BarChart, href: '/office-management/reports', disabled: true },
   ];
 

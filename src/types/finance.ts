@@ -5,7 +5,7 @@
 export const paymentSources = ['Cash', 'Bank', 'Mobile Money', 'Credit (Payable)'] as const;
 export type PaymentSource = typeof paymentSources[number];
 
-export const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Vet Services', 'Medication', 'Payroll', 'Other'] as const;
+export const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Vet Services', 'Medication', 'Payroll', 'Technology', 'Other'] as const;
 export type CostCategory = typeof costCategories[number];
 
 export type TransactionType = 'Income' | 'Expense';
@@ -20,6 +20,7 @@ export type LinkedModule =
   | 'Resource Inventory'
   | 'Payroll'
   | 'Soil & Water Management'
+  | 'Technology Management'
   | 'Other';
 
 // Define which modules fall under which high-level budget type for filtering
@@ -36,6 +37,7 @@ export const FARM_OPS_MODULES: LinkedModule[] = [
 
 export const OFFICE_OPS_MODULES: LinkedModule[] = [
   'Payroll',
+  'Technology Management',
   'Other' // 'Other' can be used for general office expenses not tied to a specific module
 ];
 
