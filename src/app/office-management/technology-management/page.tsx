@@ -68,14 +68,8 @@ export default function TechnologyManagementPage() {
     },
   });
 
-  useEffect(() => {
-    if (isProfileLoading) return;
-    if (!userProfile?.farmId) {
-      setError("Farm information is not available.");
-      setIsLoading(false);
-      return;
-    }
-    const fetchAssets = async () => {
+  const fetchAssets = async () => {
+      if (!userProfile?.farmId) return;
       setIsLoading(true);
       setError(null);
       try {
@@ -88,6 +82,14 @@ export default function TechnologyManagementPage() {
         setIsLoading(false);
       }
     };
+
+  useEffect(() => {
+    if (isProfileLoading) return;
+    if (!userProfile?.farmId) {
+      setError("Farm information is not available.");
+      setIsLoading(false);
+      return;
+    }
     fetchAssets();
   }, [userProfile, isProfileLoading]);
 
@@ -166,9 +168,7 @@ export default function TechnologyManagementPage() {
       toast({ title: editingAsset ? "Asset Updated" : "Asset Created", description: `"${data.name}" has been saved.` });
       
       // Manually trigger a re-fetch after commit
-      const q = query(collection(db, ASSETS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("purchaseDate", "desc"));
-      const querySnapshot = await getDocs(q);
-      setAssets(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TechnologyAsset)));
+      fetchAssets();
       
       setIsModalOpen(false);
     } catch (e: any) {

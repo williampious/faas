@@ -123,14 +123,12 @@ export default function CompleteRegistrationPage() {
           firebaseUid: firebaseUser.uid,
           fullName: data.fullName,
           accountStatus: 'Active' as const, // Set status to Active
-          invitationToken: null, // Ensure the token is cleared
           updatedAt: serverTimestamp(),
           registrationDate: new Date().toISOString(), // Set final registration date
       };
       
-      // The invitation document's 'createdAt' shouldn't be copied. 
-      // It will be set by `setDoc` if creating a new doc, or preserved if merging. Let's just create it fresh.
-      const { createdAt, ...profileToWrite } = finalUserProfileData;
+      // The invitationToken and createdAt fields from the temporary document should not be copied.
+      const { createdAt, invitationToken, ...profileToWrite } = finalUserProfileData;
 
       // Create the new document with the Firebase Auth UID as its ID
       batch.set(newUserDocRef, { ...profileToWrite, createdAt: serverTimestamp() });

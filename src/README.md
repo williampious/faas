@@ -196,7 +196,7 @@ service cloud.firestore {
       allow read, update, delete: if isOfficeManager(resource.data.farmId);
     }
     
-     match /safetySecurityRecords/{recordId} {
+    match /safetySecurityRecords/{recordId} {
       allow create: if isOfficeManager(request.resource.data.farmId);
       allow read, update, delete: if isOfficeManager(resource.data.farmId);
     }
