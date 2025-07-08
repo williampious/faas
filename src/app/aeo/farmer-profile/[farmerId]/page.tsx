@@ -79,15 +79,13 @@ export default function FarmerProfilePage() {
 
     if (isAeoProfileLoading) return; // Wait for AEO profile to load
 
-    if (!aeoProfile || !aeoProfile.role?.includes('Agric Extension Officer')) {
-      // This check might be redundant if aeo/layout handles it, but good for direct access attempts
-      setError("You do not have permission to view this page.");
+    if (!aeoProfile) {
+      setError("Your AEO profile is not loaded. Cannot verify permissions.");
       setIsLoading(false);
-      // Optionally redirect: router.replace('/aeo/dashboard');
       return;
     }
     
-    if (!isFirebaseClientConfigured || !db) {
+    if (!db) {
       setError("Firebase is not configured. Cannot fetch farmer details.");
       setIsLoading(false);
       return;
@@ -102,7 +100,7 @@ export default function FarmerProfilePage() {
 
         if (docSnap.exists()) {
           const farmerData = { userId: docSnap.id, ...docSnap.data() } as AgriFAASUserProfile;
-          // Security check: Ensure AEO manages this farmer (or is admin - future enhancement)
+          // Security check: Ensure AEO manages this farmer
           if (farmerData.managedByAEO !== aeoProfile.userId) {
              setError("You are not authorized to view this farmer's profile.");
              setFarmer(null);

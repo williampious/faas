@@ -93,6 +93,12 @@ export default function EditFarmerProfilePage() {
     }
     if (isAeoProfileLoading) return;
 
+    if (!aeoProfile) {
+      setError("Your AEO profile is not loaded. Cannot verify permissions.");
+      setIsLoading(false);
+      return;
+    }
+
     const fetchFarmer = async () => {
       setIsLoading(true);
       setError(null);
@@ -102,7 +108,7 @@ export default function EditFarmerProfilePage() {
 
         if (docSnap.exists()) {
           const farmerData = { userId: docSnap.id, ...docSnap.data() } as AgriFAASUserProfile;
-          if (farmerData.managedByAEO !== aeoProfile?.userId) {
+          if (farmerData.managedByAEO !== aeoProfile.userId) {
             setError("You are not authorized to edit this farmer's profile.");
             setFarmer(null);
           } else {

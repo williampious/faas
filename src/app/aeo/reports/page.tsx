@@ -25,7 +25,7 @@ export default function AEOReportsPage() {
 
   useEffect(() => {
     if (isAeoProfileLoading) return;
-    if (!aeoProfile?.userId) {
+    if (!aeoProfile || !aeoProfile.userId) {
       if (!isAeoProfileLoading) setError("AEO profile not found. Cannot fetch farmers.");
       setIsLoading(false);
       return;
@@ -45,7 +45,11 @@ export default function AEOReportsPage() {
         setFarmers(fetchedFarmers);
       } catch (err: any) {
         console.error("Error fetching farmers for report:", err);
-        setError(`Failed to fetch farmers: ${err.message}`);
+        let message = `Failed to fetch farmers: ${err.message}`;
+        if (err.code === 'failed-precondition' || err.message?.includes('requires an index')) {
+          message = "Failed to load the report data. This is likely because a required Firestore index is missing. Please check your browser's developer console for a link to create it automatically, or refer to the README file for instructions on creating the 'AEO Farmer Directory' index.";
+        }
+        setError(message);
       } finally {
         setIsLoading(false);
       }
