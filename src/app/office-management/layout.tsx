@@ -11,23 +11,34 @@ export default function OfficeManagementLayout({ children }: { children: ReactNo
   const { userProfile, isLoading, user } = useUserProfile();
   const router = useRouter();
 
-  // Check if user has one of the required roles
-  const hasAccess = userProfile?.role?.some(role => 
-    ['Admin', 'OfficeManager', 'FinanceManager'].includes(role)
-  ) || false;
-
   useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        // No user logged in, redirect to sign-in
-        router.replace('/auth/signin?redirect=/office-management/dashboard');
-      } else if (!hasAccess) {
-        // User is logged in but does not have access
+    if (isLoading) {
+      return; // Wait until loading is complete
+    }
+
+    if (!user) {
+      // Not logged in, redirect to sign-in
+      router.replace('/auth/signin?redirect=/office-management/dashboard');
+      return;
+    }
+    
+    // User is logged in, and loading is done. Now check profile and roles.
+    if (userProfile) {
+      const hasAccess = userProfile.role?.some(role => 
+        ['Admin', 'OfficeManager', 'FinanceManager'].includes(role)
+      ) || false;
+
+      if (!hasAccess) {
+        // Profile loaded, but user lacks required role
         router.replace('/dashboard');
       }
+      // User has access, so do nothing and let the page render.
     }
-  }, [hasAccess, isLoading, user, router]);
+    
+    // If userProfile is still null here, the root layout's error handler will take over.
+  }, [user, userProfile, isLoading, router]);
 
+  // The loading state is important to prevent premature rendering of children or unauthorized message
   if (isLoading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-[calc(100vh-10rem)] p-4 text-center">
@@ -36,8 +47,14 @@ export default function OfficeManagementLayout({ children }: { children: ReactNo
       </div>
     );
   }
+  
+  const hasAccess = userProfile?.role?.some(role => 
+    ['Admin', 'OfficeManager', 'FinanceManager'].includes(role)
+  ) || false;
 
-  if (user && !hasAccess && !isLoading) {
+  // If the user is logged in but doesn't have access, show unauthorized message
+  // This might flash for a frame before useEffect redirects, which is acceptable.
+  if (user && !hasAccess) {
     return (
       <div className="container mx-auto py-10 flex justify-center">
         <Card className="w-full max-w-lg text-center shadow-lg">
@@ -56,6 +73,6 @@ export default function OfficeManagementLayout({ children }: { children: ReactNo
     );
   }
 
-  // If loading is false, user is present, and has access
+  // If all checks pass, render the children
   return <>{children}</>;
 }
