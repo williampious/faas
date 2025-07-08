@@ -92,6 +92,7 @@ const adminSystemNavItems: NavItem[] = [
 const aeoNavItems: NavItem[] = [
   { href: '/aeo/dashboard', label: 'AEO Dashboard', icon: Compass, roles: ['Agric Extension Officer', 'Admin'] },
   { href: '/aeo/farmer-directory', label: 'Farmer Directory', icon: Users, roles: ['Agric Extension Officer', 'Admin'] },
+  { href: '/aeo/support-communication', label: 'Support Logs', icon: MessageSquareText, roles: ['Agric Extension Officer', 'Admin'] },
   { href: '/aeo/knowledge-transfer', label: 'Knowledge Base', icon: BookOpenCheck, roles: ['Agric Extension Officer', 'Admin'] },
   { href: '/aeo/reports', label: 'AEO Reports', icon: BarChart3, roles: ['Agric Extension Officer', 'Admin'] },
 ];

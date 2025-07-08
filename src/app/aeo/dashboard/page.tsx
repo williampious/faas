@@ -52,8 +52,7 @@ export default function AEODashboardPage() {
       description: "Log interactions, advice provided, and track follow-up visits with farmers for comprehensive support.",
       icon: MessageSquareText,
       href: "/aeo/support-communication",
-      cta: "View Logs",
-      disabled: true
+      cta: "View Logs"
     },
     {
       title: "Monitoring & Reports",
