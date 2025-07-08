@@ -13,28 +13,21 @@ export default function AeoLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Wait until loading is complete before doing any checks
     if (isLoading) {
       return;
     }
 
-    // If there's no user, redirect to sign-in
     if (!user) {
       router.replace('/auth/signin?redirect=/aeo/dashboard');
       return;
     }
     
-    // Now we know we have a user and are not loading. Check the profile.
-    // userProfile might still be null briefly before it's set.
     if (userProfile) {
-        const isAEO = userProfile.role?.includes('Agric Extension Officer') || false;
-        if (!isAEO) {
-            // User profile is loaded, but they don't have the AEO role.
+        const hasAccess = userProfile.role?.includes('Agric Extension Officer') || userProfile.role?.includes('Admin');
+        if (!hasAccess) {
             router.replace('/dashboard');
         }
-        // If user is an AEO, they can stay, so we do nothing.
     }
-    // If userProfile is null even after loading, the error state in the root layout will handle it.
   }, [user, userProfile, isLoading, router]);
 
   if (isLoading) {
@@ -46,10 +39,9 @@ export default function AeoLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  const isAEO = userProfile?.role?.includes('Agric Extension Officer') || false;
+  const hasAccess = userProfile?.role?.includes('Agric Extension Officer') || userProfile?.role?.includes('Admin');
 
-  if (user && !isAEO && !isLoading) {
-    // This might flash for a frame before useEffect redirects, which is an acceptable UX pattern.
+  if (user && !hasAccess && !isLoading) {
     return (
       <div className="container mx-auto py-10 flex justify-center">
         <Card className="w-full max-w-lg text-center shadow-lg">
@@ -68,6 +60,5 @@ export default function AeoLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // If all checks pass, render the children
   return <>{children}</>;
 }
