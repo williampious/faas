@@ -118,7 +118,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
-  const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features', '/installation-guide', '/pricing', '/partners'].includes(pathname);
+  const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features', '/installation-guide', '/pricing', '/partners', '/terms-of-service', '/privacy-policy'].includes(pathname);
 
 
   useEffect(() => {
@@ -161,26 +161,38 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
 
     if (user) { // User is authenticated
       if (userProfile) { // Profile is loaded
-        // After profile is loaded, check for setup completion.
-        // A user is considered "set up" if they have a farm OR if they have the AEO role.
-        if (!userProfile.farmId && !userProfile.role?.includes('Agric Extension Officer') && !isSetupPage) {
+        const isAEO = userProfile.role?.includes('Agric Extension Officer');
+        const isSetUp = userProfile.farmId || isAEO;
+        const userDashboardPath = isAEO ? '/aeo/dashboard' : '/dashboard';
+
+        // 1. If user is NOT set up, redirect to setup page (unless they are already there)
+        if (!isSetUp && !isSetupPage) {
           router.replace('/setup');
-          return; // Redirect to setup and stop further processing
+          return;
         }
-        
-        // If user is set up and tries to go to an auth page, redirect to dashboard
-        if (isAuthPage) {
-          // AEOs should go to their specific dashboard
-          if (userProfile.role?.includes('Agric Extension Officer')) {
-              router.replace('/aeo/dashboard');
-          } else {
-              router.replace('/dashboard');
-          }
+
+        // 2. If user IS set up, handle redirects away from inappropriate pages
+        if (isSetUp) {
+            // Redirect from auth pages to their dashboard
+            if (isAuthPage) {
+                router.replace(userDashboardPath);
+                return;
+            }
+            // Redirect from setup pages to their dashboard
+            if (isSetupPage) {
+                router.replace(userDashboardPath);
+                return;
+            }
+            // Redirect from public landing pages to their dashboard
+            if (isPublicUnauthenticatedArea) {
+                router.replace(userDashboardPath);
+                return;
+            }
         }
       }
-      // If user is authenticated but profile is not yet loaded, DO NOTHING.
-      // The `isLoading` state will show the loading screen, and this `useEffect`
-      // will re-run once `userProfile` is available.
+      // If user is authenticated but profile is not yet loaded, do nothing.
+      // The loading screen will be shown and this effect will re-run.
+
     } else { // User is NOT authenticated
       // If user is not logged in, they can only access public landing and auth pages
       if (!isAuthPage && !isPublicUnauthenticatedArea) {
