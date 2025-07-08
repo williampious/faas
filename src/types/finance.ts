@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Centralized TypeScript type definitions for financial data.
  */
@@ -5,7 +6,7 @@
 export const paymentSources = ['Cash', 'Bank', 'Mobile Money', 'Credit (Payable)'] as const;
 export type PaymentSource = typeof paymentSources[number];
 
-export const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Vet Services', 'Medication', 'Payroll', 'Technology', 'Administrative', 'Events', 'Safety', 'Other'] as const;
+export const costCategories = ['Material/Input', 'Labor', 'Equipment Rental', 'Services', 'Utilities', 'Vet Services', 'Medication', 'Payroll', 'Technology', 'Administrative', 'Events', 'Safety', 'Breeding', 'Other'] as const;
 export type CostCategory = typeof costCategories[number];
 
 export type TransactionType = 'Income' | 'Expense';
@@ -17,6 +18,7 @@ export type LinkedModule =
   | 'Harvesting'
   | 'Animal Housing'
   | 'Animal Health'
+  | 'Breeding'
   | 'Resource Inventory'
   | 'Payroll'
   | 'Soil & Water Management'
@@ -35,6 +37,7 @@ export const FARM_OPS_MODULES: LinkedModule[] = [
   'Harvesting',
   'Animal Housing',
   'Animal Health',
+  'Breeding',
   'Resource Inventory',
   'Soil & Water Management'
 ];

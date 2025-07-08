@@ -131,7 +131,7 @@ export default function AnimalProductionPage() {
     { title: "Health Care & Biosecurity", description: "Log vaccinations, health monitoring, medication, and quarantine protocols.", icon: ShieldCheck, href: "/animal-production/health" },
     { title: "Feeding & Nutrition", description: "Track feed types, schedules, inventory, and specific dietary needs.", icon: Utensils, disabled: true },
     { title: "Production Management", description: "Track species-specific outputs like egg collection or weight gain.", icon: BarChartBig, disabled: true },
-    { title: "Breeding & Incubation", description: "Manage breeding ratios, incubation, fertility, and hatch rates.", icon: Construction, href: "/animal-production/breeding", disabled: true }, // Placeholder for breeding
+    { title: "Breeding & Incubation", description: "Manage breeding ratios, incubation, fertility, and hatch rates.", icon: Construction, href: "/animal-production/breeding" },
     { title: "Record Keeping & Marketing", description: "Log activities, generate reports, and track sales.", icon: LinkIcon, disabled: true }, // Combined for brevity
   ];
 

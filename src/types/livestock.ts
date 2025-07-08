@@ -67,6 +67,29 @@ export interface HealthRecord {
   updatedAt: string; // ISO datetime string
 }
 
+// --- Breeding & Incubation Types ---
+export const breedingActivityTypes = ['Natural Mating', 'Artificial Insemination', 'Embryo Transfer', 'Hatching', 'Other'] as const;
+export type BreedingActivityType = typeof breedingActivityTypes[number];
+
+export interface BreedingRecord {
+  id: string;
+  farmId: string;
+  activityType: BreedingActivityType;
+  maleIdentifier: string;
+  femaleIdentifier: string;
+  matingDate: string; // ISO "yyyy-MM-dd"
+  expectedDueDate?: string; // ISO "yyyy-MM-dd"
+  actualDueDate?: string; // ISO "yyyy-MM-dd"
+  offspringCount?: number;
+  notes?: string;
+  costItems: CostItem[];
+  totalBreedingCost: number;
+  farmingYearId?: string;
+  farmingSeasonId?: string;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
+}
+
 
 // Future types for feeding, etc. will go here
 // e.g.,

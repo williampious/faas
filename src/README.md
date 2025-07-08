@@ -129,6 +129,11 @@ service cloud.firestore {
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
     
+    match /breedingRecords/{recordId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
+    
     match /soilTestRecords/{recordId} {
         allow create: if isFarmMember(request.resource.data.farmId);
         allow read, update, delete: if isFarmMember(resource.data.farmId);
@@ -200,18 +205,8 @@ service cloud.firestore {
       // AEOs can create articles for themselves.
       allow create: if isUserAEO() && request.auth.uid == request.resource.data.authorId;
       // An AEO can read/update/delete their own articles.
+      // NOTE: Farmers cannot read this yet. A future rule change would be needed for sharing.
       allow read, update, delete: if isUserAEO() && request.auth.uid == resource.data.authorId;
-    }
-    
-    match /supportLogs/{logId} {
-      // An AEO can create a log for a farmer they manage.
-      allow create: if isUserAEO() &&
-                      request.resource.data.aeoId == request.auth.uid &&
-                      exists(/databases/$(database)/documents/users/$(request.resource.data.farmerId)) &&
-                      get(/databases/$(database)/documents/users/$(request.resource.data.farmerId)).data.managedByAEO == request.auth.uid;
-
-      // Only the AEO who authored the log can read, update, or delete it.
-      allow read, update, delete: if isUserAEO() && resource.data.aeoId == request.auth.uid;
     }
 
     match /transactions/{transactionId} {
@@ -294,5 +289,6 @@ You can create these by following the link provided in the console error, or by 
 15. **AEO Knowledge Base:**
     *   Collection: `knowledgeArticles`, Fields: `authorId` (Asc), `createdAt` (Desc), Scope: Collection
 
-16. **AEO Support Logs:**
-    *   Collection: `supportLogs`, Fields: `aeoId` (Asc), `interactionDate` (Desc), Scope: Collection
+16. **Breeding Records:**
+    *   Collection: `breedingRecords`, Fields: `farmId` (Asc), `matingDate` (Desc), Scope: Collection
+
