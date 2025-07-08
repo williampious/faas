@@ -90,7 +90,27 @@ export interface BreedingRecord {
   updatedAt: any; // Firestore ServerTimestamp
 }
 
+// --- Feeding & Nutrition Types ---
+export const feedTypes = ['Starter Mash', 'Grower Pellets', 'Layer Mash', 'Broiler Finisher', 'Silage', 'Hay', 'Custom Mix', 'Other'] as const;
+export type FeedType = typeof feedTypes[number];
 
-// Future types for feeding, etc. will go here
+export interface FeedingRecord {
+  id: string;
+  farmId: string;
+  date: string; // ISO string "yyyy-MM-dd"
+  animalsFed: string; // e.g., "Broiler House 1", "All Goats"
+  feedType: FeedType | string; // Allow custom string for 'Other'
+  quantity: number;
+  quantityUnit: string; // e.g., 'kg', 'bags'
+  notes?: string;
+  costItems: CostItem[];
+  totalCost: number;
+  farmingYearId?: string;
+  farmingSeasonId?: string;
+  createdAt: any; // Firestore ServerTimestamp
+  updatedAt: any; // Firestore ServerTimestamp
+}
+
+// Future types for production, etc. will go here
 // e.g.,
-// export interface FeedingSchedule { ... }
+// export interface ProductionRecord { ... }

@@ -18,6 +18,7 @@ export type LinkedModule =
   | 'Harvesting'
   | 'Animal Housing'
   | 'Animal Health'
+  | 'Animal Feeding'
   | 'Breeding'
   | 'Resource Inventory'
   | 'Payroll'
@@ -37,6 +38,7 @@ export const FARM_OPS_MODULES: LinkedModule[] = [
   'Harvesting',
   'Animal Housing',
   'Animal Health',
+  'Animal Feeding',
   'Breeding',
   'Resource Inventory',
   'Soil & Water Management'
