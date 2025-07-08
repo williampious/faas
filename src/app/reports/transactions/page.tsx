@@ -54,8 +54,8 @@ export default function TransactionsLedgerPage() {
       } catch (err: any) {
         console.error("Error fetching transactions:", err);
         let message = `Failed to fetch transactions. This may be a permissions issue.`;
-        if (err.message && err.message.toLowerCase().includes('requires an index')) {
-          message = `Failed to sort transactions. This is because a required Firestore index is missing. Please add the index for sorting by '${sortConfig.key}' as specified in the README.md file, or check your browser's developer console for a direct link to create it.`
+        if (err.code === 'failed-precondition' || err.message?.includes('requires an index')) {
+          message = `Failed to sort transactions by '${sortConfig.key}'. This is because a required Firestore index is missing. Please create the index in your Firebase Console. The README.md file has a complete list of required indexes.`
         }
         setError(message);
       } finally {

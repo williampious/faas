@@ -50,32 +50,21 @@ service cloud.firestore {
 
     // User Profile Rules
     match /users/{userId} {
-      // Who can create a user document?
-      // 1. A user registering themselves via the public registration page.
-      // 2. An Admin inviting a user.
-      // 3. An AEO adding a farmer.
-      allow create: if request.auth != null && (
-                      (request.auth.uid == userId && request.resource.data.farmId == null) || // Public registration, no farmId initially
-                      isUserAdmin() || // Admin can invite anyone
-                      (isUserAEO() && request.resource.data.managedByAEO == request.auth.uid) // AEO adds a farmer
-                    );
+      // Allow a user to create their own initial profile document upon registration.
+      // This is crucial for the registration flow.
+      allow create: if request.auth != null && request.auth.uid == userId;
 
-      // Who can read a user document?
-      // 1. An Admin needs to be able to read all user profiles for management.
-      // 2. The user themselves.
-      // 3. An Admin, Manager, or HRManager viewing users on the same farm.
-      // 4. An AEO reading a profile of a farmer they manage.
+      // Allow a user to read their own profile, an admin to read any profile,
+      // and an AEO to read profiles of farmers they manage.
       allow read: if request.auth != null && (
-                    isUserAdmin() ||
                     request.auth.uid == userId ||
-                    isFarmManager(resource.data.farmId) ||
+                    isUserAdmin() ||
                     (isUserAEO() && resource.data.managedByAEO == request.auth.uid)
                   );
 
-      // Who can update a user document?
-      // 1. The user themselves.
-      // 2. An Admin.
-      // 3. An AEO updating a farmer they manage.
+      // A user can update their own profile.
+      // An admin can update any user profile (e.g., to assign roles).
+      // An AEO can update profiles of farmers they manage.
       allow update: if request.auth != null && (
                       request.auth.uid == userId ||
                       isUserAdmin() ||
@@ -85,6 +74,7 @@ service cloud.firestore {
       // Only admins can delete user profiles.
       allow delete: if isUserAdmin();
     }
+
 
     // Farm Rules
     match /farms/{farmId} {
