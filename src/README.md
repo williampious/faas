@@ -195,6 +195,11 @@ service cloud.firestore {
       allow create: if isOfficeManager(request.resource.data.farmId);
       allow read, update, delete: if isOfficeManager(resource.data.farmId);
     }
+    
+     match /safetySecurityRecords/{recordId} {
+      allow create: if isOfficeManager(request.resource.data.farmId);
+      allow read, update, delete: if isOfficeManager(resource.data.farmId);
+    }
 
     match /officeEvents/{eventId} {
       allow create: if isOfficeManager(request.resource.data.farmId);
@@ -274,3 +279,6 @@ You can create these by following the link provided in the console error, or by 
 
 13. **Event Planning:**
     *   Collection: `officeEvents`, Fields: `farmId` (Asc), `eventDate` (Desc), Scope: Collection
+
+14. **Safety & Security Management:**
+    *   Collection: `safetySecurityRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
