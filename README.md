@@ -195,6 +195,14 @@ service cloud.firestore {
       allow create: if isOfficeManager(request.resource.data.farmId);
       allow read, update, delete: if isOfficeManager(resource.data.farmId);
     }
+    
+    match /knowledgeArticles/{articleId} {
+      // AEOs can create articles for themselves.
+      allow create: if isUserAEO() && request.auth.uid == request.resource.data.authorId;
+      // An AEO can read/update/delete their own articles.
+      // NOTE: Farmers cannot read this yet. A future rule change would be needed for sharing.
+      allow read, update, delete: if isUserAEO() && request.auth.uid == resource.data.authorId;
+    }
 
     match /transactions/{transactionId} {
       allow create: if isFarmMember(request.resource.data.farmId);
@@ -272,3 +280,6 @@ You can create these by following the link provided in the console error, or by 
 
 14. **Safety & Security Management:**
     *   Collection: `safetySecurityRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
+
+15. **AEO Knowledge Base:**
+    *   Collection: `knowledgeArticles`, Fields: `authorId` (Asc), `createdAt` (Desc), Scope: Collection

@@ -68,7 +68,6 @@ export default function AEODashboardPage() {
       icon: BookOpenCheck,
       href: "/aeo/knowledge-transfer",
       cta: "Access Resources",
-      disabled: true
     },
      {
       title: "AEO Profile & Settings",
