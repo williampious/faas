@@ -3,6 +3,7 @@
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfigValuesFromEnv = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -30,6 +31,7 @@ export const isFirebaseClientConfigured = missingOrPlaceholderKeys.length === 0;
 let appInstance: ReturnType<typeof initializeApp> | null = null;
 let firestoreInstance: ReturnType<typeof getFirestore> | null = null;
 let authInstance: ReturnType<typeof getAuth> | null = null;
+let storageInstance: ReturnType<typeof getStorage> | null = null;
 
 if (!isFirebaseClientConfigured) {
   console.warn(
@@ -66,10 +68,11 @@ if (!isFirebaseClientConfigured) {
     try {
       firestoreInstance = getFirestore(appInstance);
       authInstance = getAuth(appInstance);
-      console.log("Firestore and Auth instances obtained (client-side).");
+      storageInstance = getStorage(appInstance);
+      console.log("Firestore, Auth, and Storage instances obtained (client-side).");
     } catch (e: any) {
         console.error(
-            "CRITICAL Firebase Error: Failed to get Firestore/Auth instances from the initialized app (client-side).",
+            "CRITICAL Firebase Error: Failed to get Firestore/Auth/Storage instances from the initialized app (client-side).",
             "Error Details:", e.message,
             "Stack:", e.stack
         );
@@ -88,3 +91,4 @@ if (!isFirebaseClientConfigured) {
 export const app = appInstance;
 export const db = firestoreInstance;
 export const auth = authInstance;
+export const storage = storageInstance;

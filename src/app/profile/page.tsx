@@ -1,17 +1,18 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Image from 'next/image';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import type { AgriFAASUserProfile, UserRole, Gender, CommunicationChannel } from '@/types/user';
-import { UserCircle, Mail, Phone, MapPin, Briefcase, Building, ShieldCheck, Settings, Bell, Loader2, AlertTriangle, Edit3, Save, XCircle, CalendarIcon } from 'lucide-react';
+import { UserCircle, Mail, Phone, MapPin, Briefcase, Building, ShieldCheck, Settings, Bell, Loader2, AlertTriangle, Edit3, Save, XCircle, CalendarIcon, Camera } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/contexts/user-profile-context';
@@ -26,11 +27,12 @@ import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const genderOptions: Gender[] = ['Male', 'Female', 'Other', 'PreferNotToSay'];
 const communicationChannelOptions: CommunicationChannel[] = ['SMS', 'AppNotification', 'WhatsApp'];
@@ -99,6 +101,90 @@ function InfoItem({ icon: Icon, label, value, className }: InfoItemProps) {
   );
 }
 
+function ProfilePhotoUploadDialog({ onUploadSuccess }: { onUploadSuccess: () => void }) {
+  const { user } = useUserProfile();
+  const { toast } = useToast();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (selectedFile) {
+      const objectUrl = URL.createObjectURL(selectedFile);
+      setPreviewUrl(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+  }, [selectedFile]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedFile(file);
+    } else {
+      toast({ title: "Invalid File", description: "Please select an image file.", variant: "destructive" });
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile || !user || !storage) {
+      toast({ title: "Error", description: "No file selected or user not logged in.", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+    const filePath = `profile-photos/${user.uid}/${selectedFile.name}`;
+    const fileRef = storageRef(storage, filePath);
+
+    try {
+      await uploadBytes(fileRef, selectedFile);
+      const downloadURL = await getDownloadURL(fileRef);
+      
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, { avatarUrl: downloadURL });
+
+      toast({ title: "Success", description: "Profile photo updated successfully!" });
+      onUploadSuccess(); // This will close the dialog and potentially refresh data
+    } catch (error: any) {
+      console.error("Error uploading profile photo:", error);
+      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Update Profile Photo</DialogTitle>
+      </DialogHeader>
+      <div className="py-4 space-y-4">
+        <div className="flex justify-center">
+          {previewUrl ? (
+            <Image src={previewUrl} alt="Preview" width={128} height={128} className="rounded-full object-cover h-32 w-32 border-2 border-primary" />
+          ) : (
+            <div className="h-32 w-32 rounded-full bg-muted flex items-center justify-center">
+              <Camera className="h-12 w-12 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+        <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>
+          {selectedFile ? 'Change Photo' : 'Select Photo'}
+        </Button>
+      </div>
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button type="button" variant="ghost">Cancel</Button>
+        </DialogClose>
+        <Button onClick={handleUpload} disabled={isUploading || !selectedFile}>
+          {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isUploading ? 'Uploading...' : 'Upload & Save'}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
 
 export default function UserProfilePage() {
   const { userProfile, isLoading: isProfileLoading, error: profileError, user } = useUserProfile();
@@ -106,6 +192,7 @@ export default function UserProfilePage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isAEO = userProfile?.role?.includes('Agric Extension Officer') || false;
+  const [isPhotoUploadOpen, setIsPhotoUploadOpen] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -213,7 +300,6 @@ export default function UserProfilePage() {
       description: "Local browser settings have been cleared. The page will now reload.",
     });
 
-    // Reload the page to reflect the cleared state
     setTimeout(() => {
       window.location.reload();
     }, 1500);
@@ -271,7 +357,6 @@ export default function UserProfilePage() {
 
   const formatTimestamp = (timestamp: any, dateFormat: string = 'PPpp'): string => {
     if (!timestamp) return 'N/A';
-
     if (typeof timestamp.toDate === 'function') { // Firestore Timestamp
       const dateObj = timestamp.toDate();
       return isValid(dateObj) ? format(dateObj, dateFormat) : 'Invalid Date';
@@ -291,7 +376,6 @@ export default function UserProfilePage() {
     return 'Invalid Date Format';
   };
 
-
   return (
     <div>
       <PageHeader
@@ -304,7 +388,9 @@ export default function UserProfilePage() {
           </Button>
         )}
       />
-
+      <Dialog open={isPhotoUploadOpen} onOpenChange={setIsPhotoUploadOpen}>
+        <ProfilePhotoUploadDialog onUploadSuccess={() => setIsPhotoUploadOpen(false)} />
+      </Dialog>
       {isEditMode ? (
         <Card className="shadow-lg">
           <CardHeader>
@@ -314,76 +400,32 @@ export default function UserProfilePage() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                {/* Basic Information Section */}
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Basic Information</h3>
-                  <FormField
-                    control={form.control}
-                    name="fullName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl><Input placeholder="Your full name" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="phoneNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl><Input type="tel" placeholder="Your phone number" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="dateOfBirth"
-                    render={({ field }) => (
+                  <FormField control={form.control} name="fullName" render={({ field }) => (
+                      <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="Your full name" {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                      <FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input type="tel" placeholder="Your phone number" {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="dateOfBirth" render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Date of Birth</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-[240px] pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
+                        <Popover><PopoverTrigger asChild><FormControl>
+                              <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                               </Button>
-                            </FormControl>
-                          </PopoverTrigger>
+                        </FormControl></PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) =>
-                                date > new Date() || date < new Date("1900-01-01")
-                              }
-                              initialFocus
-                            />
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange}
+                              disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                              initialFocus/>
                           </PopoverContent>
-                        </Popover>
-                        <FormMessage />
+                        </Popover><FormMessage />
                       </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
+                  )}/>
+                  <FormField control={form.control} name="gender" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Gender</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -391,43 +433,25 @@ export default function UserProfilePage() {
                           <SelectContent>
                             {genderOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
                           </SelectContent>
-                        </Select>
-                        <FormMessage />
+                        </Select><FormMessage />
                       </FormItem>
-                    )}
-                  />
+                  )}/>
                 </section>
-
                  {isAEO && (
                   <section className="space-y-4 p-4 border rounded-lg">
                     <h3 className="text-lg font-semibold text-primary">AEO Assignment</h3>
-                    <FormField
-                      control={form.control}
-                      name="assignedRegion"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Assigned Region</FormLabel>
-                          <FormControl><Input placeholder="e.g., Volta Region" {...field} /></FormControl>
-                          <FormDescription>The primary region you are assigned to as an AEO.</FormDescription>
-                          <FormMessage />
+                    <FormField control={form.control} name="assignedRegion" render={({ field }) => (
+                        <FormItem><FormLabel>Assigned Region</FormLabel><FormControl><Input placeholder="e.g., Volta Region" {...field} /></FormControl>
+                          <FormDescription>The primary region you are assigned to as an AEO.</FormDescription><FormMessage />
                         </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="assignedDistrict"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Assigned District</FormLabel>
-                          <FormControl><Input placeholder="e.g., South Tongu" {...field} /></FormControl>
-                          <FormDescription>The primary district you are assigned to within your region.</FormDescription>
-                          <FormMessage />
+                    )}/>
+                    <FormField control={form.control} name="assignedDistrict" render={({ field }) => (
+                        <FormItem><FormLabel>Assigned District</FormLabel><FormControl><Input placeholder="e.g., South Tongu" {...field} /></FormControl>
+                          <FormDescription>The primary district you are assigned to within your region.</FormDescription><FormMessage />
                         </FormItem>
-                      )}
-                    />
+                    )}/>
                   </section>
                 )}
-
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Address</h3>
                   <FormField control={form.control} name="address.street" render={({ field }) => (<FormItem><FormLabel>Street</FormLabel><FormControl><Input placeholder="Street address" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -436,14 +460,10 @@ export default function UserProfilePage() {
                   <FormField control={form.control} name="address.country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input placeholder="Country" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="address.postalCode" render={({ field }) => (<FormItem><FormLabel>Postal Code</FormLabel><FormControl><Input placeholder="Postal Code" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 </section>
-
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Preferences</h3>
                   <FormField control={form.control} name="primaryLanguage" render={({ field }) => (<FormItem><FormLabel>Primary Language</FormLabel><FormControl><Input placeholder="e.g., English, Twi" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField
-                    control={form.control}
-                    name="preferredCommunicationChannel"
-                    render={({ field }) => (
+                  <FormField control={form.control} name="preferredCommunicationChannel" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Preferred Communication Channel</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -451,11 +471,9 @@ export default function UserProfilePage() {
                           <SelectContent>
                             {communicationChannelOptions.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
                           </SelectContent>
-                        </Select>
-                        <FormMessage />
+                        </Select><FormMessage />
                       </FormItem>
-                    )}
-                  />
+                  )}/>
                   <div className="space-y-2">
                     <FormLabel>Notification Preferences</FormLabel>
                     <FormField control={form.control} name="notificationPreferences.email" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Email Notifications</FormLabel></FormItem>)} />
@@ -470,32 +488,12 @@ export default function UserProfilePage() {
                     <FormField control={form.control} name="alertsToggle.priceAlerts" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Price Alerts</FormLabel></FormItem>)} />
                     <FormField control={form.control} name="alertsToggle.pestAlerts" render={({ field }) => (<FormItem className="flex flex-row items-center space-x-3 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal">Pest Alerts</FormLabel></FormItem>)} />
                   </div>
-                   <FormField
-                    control={form.control}
-                    name="receiveAgriculturalTips"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <div className="space-y-0.5">
-                          <FormLabel>Agricultural Tips</FormLabel>
-                          <FormDescription>Receive useful agricultural tips and news.</FormDescription>
-                        </div>
-                        <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="receiveWeatherUpdates"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                        <div className="space-y-0.5">
-                          <FormLabel>Weather Updates</FormLabel>
-                          <FormDescription>Receive weather updates relevant to your location.</FormDescription>
-                        </div>
-                        <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                      </FormItem>
-                    )}
-                  />
+                   <FormField control={form.control} name="receiveAgriculturalTips" render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Agricultural Tips</FormLabel><FormDescription>Receive useful agricultural tips and news.</FormDescription></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="receiveWeatherUpdates" render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Weather Updates</FormLabel><FormDescription>Receive weather updates relevant to your location.</FormDescription></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                  )}/>
                 </section>
 
                 <div className="flex justify-end gap-3 pt-4">
@@ -516,10 +514,17 @@ export default function UserProfilePage() {
           <div className="md:col-span-1 space-y-6">
             <Card className="shadow-lg">
               <CardHeader className="items-center text-center">
-                <Avatar className="w-24 h-24 mb-4 border-2 border-primary">
-                  <AvatarImage src={currentProfile.avatarUrl} alt={currentProfile.fullName} data-ai-hint="profile person" />
-                  <AvatarFallback>{currentProfile.fullName?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
-                </Avatar>
+                <div className="relative group">
+                    <Avatar className="w-24 h-24 mb-4 border-2 border-primary">
+                      <AvatarImage src={currentProfile.avatarUrl} alt={currentProfile.fullName} data-ai-hint="profile person" />
+                      <AvatarFallback>{currentProfile.fullName?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <DialogTrigger asChild>
+                        <button onClick={() => setIsPhotoUploadOpen(true)} className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="h-8 w-8 text-white" />
+                        </button>
+                    </DialogTrigger>
+                </div>
                 <CardTitle className="font-headline">{currentProfile.fullName}</CardTitle>
                 <div className="flex flex-wrap justify-center gap-2 mt-1">
                   {currentProfile.role?.map(r => <Badge key={r} variant={r === 'Admin' ? 'default' : 'secondary'}>{r}</Badge>) ?? <Badge variant="outline">No Role</Badge>}

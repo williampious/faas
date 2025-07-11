@@ -7,6 +7,7 @@ if (!admin.apps.length) {
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const projectId = process.env.FIREBASE_PROJECT_ID;
+  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
   if (privateKey && clientEmail && projectId && projectId !== "YOUR_PROJECT_ID_FROM_SERVICE_ACCOUNT") {
     try {
@@ -17,7 +18,7 @@ if (!admin.apps.length) {
           // Replace escaped newlines if the private key is stored as a single line in .env
           privateKey: privateKey.replace(/\\n/g, '\n'),
         }),
-        // databaseURL: `https://${projectId}.firebaseio.com` // Optional: if using Realtime Database
+        storageBucket: storageBucket,
       });
       console.log('Firebase Admin SDK initialized successfully.');
     } catch (error: any) {
@@ -30,7 +31,9 @@ if (!admin.apps.length) {
     }
   } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     try {
-        admin.initializeApp(); // Tries to initialize using GOOGLE_APPLICATION_CREDENTIALS
+        admin.initializeApp({
+            storageBucket: storageBucket
+        }); // Tries to initialize using GOOGLE_APPLICATION_CREDENTIALS
         console.log('Firebase Admin SDK initialized successfully using GOOGLE_APPLICATION_CREDENTIALS.');
     } catch (error: any) {
         console.error('Firebase Admin SDK initialization error using GOOGLE_APPLICATION_CREDENTIALS:', error.message);
