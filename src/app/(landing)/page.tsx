@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Settings2, BrainCircuit, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon, LayoutList, DownloadCloud, LifeBuoy, HelpCircle, Handshake, GitFork } from 'lucide-react';
+import { ArrowRight, Settings2, BrainCircuit, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon, LayoutList, DownloadCloud, LifeBuoy, HelpCircle, Handshake, GitFork, Building, LandPlot, HandHelping } from 'lucide-react';
 
 interface BenefitCardProps {
   icon: React.ElementType;
@@ -99,6 +99,24 @@ export default function LandingPage() {
       description: "Use the financial dashboard, budgeting tools, and AI-powered advice to make smarter, data-driven decisions.",
     },
   ];
+  
+  const targetGroups = [
+      {
+          icon: Building,
+          title: "Commercial Farms & Agribusinesses",
+          description: "Ideal for medium-to-large scale farms needing multi-user collaboration, role-based permissions, financial dashboards, and detailed operational tracking.",
+      },
+      {
+          icon: HandHelping,
+          title: "Agric Extension Officers (AEOs) & NGOs",
+          description: "A dedicated suite of tools to manage a directory of farmers, log support interactions, track progress, and provide targeted advice.",
+      },
+      {
+          icon: LandPlot,
+          title: "Farmer Associations & Cooperatives",
+          description: "Manage member data, provide extension services, aggregate production information, and streamline group operations and reporting.",
+      }
+  ];
 
   return (
     <>
@@ -162,6 +180,20 @@ export default function LandingPage() {
           <h2 className="text-3xl font-semibold text-foreground/90 mb-10 font-headline">Why AgriFAAS Connect?</h2>
           <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6">
             {whyAgriFAASPoints.map((point, index) => (
+              <BenefitCard
+                key={index}
+                icon={point.icon}
+                title={point.title}
+                description={point.description}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="text-center max-w-5xl mx-auto mb-16">
+          <h2 className="text-3xl font-semibold text-foreground/90 mb-10 font-headline">Who is AgriFAAS Connect For?</h2>
+          <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6">
+            {targetGroups.map((point, index) => (
               <BenefitCard
                 key={index}
                 icon={point.icon}

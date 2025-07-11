@@ -3,7 +3,16 @@
 
 This is a Next.js starter project for a collaborative, cloud-based farm management platform, built in Firebase Studio.
 
-To get started, review the setup instructions below and then run the application.
+## Target Audience
+
+AgriFAAS Connect is designed for a range of users within the agricultural ecosystem:
+
+*   **Commercial Farms & Agribusinesses:** Ideal for medium-to-large scale farms that require collaboration between managers, field officers, and staff. Features like multi-user access, role-based permissions, financial dashboards, and detailed operational tracking are built for this scale.
+*   **Agricultural Cooperatives & Farmer Associations:** These groups can use the platform to manage member data, provide extension services, and aggregate production information.
+*   **Agric Extension Officers (AEOs) & NGOs:** AEOs get a dedicated suite of tools to manage and support a directory of farmers, track their progress, and provide targeted advice.
+*   **Individual Tech-Savvy Farmers:** Smaller, modern farms can benefit from the detailed record-keeping for crops, livestock, and finances, helping them make data-driven decisions.
+*   **Farm Investors & Financial Institutions:** The robust financial reporting and dashboard features provide the transparency and oversight needed for investment and lending decisions.
+*   **Agricultural Consultants:** Consultants can use the platform to manage multiple client farms, track recommendations, and monitor outcomes.
 
 ## 1. Important Note on Firestore Security Rules
 
