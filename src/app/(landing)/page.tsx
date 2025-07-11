@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Settings2, BrainCircuit, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon, LayoutList, DownloadCloud, LifeBuoy, HelpCircle, Handshake, GitFork, Building, LandPlot, HandHelping } from 'lucide-react';
+import { ArrowRight, Settings2, BrainCircuit, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon, LayoutList, DownloadCloud, LifeBuoy, HelpCircle, Handshake, GitFork, Building, LandPlot, HandHelping, UserCog } from 'lucide-react';
 
 interface BenefitCardProps {
   icon: React.ElementType;
@@ -255,6 +255,12 @@ export default function LandingPage() {
                 Our Partners
               </Button>
             </Link>
+             <Link href="/roles-permissions">
+              <Button variant="secondary" size="lg">
+                <UserCog className="mr-2 h-4 w-4" />
+                Roles & Permissions
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -290,6 +296,7 @@ export default function LandingPage() {
             <Link href="/partners" className="text-sm text-muted-foreground hover:text-primary">Partners</Link>
             <Link href="/faq" className="text-sm text-muted-foreground hover:text-primary">FAQ</Link>
             <Link href="/help" className="text-sm text-muted-foreground hover:text-primary">Help Center</Link>
+             <Link href="/roles-permissions" className="text-sm text-muted-foreground hover:text-primary">Roles</Link>
           </div>
 
           <p className="text-xs text-muted-foreground/80">
