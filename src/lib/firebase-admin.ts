@@ -1,4 +1,5 @@
 
+
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
@@ -9,7 +10,7 @@ if (!admin.apps.length) {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
-  if (privateKey && clientEmail && projectId && projectId !== "YOUR_PROJECT_ID_FROM_SERVICE_ACCOUNT") {
+  if (privateKey && clientEmail && projectId && projectId !== "YOUR_PROJECT_ID_FROM_SERVICE_ACCOUNT" && privateKey !== "YOUR_PRIVATE_KEY") {
     try {
       admin.initializeApp({
         credential: admin.credential.cert({
@@ -20,13 +21,13 @@ if (!admin.apps.length) {
         }),
         storageBucket: storageBucket,
       });
-      console.log('Firebase Admin SDK initialized successfully.');
+      console.log('[Firebase Admin] SDK initialized successfully via environment variables.');
     } catch (error: any) {
-      console.error('Firebase Admin SDK initialization error:', error.message);
+      console.error('[Firebase Admin] SDK initialization error via environment variables:', error.message);
       if (error.code === 'app/duplicate-app') {
-         console.warn('Firebase Admin SDK already initialized (caught duplicate app error).');
+         console.warn('[Firebase Admin] SDK already initialized (caught duplicate app error).');
       } else {
-        console.error('Detailed Firebase Admin SDK initialization error:', error);
+        console.error('[Firebase Admin] Detailed SDK initialization error:', error);
       }
     }
   } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -34,19 +35,19 @@ if (!admin.apps.length) {
         admin.initializeApp({
             storageBucket: storageBucket
         }); // Tries to initialize using GOOGLE_APPLICATION_CREDENTIALS
-        console.log('Firebase Admin SDK initialized successfully using GOOGLE_APPLICATION_CREDENTIALS.');
+        console.log('[Firebase Admin] SDK initialized successfully using GOOGLE_APPLICATION_CREDENTIALS.');
     } catch (error: any) {
-        console.error('Firebase Admin SDK initialization error using GOOGLE_APPLICATION_CREDENTIALS:', error.message);
+        console.error('[Firebase Admin] SDK initialization error using GOOGLE_APPLICATION_CREDENTIALS:', error.message);
     }
   } else {
     console.warn(
-        "Firebase Admin SDK credentials are not fully set in .env (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY) " +
-        "and GOOGLE_APPLICATION_CREDENTIALS is not set. Admin SDK features will not be available. " +
-        "Ensure placeholder values are replaced."
+        "[Firebase Admin] SDK credentials are not fully set in .env (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY) " +
+        "and GOOGLE_APPLICATION_CREDENTIALS is not set. Admin SDK features will be unavailable. " +
+        "Ensure placeholder values are replaced and environment variables are accessible to the server."
     );
   }
 } else {
-    console.log("Firebase Admin SDK already initialized.");
+    console.log("[Firebase Admin] SDK was already initialized.");
 }
 
 let adminDbInstance: admin.firestore.Firestore | null = null;
@@ -57,7 +58,7 @@ if (admin.apps.length > 0 && admin.apps[0]) { // Check if an app was successfull
         adminDbInstance = admin.firestore();
         adminAuthInstance = admin.auth();
     } catch (e: any) {
-        console.error("Error getting admin Firestore/Auth instances:", e);
+        console.error("[Firebase Admin] Error getting Firestore/Auth instances:", e);
     }
 }
 

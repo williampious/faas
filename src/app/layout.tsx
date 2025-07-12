@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import './globals.css';
@@ -211,7 +212,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
     );
   }
   
-  if (profileError && !pathname.startsWith('/auth/') && !isPublicUnauthenticatedArea) {
+  if (profileError && !pathname.startsWith('/auth/') && !isPublicUnauthenticatedArea && user) {
     const performSignOutFromErrorPage = async () => {
       if (!auth) {
         console.error('Firebase auth instance is not available for sign out from error page.');

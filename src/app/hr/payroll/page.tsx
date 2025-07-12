@@ -22,7 +22,7 @@ import type { AgriFAASUserProfile } from '@/types/user';
 import { useRouter } from 'next/navigation';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import type { OperationalTransaction } from '@/types/finance';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -86,13 +86,13 @@ export default function PayrollPage() {
         if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
         
         // Fetch Payroll Records
-        const payrollQuery = query(collection(db, PAYROLL_RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const payrollQuery = query(collection(db, PAYROLL_RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("paymentDate", "desc"));
         const payrollSnapshot = await getDocs(payrollQuery);
         const fetchedRecords = payrollSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PayrollRecord[];
         setPayrollRecords(fetchedRecords);
 
         // Fetch Employees
-        const usersQuery = query(collection(db, USERS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const usersQuery = query(collection(db, USERS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("fullName", "asc"));
         const usersSnapshot = await getDocs(usersQuery);
         const fetchedUsers = usersSnapshot.docs.map(doc => doc.data() as AgriFAASUserProfile);
         setEmployees(fetchedUsers);
@@ -348,7 +348,7 @@ export default function PayrollPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {payrollRecords.sort((a,b) => parseISO(b.paymentDate).getTime() - parseISO(a.paymentDate).getTime()).map((record) => (
+                {payrollRecords.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">{record.userName}</TableCell>
                     <TableCell>{record.payPeriod}</TableCell>

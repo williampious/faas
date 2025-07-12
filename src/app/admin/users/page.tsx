@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -114,8 +115,8 @@ export default function AdminUsersPage() {
       } catch (err: any) {
         console.error("Error fetching users: ", err);
         let message = `Failed to fetch users: ${err.message}`;
-        if (err.message?.includes('requires an index')) {
-          message += " This commonly happens if a required Firestore index is missing. Please check the browser console for a link to create it, or refer to the README for instructions."
+        if (err.message?.toLowerCase().includes('requires an index')) {
+          message = "Failed to load user data because a Firestore index is missing. Please create the required index for the 'users' collection (sorted by 'farmId' and 'fullName') as detailed in the README.md file."
         }
         setError(message);
       } finally {

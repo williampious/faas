@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -190,6 +191,7 @@ export default function TaskManagementPage() {
       form.reset({
         name: '', assignedArea: '', status: 'To Do', priority: 'Medium',
         description: '', project: '', owner: '', startDate: '', dueDate: '',
+        farmingYearId: undefined, farmingSeasonId: undefined,
       });
     }
     setIsModalOpen(true);
