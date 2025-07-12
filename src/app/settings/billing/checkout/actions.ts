@@ -49,7 +49,7 @@ export async function initializePaystackTransaction(
       billing_cycle: billingCycle,
       cancel_action: `${process.env.NEXT_PUBLIC_BASE_URL}/settings/billing`, // URL to redirect to on cancel
     },
-    // callback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/settings/billing/verify`, // URL for verification after payment
+    callback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/settings/billing/verify?planId=${planId}&billingCycle=${billingCycle}`, // URL for verification after payment
   };
 
   try {
