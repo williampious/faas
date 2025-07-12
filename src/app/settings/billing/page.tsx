@@ -10,7 +10,6 @@ import { ArrowLeft, CreditCard, Check, Star, Gem, Rocket, Mail, CircleDollarSign
 import { useRouter } from 'next/navigation';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import type { SubscriptionDetails } from '@/types/user';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -133,12 +132,8 @@ const pricingTiers: PricingTier[] = [
 
 export default function BillingPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   
-  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
-  const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<PricingTier | null>(null);
-
   const [currentPlan, setCurrentPlan] = useState<SubscriptionDetails>({
       planId: 'starter',
       status: 'Active',
@@ -147,8 +142,7 @@ export default function BillingPage() {
   });
 
   useEffect(() => {
-    // When the user profile loads, update the current plan state
-    if (userProfile && userProfile.subscription) {
+    if (userProfile?.subscription) {
         setCurrentPlan(userProfile.subscription);
     }
   }, [userProfile]);
@@ -161,16 +155,9 @@ export default function BillingPage() {
         return;
     }
     
-    setSelectedPlanForCheckout(plan);
-    setIsCheckoutModalOpen(true);
-  };
-  
-  const handleProceedToPayment = () => {
-    toast({
-      title: "Payment Gateway Not Implemented",
-      description: "This is where the app would redirect to a secure payment processor like Paystack or Stripe.",
-      variant: "default",
-    });
+    // For now, we'll assume annual billing cycle for upgrades.
+    // This can be enhanced with a toggle later.
+    router.push(`/settings/billing/checkout?plan=${plan.id}&cycle=annually`);
   };
 
   const getButtonText = (planId: string, isEnterprise?: boolean) => {
@@ -181,9 +168,7 @@ export default function BillingPage() {
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
-
-  // Handle case where profile is still loading
-  if (isProfileLoading) {
+  if (isProfileLoading || !userProfile) {
     return (
         <div>
             <PageHeader
@@ -230,7 +215,7 @@ export default function BillingPage() {
                   </div>
                   {currentPlan.nextBillingDate ? (
                      <div className="flex items-center gap-2"><strong>Next Billing Date:</strong> <span>{currentPlan.nextBillingDate}</span></div>
-                  ) : (
+                  ) : currentPlan.planId !== 'starter' ? null : (
                     <div>This is a free plan.</div>
                   )}
                 </div>
@@ -297,54 +282,6 @@ export default function BillingPage() {
           </Card>
         </div>
       </div>
-      
-      <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Your Plan Upgrade</DialogTitle>
-            <DialogDescription>
-              Review your selection before proceeding to payment.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedPlanForCheckout && (
-            <div className="py-4 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="capitalize">{selectedPlanForCheckout.name} Plan</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold">{formatCurrency(selectedPlanForCheckout.price.annually)} <span className="text-sm font-normal text-muted-foreground">/ year</span></p>
-                  <p className="text-sm text-muted-foreground">(Billed annually. Equivalent to {formatCurrency(selectedPlanForCheckout.price.monthly)}/month)</p>
-                </CardContent>
-              </Card>
-
-              <RadioGroup defaultValue="momo" className="space-y-2">
-                <Label className="font-semibold">Select Payment Method</Label>
-                <div className="flex items-center space-x-2 p-3 border rounded-md">
-                  <RadioGroupItem value="momo" id="momo" />
-                  <Label htmlFor="momo" className="flex items-center gap-2 font-normal">
-                    <CircleDollarSign className="h-5 w-5 text-yellow-500" />
-                    Mobile Money (MTN, Vodafone, AirtelTigo)
-                  </Label>
-                </div>
-                 <div className="flex items-center space-x-2 p-3 border rounded-md">
-                  <RadioGroupItem value="card" id="card" />
-                  <Label htmlFor="card" className="flex items-center gap-2 font-normal">
-                    <CreditCard className="h-5 w-5 text-blue-500" />
-                    Credit/Debit Card
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
-          <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={handleProceedToPayment} disabled>
-              Proceed to Payment (Coming Soon)
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
