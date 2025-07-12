@@ -4,7 +4,7 @@
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
-import { Loader2, AlertTriangle, Briefcase, Sparkles } from 'lucide-react';
+import { Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -47,13 +47,12 @@ export default function OfficeManagementLayout({ children }: { children: ReactNo
   }
   
   const hasAdminRole = userProfile.role?.includes('Admin');
-  const plan = userProfile.subscription?.planId;
+  const plan = userProfile.subscription?.planId || 'starter';
   const hasPaidPlanAccess = plan === 'business' || plan === 'enterprise';
 
   // Admins always have access, regardless of plan.
   // Other users need a specific plan.
   const hasAccess = hasAdminRole || hasPaidPlanAccess;
-
 
   if (!hasAccess) {
     return (
@@ -70,7 +69,7 @@ export default function OfficeManagementLayout({ children }: { children: ReactNo
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              Your current plan is <span className="font-semibold capitalize text-primary">{plan || 'Starter'}</span>. Please upgrade your subscription to unlock this and other advanced features for managing your office operations.
+              Your current plan is <span className="font-semibold capitalize text-primary">{plan}</span>. Please upgrade your subscription to unlock this and other advanced features for managing your office operations.
             </p>
             <Link href="/settings/billing">
                 <Button>Upgrade Your Plan</Button>
