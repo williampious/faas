@@ -1,8 +1,9 @@
+
 'use client';
 
 import { PageHeader } from '@/components/layout/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldHalf, UsersRound, Settings, TicketPercent } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ShieldHalf, UsersRound, Settings, TicketPercent, ExternalLink, Info } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminDashboardPage() {
@@ -60,14 +61,20 @@ export default function AdminDashboardPage() {
         {/* Add more admin-specific cards here as features are developed */}
       </div>
 
-      <div className="mt-8 p-4 bg-secondary/30 rounded-lg">
-        <h3 className="text-lg font-semibold text-secondary-foreground mb-2">Admin Notes:</h3>
-        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-          <li>Full user editing capabilities (roles, status) will be implemented in the User Management section.</li>
-          <li>Assigning users to farm plots or specific tasks is a planned feature.</li>
-          <li>More detailed analytics and reporting will be added to this dashboard.</li>
-        </ul>
-      </div>
+      <Card className="mt-8 bg-muted/30 p-4">
+        <CardHeader className="p-0 pb-2">
+            <CardTitle className="text-base font-semibold text-muted-foreground flex items-center">
+                <Info className="mr-2 h-5 w-5"/> How to Manage Your App
+            </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 text-xs text-muted-foreground space-y-2">
+            <p>This Admin Dashboard is for managing your application's day-to-day business logic (like creating promo codes or managing user roles).</p>
+            <p>For backend management, such as viewing raw database records, managing user authentication credentials, or updating security rules, you will need to use the Google Firebase Console directly.</p>
+            <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary hover:underline font-semibold">
+                Go to Firebase Console <ExternalLink className="ml-1 h-3 w-3" />
+            </a>
+        </CardContent>
+      </Card>
     </div>
   );
 }
