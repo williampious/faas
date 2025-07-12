@@ -71,7 +71,7 @@ export async function verifyPaystackTransaction(input: VerificationInput): Promi
     const newSubscription: SubscriptionDetails = {
       planId: planId,
       status: 'Active',
-      billingCycle: billingCycle,
+      billingCycle: billingCycle, // Correctly save the billing cycle
       nextBillingDate: format(nextBillingDate, 'yyyy-MM-dd'),
     };
 

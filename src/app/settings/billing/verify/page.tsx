@@ -23,8 +23,8 @@ function VerificationPageContent() {
 
   useEffect(() => {
     const reference = searchParams.get('reference');
-    const planId = searchParams.get('planId');
-    const billingCycle = searchParams.get('billingCycle');
+    const planId = searchParams.get('planId') as 'starter' | 'grower' | 'business' | 'enterprise';
+    const billingCycle = searchParams.get('billingCycle') as 'monthly' | 'annually';
 
     if (!reference || !planId || !billingCycle) {
       setStatus('failed');
