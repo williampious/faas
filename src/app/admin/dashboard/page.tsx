@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ShieldHalf, UsersRound, Settings, TicketPercent, ExternalLink, Info } from 'lucide-react';
+import { ShieldHalf, UsersRound, Settings, TicketPercent, ExternalLink, Info, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminDashboardPage() {
@@ -58,7 +58,19 @@ export default function AdminDashboardPage() {
           </Card>
         </Link>
 
-        {/* Add more admin-specific cards here as features are developed */}
+        <Link href="/admin/migrate-users" passHref>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-destructive border-2 border-dashed border-destructive/50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium text-destructive">User Subscription Migration</CardTitle>
+              <Wand2 className="h-6 w-6 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                One-time tool to move all existing users to the 'Starter' plan.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <Card className="mt-8 bg-muted/30 p-4">
