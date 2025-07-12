@@ -229,7 +229,27 @@ service cloud.firestore {
 }
 ```
 
-## 2. Important Note on Firestore Indexes
+## 2. Important Note on Firebase Storage Security Rules
+
+If you see a `storage/unauthorized` error in the browser console when trying to **upload a profile photo**, you must update your Firebase Storage Security Rules.
+
+Copy and paste the entire ruleset below into your **Firebase Console -> Storage -> Rules**.
+
+```
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow users to read and write to their own profile photo directory.
+    // The path must match the structure 'profile-photos/{userId}/{fileName}'.
+    match /profile-photos/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+## 3. Important Note on Firestore Indexes
 
 As the app's features grow, Firestore will require specific indexes for complex queries to work securely and efficiently. If you see an error in your browser console that says `The query requires an index...` followed by a long URL, you must create the specified index.
 
