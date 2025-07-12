@@ -71,8 +71,10 @@ export default function BillingPage() {
                   <p className="text-3xl font-bold text-primary capitalize">{currentPlan.planId}</p>
                   <p className="text-sm text-primary">Plan</p>
                 </div>
-                <div className="text-sm">
-                  <p><strong>Status:</strong> <Badge variant="default">{currentPlan.status}</Badge></p>
+                <div className="text-sm space-y-2">
+                  <div className="flex items-center gap-2">
+                    <strong>Status:</strong> <Badge variant="default">{currentPlan.status}</Badge>
+                  </div>
                   {currentPlan.nextBillingDate ? (
                     <p><strong>Next Billing Date:</strong> {currentPlan.nextBillingDate}</p>
                   ) : (
