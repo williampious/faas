@@ -2,7 +2,7 @@
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldHalf, UsersRound, Settings } from 'lucide-react';
+import { ShieldHalf, UsersRound, Settings, TicketPercent } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminDashboardPage() {
@@ -38,6 +38,20 @@ export default function AdminDashboardPage() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Update your farm's name, contact details, and other settings.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+         <Link href="/admin/promo-codes" passHref>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-medium">Promo Codes</CardTitle>
+              <TicketPercent className="h-6 w-6 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Create and manage promotional codes for user subscriptions.
               </p>
             </CardContent>
           </Card>
