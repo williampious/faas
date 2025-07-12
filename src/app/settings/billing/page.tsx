@@ -11,13 +11,119 @@ import { useRouter } from 'next/navigation';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
+
+
+interface TierFeature {
+  text: string;
+}
+
+interface FeatureGroup {
+    title: string;
+    features: TierFeature[];
+}
+
+interface PricingTier {
+  id: string;
+  name: string;
+  icon: React.ElementType;
+  price: string;
+  description: string;
+  featureGroups: FeatureGroup[];
+}
+
 
 // This is a simplified version of the public pricing tiers for the billing page.
-const pricingTiers = [
-  { id: 'starter', name: 'Starter', icon: Check, price: 'Free', description: "For individual farmers or small teams getting started." },
-  { id: 'grower', name: 'Grower', icon: Star, price: '₵210/mo', description: "For growing farms and teams needing more capabilities." },
-  { id: 'business', name: 'Business', icon: Gem, price: '₵450/mo', description: "For established agribusinesses requiring advanced tools." },
-  { id: 'enterprise', name: 'Enterprise', icon: Rocket, price: 'Custom', description: "Custom solutions for large-scale operations." },
+const pricingTiers: PricingTier[] = [
+  { 
+    id: 'starter', 
+    name: 'Starter', 
+    icon: Check, 
+    price: 'Free', 
+    description: "For individual farmers or small teams getting started.",
+    featureGroups: [
+        {
+            title: 'Core Features',
+            features: [
+              { text: '1 User Account' },
+              { text: 'Basic Dashboard' },
+              { text: 'Limited Task Management' },
+              { text: '1 Farm Plot' },
+              { text: 'Community Support' },
+            ],
+        },
+    ],
+  },
+  { 
+    id: 'grower', 
+    name: 'Grower', 
+    icon: Star, 
+    price: '₵210/mo', 
+    description: "For growing farms and teams needing more capabilities.",
+    featureGroups: [
+        {
+            title: 'Everything in Starter, plus:',
+            features: [
+              { text: 'Up to 5 Users' },
+              { text: 'Full Farm Operations Suite' },
+              { text: 'Full Task & Calendar Tools' },
+              { text: 'Resource Inventory' },
+            ],
+        },
+        {
+            title: 'Financials',
+            features: [
+                { text: 'AI Planting Advice (Standard)' },
+                { text: 'Basic Financial Dashboard' },
+                { text: 'Standard Budgeting Tools' },
+            ]
+        }
+    ],
+  },
+  { 
+    id: 'business', 
+    name: 'Business', 
+    icon: Gem, 
+    price: '₵450/mo', 
+    description: "For established agribusinesses requiring advanced tools.",
+    featureGroups: [
+        {
+            title: 'Everything in Grower, plus:',
+            features: [
+              { text: 'Unlimited Users' },
+              { text: 'HR & Office Management Modules' },
+              { text: 'AEO Management Tools' },
+              { text: 'Priority Phone & Chat Support' },
+            ],
+        },
+        {
+            title: 'Financials & Reporting',
+            features: [
+                { text: 'Advanced AI Tools & History' },
+                { text: 'Full Financial Reporting Suite' },
+                { text: 'Profitability Analysis' },
+            ]
+        }
+    ],
+  },
+  { 
+    id: 'enterprise', 
+    name: 'Enterprise', 
+    icon: Rocket, 
+    price: 'Custom', 
+    description: "Custom solutions for large-scale operations.",
+    featureGroups: [
+        {
+            title: 'Everything in Business, plus:',
+            features: [
+              { text: 'Dedicated Account Manager' },
+              { text: 'Custom Integrations (API Access)' },
+              { text: 'Onboarding & Training Services' },
+              { text: 'Custom Security & Compliance' },
+            ],
+        },
+    ],
+  },
 ];
 
 export default function BillingPage() {
@@ -76,9 +182,9 @@ export default function BillingPage() {
                     <strong>Status:</strong> <Badge variant="default">{currentPlan.status}</Badge>
                   </div>
                   {currentPlan.nextBillingDate ? (
-                    <p><strong>Next Billing Date:</strong> {currentPlan.nextBillingDate}</p>
+                     <div className="flex items-center gap-2"><strong>Next Billing Date:</strong> <span>{currentPlan.nextBillingDate}</span></div>
                   ) : (
-                    <p>This is a free plan.</p>
+                    <div>This is a free plan.</div>
                   )}
                 </div>
                 <Button variant="outline" className="w-full" disabled>
@@ -97,26 +203,48 @@ export default function BillingPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {pricingTiers.map((tier) => (
-                <div key={tier.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                     <tier.icon className={cn("h-6 w-6 shrink-0", tier.id === 'starter' ? 'text-green-600' : 'text-primary')} />
-                    <div>
-                      <h4 className="font-semibold">{tier.name}</h4>
-                      <p className="text-xs text-muted-foreground">{tier.description}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold">{tier.price}</p>
-                    <Button
-                      size="sm"
-                      onClick={() => handlePlanAction(tier.id)}
-                      disabled={currentPlan.planId === tier.id}
-                      variant={currentPlan.planId === tier.id ? 'secondary' : 'default'}
-                    >
-                      {currentPlan.planId === tier.id ? 'Current Plan' : tier.id === 'enterprise' ? 'Contact Us' : 'Upgrade'}
-                    </Button>
-                  </div>
-                </div>
+                <Card key={tier.id} className={cn("flex flex-col", currentPlan.planId === tier.id && "border-2 border-primary")}>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <tier.icon className={cn("h-6 w-6 shrink-0", tier.id === 'starter' ? 'text-green-600' : 'text-primary')} />
+                                <div>
+                                    <h4 className="font-semibold text-lg">{tier.name}</h4>
+                                    <p className="text-xs text-muted-foreground">{tier.description}</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="font-bold text-lg">{tier.price}</p>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-4">
+                        <Separator />
+                        {tier.featureGroups.map(group => (
+                            <div key={group.title}>
+                                <h5 className="font-semibold text-sm mb-2">{group.title}</h5>
+                                <ul className="space-y-2 text-sm text-muted-foreground">
+                                    {group.features.map(feature => (
+                                        <li key={feature.text} className="flex items-start">
+                                            <Check className="h-4 w-4 mr-2 mt-0.5 text-green-600 shrink-0" />
+                                            <span>{feature.text}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
+                    </CardContent>
+                    <CardFooter>
+                       <Button
+                            onClick={() => handlePlanAction(tier.id)}
+                            disabled={currentPlan.planId === tier.id}
+                            variant={currentPlan.planId === tier.id ? 'secondary' : 'default'}
+                            className="w-full"
+                        >
+                            {currentPlan.planId === tier.id ? 'Your Current Plan' : tier.id === 'enterprise' ? 'Contact Us' : 'Upgrade'}
+                        </Button>
+                    </CardFooter>
+                </Card>
               ))}
             </CardContent>
           </Card>
