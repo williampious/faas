@@ -6,13 +6,15 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CreditCard, Lock, CircleDollarSign, Loader2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, Lock, CircleDollarSign, Loader2, Tag, TicketPercent } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useUserProfile } from '@/contexts/user-profile-context';
-import { initializePaystackTransaction } from './actions';
+import { initializePaystackTransaction, validatePromoCode } from './actions';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 
 
 // Data can be moved to a shared file later
@@ -30,14 +32,39 @@ function CheckoutPageContent() {
   const { userProfile } = useUserProfile();
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [promoMessage, setPromoMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [isApplyingCode, setIsApplyingCode] = useState(false);
 
   const planId = searchParams.get('plan') as 'starter' | 'grower' | 'business' | 'enterprise' || 'starter';
   const cycle = searchParams.get('cycle') as 'monthly' | 'annually' || 'annually';
 
   const selectedPlan = pricingTiers.find(p => p.id === planId) || pricingTiers[0];
   const price = cycle === 'annually' ? selectedPlan.price.annually : selectedPlan.price.monthly;
+  const finalPrice = Math.max(0, price - appliedDiscount);
   const billingCycleText = cycle === 'annually' ? 'Billed Annually' : 'Billed Monthly';
   
+  const handleApplyPromoCode = async () => {
+      if (!promoCode.trim()) {
+          setPromoMessage({ type: 'error', text: 'Please enter a promotional code.' });
+          return;
+      }
+      setIsApplyingCode(true);
+      setPromoMessage(null);
+      
+      const result = await validatePromoCode(promoCode);
+
+      if (result.success && result.discountAmount) {
+          setAppliedDiscount(result.discountAmount);
+          setPromoMessage({ type: 'success', text: result.message });
+      } else {
+          setAppliedDiscount(0);
+          setPromoMessage({ type: 'error', text: result.message });
+      }
+      setIsApplyingCode(false);
+  };
+
   const handleProceedToPayment = async () => {
     if (!userProfile) {
       toast({ title: "Error", description: "You must be logged in to make a payment.", variant: "destructive" });
@@ -46,7 +73,7 @@ function CheckoutPageContent() {
     
     setIsProcessing(true);
     
-    const amountInKobo = price * 100; // Convert GHS to Kobo
+    const amountInKobo = finalPrice * 100; // Convert GHS to Kobo
     const result = await initializePaystackTransaction(userProfile, amountInKobo, planId, cycle);
 
     if (result.success && result.data?.authorization_url) {
@@ -90,10 +117,33 @@ function CheckoutPageContent() {
                 </div>
                 <p className="font-bold text-2xl text-primary">{formatCurrency(price)}</p>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="promo-code">Promotional Code</Label>
+                <div className="flex gap-2">
+                    <Input id="promo-code" placeholder="Enter code" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} disabled={isApplyingCode}/>
+                    <Button onClick={handleApplyPromoCode} disabled={isApplyingCode}>
+                        {isApplyingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Apply
+                    </Button>
+                </div>
+                {promoMessage && (
+                    <p className={`text-sm ${promoMessage.type === 'error' ? 'text-destructive' : 'text-green-600'}`}>
+                        {promoMessage.text}
+                    </p>
+                )}
+              </div>
+              
               <Separator />
+
+              {appliedDiscount > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span>Discount</span>
+                  <span className="font-medium text-green-600">-{formatCurrency(appliedDiscount)}</span>
+                </div>
+              )}
+
               <div className="flex justify-between font-bold text-lg">
                 <span>Total Due Today</span>
-                <span>{formatCurrency(price)}</span>
+                <span>{formatCurrency(finalPrice)}</span>
               </div>
             </CardContent>
           </Card>
@@ -121,7 +171,7 @@ function CheckoutPageContent() {
             <CardFooter className="flex-col items-start gap-4">
                <Button size="lg" className="w-full" onClick={handleProceedToPayment} disabled={isProcessing}>
                   {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
-                  {isProcessing ? 'Initializing...' : 'Proceed to Paystack'}
+                  {isProcessing ? 'Initializing...' : `Pay ${formatCurrency(finalPrice)} via Paystack`}
                </Button>
                <p className="text-xs text-muted-foreground text-center w-full">
                 You will be redirected to Paystack's secure payment page to complete your purchase.
