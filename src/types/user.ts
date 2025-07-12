@@ -152,6 +152,13 @@ export interface AlertToggles {
 
 export type AccountStatus = 'Active' | 'PendingVerification' | 'Suspended' | 'Deactivated' | 'Invited';
 
+export interface SubscriptionDetails {
+  planId: 'starter' | 'grower' | 'business' | 'enterprise';
+  status: 'Active' | 'Canceled' | 'Trialing' | 'Past Due';
+  billingCycle: 'monthly' | 'annually';
+  nextBillingDate?: string; // ISO date string
+  // customerId?: string; // To store Stripe/Paystack customer ID
+}
 
 export interface AgriFAASUserProfile {
   // 1. Basic Information
@@ -220,8 +227,11 @@ export interface AgriFAASUserProfile {
   alertsToggle?: AlertToggles;
   receiveAgriculturalTips?: boolean;
   receiveWeatherUpdates?: boolean;
+
+  // 8. Billing & Subscription
+  subscription?: SubscriptionDetails;
   
-  // 8. AEO Specific Linkage
+  // 9. AEO Specific Linkage
   managedByAEO?: string;
   initialAeoRegion?: string;
   initialAeoDistrict?: string;

@@ -12,6 +12,7 @@ import { useUserProfile } from '@/contexts/user-profile-context';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import type { SubscriptionDetails } from '@/types/user';
 
 
 interface TierFeature {
@@ -30,11 +31,10 @@ interface PricingTier {
   price: string;
   description: string;
   featureGroups: FeatureGroup[];
-  isEnterprise?: boolean; // To identify the enterprise plan specifically
+  isEnterprise?: boolean; 
 }
 
 
-// This is a simplified version of the public pricing tiers for the billing page.
 const pricingTiers: PricingTier[] = [
   { 
     id: 'starter', 
@@ -131,33 +131,30 @@ const pricingTiers: PricingTier[] = [
 export default function BillingPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { userProfile } = useUserProfile();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   
-  // In a real app, this would be fetched from the user's subscription data in Firestore.
-  // For now, we'll mock it. If userProfile exists, use its data, otherwise default to starter.
-  const [currentPlan, setCurrentPlan] = useState({
-      planId: userProfile?.subscription?.planId || 'starter',
-      status: userProfile?.subscription?.status || 'Active',
-      nextBillingDate: userProfile?.subscription?.nextBillingDate || null,
-      billingCycle: userProfile?.subscription?.billingCycle || 'annually',
+  const [currentPlan, setCurrentPlan] = useState<SubscriptionDetails>({
+      planId: 'starter',
+      status: 'Active',
+      nextBillingDate: null,
+      billingCycle: 'annually',
   });
 
   useEffect(() => {
-    // This effect handles the case where userProfile loads after the initial state is set.
-    if (userProfile?.subscription) {
-      setCurrentPlan({
-        planId: userProfile.subscription.planId,
-        status: userProfile.subscription.status,
-        nextBillingDate: userProfile.subscription.nextBillingDate,
-        billingCycle: userProfile.subscription.billingCycle,
-      });
+    // When the user profile loads, update the current plan state
+    if (userProfile) {
+        setCurrentPlan(userProfile.subscription || {
+            planId: 'starter',
+            status: 'Active',
+            nextBillingDate: null,
+            billingCycle: 'annually',
+        });
     }
   }, [userProfile]);
   
   const handlePlanAction = (planId: string) => {
-    if (planId === currentPlan.planId) return; // Do nothing if it's the current plan
+    if (planId === currentPlan.planId) return;
     
-    // In a real implementation, this would trigger the payment gateway flow.
     toast({
       title: "Billing System Under Construction",
       description: `The checkout process for the '${planId}' plan is not yet implemented.`,
@@ -168,6 +165,20 @@ export default function BillingPage() {
     if (planId === currentPlan.planId) return 'Your Current Plan';
     if (isEnterprise) return 'Contact Us';
     return 'Upgrade';
+  }
+
+  // Handle case where profile is still loading
+  if (isProfileLoading) {
+    return (
+        <div>
+            <PageHeader
+                title="Billing & Subscriptions"
+                icon={CreditCard}
+                description="Loading your subscription details..."
+            />
+            {/* You could add a loading skeleton here if desired */}
+        </div>
+    );
   }
 
   return (
