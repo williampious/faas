@@ -137,6 +137,16 @@ service cloud.firestore {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read, update, delete: if isFarmMember(resource.data.farmId);
     }
+
+    match /breedingRecords/{recordId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
+    
+    match /feedingRecords/{recordId} {
+      allow create: if isFarmMember(request.resource.data.farmId);
+      allow read, update, delete: if isFarmMember(resource.data.farmId);
+    }
     
     match /soilTestRecords/{recordId} {
         allow create: if isFarmMember(request.resource.data.farmId);
@@ -312,3 +322,10 @@ You can create these by following the link provided in the console error, or by 
 
 15. **AEO Knowledge Base:**
     *   Collection: `knowledgeArticles`, Fields: `authorId` (Asc), `createdAt` (Desc), Scope: Collection
+            
+16. **Breeding Records:**
+    *   Collection: `breedingRecords`, Fields: `farmId` (Asc), `matingDate` (Desc), Scope: Collection
+
+17. **Feeding Records:**
+    *   Collection: `feedingRecords`, Fields: `farmId` (Asc), `date` (Desc), Scope: Collection
+```
