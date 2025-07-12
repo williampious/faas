@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, User, Lock, FileText, ChevronRight, Info, AlertTriangle } from 'lucide-react';
+import { Settings, User, Lock, FileText, ChevronRight, Info, AlertTriangle, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -60,6 +60,12 @@ export default function SettingsPage() {
       href: '/profile',
     },
     {
+      title: 'Billing & Subscription',
+      description: 'View your current plan, manage billing, and see invoices.',
+      icon: CreditCard,
+      href: '/settings/billing',
+    },
+    {
       title: 'Sign-in & Security',
       description: 'Update your password and manage account security settings.',
       icon: Lock,
@@ -94,7 +100,6 @@ export default function SettingsPage() {
       description: "Local browser settings have been cleared. The page will now reload.",
     });
 
-    // Reload the page to reflect the cleared state
     setTimeout(() => {
       window.location.reload();
     }, 1500);
