@@ -14,8 +14,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Ba
 import { format, parseISO, subMonths } from 'date-fns';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy, type QueryConstraint } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, type QueryConstraint, doc } from 'firebase/firestore';
 import type { FarmingYear } from '@/types/season';
+import type { Farm } from '@/types/farm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -60,6 +61,8 @@ export default function FinancialDashboardPage() {
   const router = useRouter();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const { toast } = useToast();
+  
+  const [farmProfile, setFarmProfile] = useState<Farm | null>(null);
 
   const [farmingYears, setFarmingYears] = useState<FarmingYear[]>([]);
   const [selectedYearId, setSelectedYearId] = useState<string>('last12months');
@@ -69,18 +72,24 @@ export default function FinancialDashboardPage() {
   useEffect(() => {
     if (!userProfile?.farmId) return;
 
-    const fetchYears = async () => {
+    const fetchFarmAndYearData = async () => {
         try {
+            const farmDocRef = doc(db, 'farms', userProfile.farmId);
+            const farmDocSnap = await getDoc(farmDocRef);
+            if(farmDocSnap.exists()) {
+                setFarmProfile(farmDocSnap.data() as Farm);
+            }
+
             const yearsQuery = query(collection(db, FARMING_YEARS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("startDate", "desc"));
             const yearsSnapshot = await getDocs(yearsQuery);
             const fetchedYears = yearsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FarmingYear));
             setFarmingYears(fetchedYears);
         } catch (err: any) {
-            console.error("Error fetching farming years:", err);
-            toast({ title: "Could not load year filters", description: err.message, variant: "destructive" });
+            console.error("Error fetching farm/year data:", err);
+            toast({ title: "Could not load filter data", description: err.message, variant: "destructive" });
         }
     };
-    fetchYears();
+    fetchFarmAndYearData();
   }, [userProfile, toast]);
 
   useEffect(() => {
@@ -192,7 +201,12 @@ export default function FinancialDashboardPage() {
   };
 
   const selectedYearData = farmingYears.find(y => y.id === selectedYearId);
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
+  const formatCurrency = (amount: number) => {
+    const currencyCode = farmProfile?.currency || 'GHS';
+    // A simple mapping for locale. For a real app, this would be more robust.
+    const locale = currencyCode === 'USD' ? 'en-US' : 'en-GH';
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: currencyCode }).format(amount);
+  };
   
   const getSelectedPeriodDescription = () => {
     let budgetDesc = 'All Operations / ';

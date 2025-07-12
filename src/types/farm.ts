@@ -18,6 +18,7 @@ export interface Farm {
   farmEmail?: string;
   farmPhone?: string;
   farmWebsite?: string;
+  currency?: 'GHS' | 'USD' | 'EUR' | 'NGN'; // Added for multi-currency support
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
   ownerId: string; // The userId of the user who created the farm

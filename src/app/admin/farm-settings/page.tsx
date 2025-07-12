@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -18,6 +19,9 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { Farm } from '@/types/farm';
 import { useRouter } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const currencyOptions = ['GHS', 'USD', 'EUR', 'NGN'] as const;
 
 const farmSettingsSchema = z.object({
   name: z.string().min(3, { message: "Farm name must be at least 3 characters." }),
@@ -28,6 +32,7 @@ const farmSettingsSchema = z.object({
   farmEmail: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
   farmPhone: z.string().optional(),
   farmWebsite: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  currency: z.enum(currencyOptions).optional(),
 });
 
 type FarmSettingsFormValues = z.infer<typeof farmSettingsSchema>;
@@ -44,7 +49,7 @@ export default function FarmSettingsPage() {
     resolver: zodResolver(farmSettingsSchema),
     defaultValues: {
       name: '', description: '', country: '', region: '', city: '',
-      farmEmail: '', farmPhone: '', farmWebsite: '',
+      farmEmail: '', farmPhone: '', farmWebsite: '', currency: 'GHS',
     },
   });
 
@@ -73,6 +78,7 @@ export default function FarmSettingsPage() {
             farmEmail: farmData.farmEmail || '',
             farmPhone: farmData.farmPhone || '',
             farmWebsite: farmData.farmWebsite || '',
+            currency: farmData.currency || 'GHS',
           });
         } else {
           setError("Farm profile not found. It might have been deleted.");
@@ -189,6 +195,24 @@ export default function FarmSettingsPage() {
                 <FormField control={form.control} name="farmEmail" render={({ field }) => (<FormItem><FormLabel>Farm Email (Optional)</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="farmWebsite" render={({ field }) => (<FormItem><FormLabel>Farm Website (Optional)</FormLabel><FormControl><Input placeholder="https://..." {...field} /></FormControl><FormMessage /></FormItem>)} />
               </div>
+              <Separator />
+               <h3 className="text-lg font-medium text-foreground">Financial Settings</h3>
+               <FormField
+                  control={form.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default Currency*</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger className="w-[200px]"><SelectValue placeholder="Select currency" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {currencyOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
             </CardContent>
             <CardFooter>
               <Button type="submit" disabled={isSubmitting}>
