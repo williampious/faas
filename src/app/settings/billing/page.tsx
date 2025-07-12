@@ -173,9 +173,9 @@ export default function BillingPage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="p-4 bg-primary/10 rounded-lg text-center">
-                  <p className="text-sm text-primary font-semibold">You are on the</p>
-                  <p className="text-3xl font-bold text-primary capitalize">{currentPlan.planId}</p>
-                  <p className="text-sm text-primary">Plan</p>
+                  <div className="text-sm text-primary font-semibold">You are on the</div>
+                  <div className="text-3xl font-bold text-primary capitalize">{currentPlan.planId}</div>
+                  <div className="text-sm text-primary">Plan</div>
                 </div>
                 <div className="text-sm space-y-2">
                   <div className="flex items-center gap-2">
