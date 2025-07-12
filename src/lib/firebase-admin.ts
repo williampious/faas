@@ -10,7 +10,12 @@ if (!admin.apps.length) {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
-  if (privateKey && clientEmail && projectId && projectId !== "YOUR_PROJECT_ID_FROM_SERVICE_ACCOUNT" && privateKey !== "YOUR_PRIVATE_KEY") {
+  const hasEnvVars = privateKey && clientEmail && projectId;
+  const hasPlaceholders = 
+    (projectId && projectId.includes("YOUR_PROJECT_ID")) ||
+    (privateKey && privateKey.includes("YOUR_PRIVATE_KEY"));
+
+  if (hasEnvVars && !hasPlaceholders) {
     try {
       admin.initializeApp({
         credential: admin.credential.cert({
@@ -41,13 +46,11 @@ if (!admin.apps.length) {
     }
   } else {
     console.warn(
-        "[Firebase Admin] SDK credentials are not fully set in .env (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY) " +
-        "and GOOGLE_APPLICATION_CREDENTIALS is not set. Admin SDK features will be unavailable. " +
-        "Ensure placeholder values are replaced and environment variables are accessible to the server."
+        "🛑 [Firebase Admin] SDK credentials not set. Server-side features like user migration will fail. " +
+        "Please ensure `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` are correctly set " +
+        "in your hosting environment's server variables and that placeholder values are replaced."
     );
   }
-} else {
-    console.log("[Firebase Admin] SDK was already initialized.");
 }
 
 let adminDbInstance: admin.firestore.Firestore | null = null;
