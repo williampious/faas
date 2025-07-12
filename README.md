@@ -14,7 +14,11 @@ AgriFAAS Connect is designed for a range of users within the agricultural ecosys
 *   **Farm Investors & Financial Institutions:** The robust financial reporting and dashboard features provide the transparency and oversight needed for investment and lending decisions.
 *   **Agricultural Consultants:** Consultants can use the platform to manage multiple client farms, track recommendations, and monitor outcomes.
 
-## 1. Important Note on Firestore Security Rules
+---
+
+## **Important Setup Instructions**
+
+### 1. Firestore Security Rules
 
 If you encounter permission errors, especially during **Farm Setup**, **User Management**, **Plot Management**, or when an **AEO manages farmers**, you MUST update your Firestore Security Rules. The default rules are too restrictive.
 
@@ -238,7 +242,7 @@ service cloud.firestore {
 }
 ```
 
-## 2. Important Note on Firebase Storage Security Rules
+### 2. Firebase Storage Security Rules
 
 If you see a `storage/unauthorized` error in the browser console when trying to **upload a profile photo**, you must update your Firebase Storage Security Rules.
 
@@ -258,83 +262,36 @@ service firebase.storage {
 }
 ```
 
-## 3. Important Note on Firestore Indexes
+### 3. Server-Side Environment Variables (CRITICAL FOR ADMIN FEATURES)
 
-As the app's features grow, Firestore will require specific indexes for complex queries to work securely and efficiently. If you see an error in your browser console that says `The query requires an index...` followed by a long URL, you must create the specified index.
+Server-side features like the **User Subscription Migration Tool** or **Paystack Webhooks** require special administrative access to Firebase. To enable this, you must set up server-side environment variables in your hosting platform (e.g., Google Cloud Run, Vercel).
+
+**Step 1: Get Your Credentials**
+1.  Go to your **Firebase Console -> Project settings -> Service accounts**.
+2.  Click **Generate new private key**. A JSON file will download.
+
+**Step 2: Add to Your Hosting Environment**
+1.  Open the downloaded JSON file. You will need the `project_id`, `client_email`, and `private_key` values from it.
+2.  Go to your hosting provider's settings for your project (e.g., Vercel Dashboard -> Project -> Settings -> Environment Variables).
+3.  Add the following three variables:
+    *   `FIREBASE_PROJECT_ID`: Paste the `project_id` value.
+    *   `FIREBASE_CLIENT_EMAIL`: Paste the `client_email` value.
+    *   `FIREBASE_PRIVATE_KEY`: Paste the entire `private_key` string, including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines.
+4.  **Redeploy your application** for the changes to take effect.
+
+### 4. Firestore Indexes
+
+As the app's features grow, Firestore will require specific indexes for complex queries to work securely and efficiently. If you see an error in your browser console that says `The query requires an index...` followed by a long URL, you must create the specified index by following the link.
 
 You can create these by following the link provided in the console error, or by going to your **Firebase Console -> Firestore Database -> Indexes** tab and creating them manually. The app will not function correctly without them.
 
-### Required Indexes:
+**Required Indexes So Far:**
 
-#### For User and Directory Management:
-
-1.  **AEO Farmer Directory:**
+*   **AEO Farmer Directory:**
     *   Collection: `users`, Fields: `managedByAEO` (Asc), `fullName` (Asc), Scope: Collection
-    
-2.  **HR Employee Directory:**
+*   **HR Employee Directory:**
     *   Collection: `users`, Fields: `farmId` (Asc), `fullName` (Asc), Scope: Collection
-
-#### For Reports and Dashboards:
-
-3.  **Financial Dashboard & Ledger:**
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Asc/Desc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `category` (Asc/Desc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `linkedModule` (Asc/Desc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `amount` (Asc/Desc), Scope: Collection
-
-4.  **Budgeting Module:**
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `type` (Asc), `date` (Asc), Scope: Collection
-    
-5.  **Profitability Report (Sorting):**
-    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `dateHarvested` (Asc/Desc), Scope: Collection
-    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `cropType` (Asc/Desc), Scope: Collection
-    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalSalesIncome` (Asc/Desc), Scope: Collection
-    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalHarvestCost` (Asc/Desc), Scope: Collection
-    
-#### For Operational Modules:
-
-6.  **AI Planting Advice History:**
-    *   Collection: `plantingAdviceRecords`, Fields: `farmId` (Asc), `createdAt` (Desc), Scope: Collection
-
-7.  **Farming Years & Seasons:**
-    *   Collection: `farmingYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
-
-8.  **Financial Years (Office Mgmt):**
-    *   Collection: `financialYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
-
-9.  **Soil & Water Management:**
-    *   Collection: `soilTestRecords`, Fields: `farmId` (Asc), `testDate` (Desc), Scope: Collection
-
-10. **Technology Management:**
-    *   Collection: `technologyAssets`, Fields: `farmId` (Asc), `purchaseDate` (Desc), Scope: Collection
-
-11. **Facility Management:**
-    *   Collection: `facilityManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
-
-12. **Records Management:**
-    *   Collection: `recordsManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
-
-13. **Event Planning:**
-    *   Collection: `officeEvents`, Fields: `farmId` (Asc), `eventDate` (Desc), Scope: Collection
-
-14. **Safety & Security Management:**
-    *   Collection: `safetySecurityRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
-
-15. **AEO Knowledge Base:**
-    *   Collection: `knowledgeArticles`, Fields: `authorId` (Asc), `createdAt` (Desc), Scope: Collection
-            
-16. **Breeding Records:**
-    *   Collection: `breedingRecords`, Fields: `farmId` (Asc), `matingDate` (Desc), Scope: Collection
-
-17. **Feeding Records:**
-    *   Collection: `feedingRecords`, Fields: `farmId` (Asc), `date` (Desc), Scope: Collection
-
-#### For Billing & Invoicing (Future Use):
-
-18. **Invoice History:**
-    *   Collection: `invoices`, Fields: `farmId` (Asc), `invoiceDate` (Desc), Scope: Collection
-    
-19. **Subscription Management:**
-    *   Collection: `subscriptions`, Fields: `farmId` (Asc), `status` (Asc), Scope: Collection
-
-    
+*   **Financial Dashboard & Ledger (Multiple):**
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Asc/Desc)
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `category` (Asc/Desc)
+*   **And others as prompted by the application...** Review `src/README.md` for a comprehensive list.
