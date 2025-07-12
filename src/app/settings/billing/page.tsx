@@ -6,13 +6,16 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CreditCard, Check, Star, Gem, Rocket } from 'lucide-react';
+import { ArrowLeft, CreditCard, Check, Star, Gem, Rocket, Mail, CircleDollarSign } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import type { SubscriptionDetails } from '@/types/user';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 
 interface TierFeature {
@@ -25,10 +28,10 @@ interface FeatureGroup {
 }
 
 interface PricingTier {
-  id: string;
+  id: 'starter' | 'grower' | 'business' | 'enterprise';
   name: string;
   icon: React.ElementType;
-  price: string;
+  price: { monthly: number; annually: number };
   description: string;
   featureGroups: FeatureGroup[];
   isEnterprise?: boolean; 
@@ -40,7 +43,7 @@ const pricingTiers: PricingTier[] = [
     id: 'starter', 
     name: 'Starter', 
     icon: Check, 
-    price: 'Free', 
+    price: { monthly: 0, annually: 0 }, 
     description: "For individual farmers or small teams getting started.",
     featureGroups: [
         {
@@ -59,7 +62,7 @@ const pricingTiers: PricingTier[] = [
     id: 'grower', 
     name: 'Grower', 
     icon: Star, 
-    price: '₵209/mo', 
+    price: { monthly: 209, annually: 2099 }, 
     description: "For growing farms and teams needing more capabilities.",
     featureGroups: [
         {
@@ -85,7 +88,7 @@ const pricingTiers: PricingTier[] = [
     id: 'business', 
     name: 'Business', 
     icon: Gem, 
-    price: '₵449/mo', 
+    price: { monthly: 449, annually: 4499 }, 
     description: "For established agribusinesses requiring advanced tools.",
     featureGroups: [
         {
@@ -111,7 +114,7 @@ const pricingTiers: PricingTier[] = [
     id: 'enterprise', 
     name: 'Enterprise', 
     icon: Rocket, 
-    price: 'Custom', 
+    price: { monthly: 0, annually: 0 }, 
     description: "Custom solutions for large-scale operations.",
     featureGroups: [
         {
@@ -133,6 +136,9 @@ export default function BillingPage() {
   const { toast } = useToast();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<PricingTier | null>(null);
+
   const [currentPlan, setCurrentPlan] = useState<SubscriptionDetails>({
       planId: 'starter',
       status: 'Active',
@@ -142,22 +148,28 @@ export default function BillingPage() {
 
   useEffect(() => {
     // When the user profile loads, update the current plan state
-    if (userProfile) {
-        setCurrentPlan(userProfile.subscription || {
-            planId: 'starter',
-            status: 'Active',
-            nextBillingDate: null,
-            billingCycle: 'annually',
-        });
+    if (userProfile && userProfile.subscription) {
+        setCurrentPlan(userProfile.subscription);
     }
   }, [userProfile]);
   
-  const handlePlanAction = (planId: string) => {
-    if (planId === currentPlan.planId) return;
+  const handlePlanAction = (plan: PricingTier) => {
+    if (plan.id === currentPlan.planId) return;
+
+    if (plan.isEnterprise) {
+        router.push('/#contact-us');
+        return;
+    }
     
+    setSelectedPlanForCheckout(plan);
+    setIsCheckoutModalOpen(true);
+  };
+  
+  const handleProceedToPayment = () => {
     toast({
-      title: "Billing System Under Construction",
-      description: `The checkout process for the '${planId}' plan is not yet implemented.`,
+      title: "Payment Gateway Not Implemented",
+      description: "This is where the app would redirect to a secure payment processor like Paystack or Stripe.",
+      variant: "default",
     });
   };
 
@@ -166,6 +178,9 @@ export default function BillingPage() {
     if (isEnterprise) return 'Contact Us';
     return 'Upgrade';
   }
+
+  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+
 
   // Handle case where profile is still loading
   if (isProfileLoading) {
@@ -176,10 +191,11 @@ export default function BillingPage() {
                 icon={CreditCard}
                 description="Loading your subscription details..."
             />
-            {/* You could add a loading skeleton here if desired */}
         </div>
     );
   }
+
+  const currentPlanDetails = pricingTiers.find(p => p.id === currentPlan.planId) || pricingTiers[0];
 
   return (
     <div>
@@ -245,7 +261,7 @@ export default function BillingPage() {
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="font-bold text-lg">{tier.price}</p>
+                                <p className="font-bold text-lg">{tier.isEnterprise ? 'Custom' : `${formatCurrency(tier.price.monthly)}/mo`}</p>
                             </div>
                         </div>
                     </CardHeader>
@@ -267,7 +283,7 @@ export default function BillingPage() {
                     </CardContent>
                     <CardFooter>
                         <Button
-                            onClick={() => tier.isEnterprise ? router.push('/#contact-us') : handlePlanAction(tier.id)}
+                            onClick={() => handlePlanAction(tier)}
                             disabled={currentPlan.planId === tier.id}
                             variant={currentPlan.planId === tier.id ? 'secondary' : 'default'}
                             className="w-full"
@@ -281,6 +297,55 @@ export default function BillingPage() {
           </Card>
         </div>
       </div>
+      
+      <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Your Plan Upgrade</DialogTitle>
+            <DialogDescription>
+              Review your selection before proceeding to payment.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPlanForCheckout && (
+            <div className="py-4 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="capitalize">{selectedPlanForCheckout.name} Plan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{formatCurrency(selectedPlanForCheckout.price.annually)} <span className="text-sm font-normal text-muted-foreground">/ year</span></p>
+                  <p className="text-sm text-muted-foreground">(Billed annually. Equivalent to {formatCurrency(selectedPlanForCheckout.price.monthly)}/month)</p>
+                </CardContent>
+              </Card>
+
+              <RadioGroup defaultValue="momo" className="space-y-2">
+                <Label className="font-semibold">Select Payment Method</Label>
+                <div className="flex items-center space-x-2 p-3 border rounded-md">
+                  <RadioGroupItem value="momo" id="momo" />
+                  <Label htmlFor="momo" className="flex items-center gap-2 font-normal">
+                    <CircleDollarSign className="h-5 w-5 text-yellow-500" />
+                    Mobile Money (MTN, Vodafone, AirtelTigo)
+                  </Label>
+                </div>
+                 <div className="flex items-center space-x-2 p-3 border rounded-md">
+                  <RadioGroupItem value="card" id="card" />
+                  <Label htmlFor="card" className="flex items-center gap-2 font-normal">
+                    <CreditCard className="h-5 w-5 text-blue-500" />
+                    Credit/Debit Card
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button onClick={handleProceedToPayment} disabled>
+              Proceed to Payment (Coming Soon)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
