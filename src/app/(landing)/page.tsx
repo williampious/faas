@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Settings2, BrainCircuit, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon, LayoutList, DownloadCloud, LifeBuoy, HelpCircle, Handshake, GitFork, Building, LandPlot, HandHelping, UserCog } from 'lucide-react';
+import { ArrowRight, Settings2, BrainCircuit, Tractor, UserPlus, CalendarCheck, Lightbulb, TrendingUp, Users, Mail, Phone, MapPin, Link as LinkIcon, LayoutList, DownloadCloud, LifeBuoy, HelpCircle, Handshake, GitFork, Building, LandPlot, HandHelping, UserCog, DollarSign } from 'lucide-react';
 
 interface BenefitCardProps {
   icon: React.ElementType;
@@ -229,6 +229,12 @@ export default function LandingPage() {
               <Button variant="secondary" size="lg">
                 <LayoutList className="mr-2 h-4 w-4" />
                 Explore Features
+              </Button>
+            </Link>
+            <Link href="/pricing">
+              <Button variant="secondary" size="lg">
+                <DollarSign className="mr-2 h-4 w-4" />
+                View Pricing
               </Button>
             </Link>
             <Link href="/installation-guide">
