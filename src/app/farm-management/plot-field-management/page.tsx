@@ -14,13 +14,15 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { LayoutGrid, PlusCircle, Edit2, Trash2, ArrowLeft, MapPin, Loader2, AlertTriangle } from 'lucide-react';
+import { LayoutGrid, PlusCircle, Edit2, Trash2, ArrowLeft, MapPin, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import type { PlotField } from '@/types/farm';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
+import Link from 'next/link';
 
 const plotFieldFormSchema = z.object({
   name: z.string().min(2, { message: "Plot name must be at least 2 characters." }).max(100),
@@ -66,6 +68,9 @@ export default function PlotFieldManagementPage() {
     },
   });
 
+  const isStarterPlan = userProfile?.subscription?.planId === 'starter';
+  const hasReachedPlotLimit = isStarterPlan && plots.length >= 1;
+
   useEffect(() => {
     if (isProfileLoading) return;
     if (!userProfile?.farmId) {
@@ -104,6 +109,15 @@ export default function PlotFieldManagementPage() {
 
 
   const handleOpenModal = (plotToEdit?: PlotField) => {
+    if (hasReachedPlotLimit && !plotToEdit) {
+        toast({
+            title: "Plot Limit Reached",
+            description: "The Starter plan allows for only 1 plot. Please upgrade to add more.",
+            variant: "destructive"
+        });
+        return;
+    }
+
     if (plotToEdit) {
       setEditingPlot(plotToEdit);
       form.reset({
@@ -223,12 +237,25 @@ export default function PlotFieldManagementPage() {
             <Button variant="outline" onClick={() => router.push('/farm-management')}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Farm Management
             </Button>
-            <Button onClick={() => handleOpenModal()}>
+            <Button onClick={() => handleOpenModal()} disabled={hasReachedPlotLimit}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add New Plot/Field
             </Button>
           </div>
         }
       />
+
+      {hasReachedPlotLimit && (
+        <Alert className="mb-6 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700">
+            <Sparkles className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            <AlertTitle className="text-yellow-800 dark:text-yellow-200">Starter Plan Limit Reached</AlertTitle>
+            <ShadcnAlertDescription className="text-yellow-700 dark:text-yellow-300">
+                You have reached the 1-plot limit for the Starter plan. To manage more plots, please upgrade your subscription.
+                <Link href="/settings/billing">
+                  <Button variant="link" className="p-0 h-auto ml-1 text-yellow-800 dark:text-yellow-200 font-bold">Upgrade Plan</Button>
+                </Link>
+            </ShadcnAlertDescription>
+        </Alert>
+      )}
 
       <Dialog open={isModalOpen} onOpenChange={(isOpen) => {
         setIsModalOpen(isOpen);
