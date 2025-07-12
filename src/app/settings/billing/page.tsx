@@ -30,6 +30,7 @@ interface PricingTier {
   price: string;
   description: string;
   featureGroups: FeatureGroup[];
+  isEnterprise?: boolean; // To identify the enterprise plan specifically
 }
 
 
@@ -123,6 +124,7 @@ const pricingTiers: PricingTier[] = [
             ],
         },
     ],
+    isEnterprise: true,
   },
 ];
 
@@ -132,13 +134,25 @@ export default function BillingPage() {
   const { userProfile } = useUserProfile();
   
   // In a real app, this would be fetched from the user's subscription data in Firestore.
-  // For now, we'll mock it.
+  // For now, we'll mock it. If userProfile exists, use its data, otherwise default to starter.
   const [currentPlan, setCurrentPlan] = useState({
-      planId: 'starter', // Default to free plan
-      status: 'Active',
-      nextBillingDate: null,
-      billingCycle: 'annually',
+      planId: userProfile?.subscription?.planId || 'starter',
+      status: userProfile?.subscription?.status || 'Active',
+      nextBillingDate: userProfile?.subscription?.nextBillingDate || null,
+      billingCycle: userProfile?.subscription?.billingCycle || 'annually',
   });
+
+  useEffect(() => {
+    // This effect handles the case where userProfile loads after the initial state is set.
+    if (userProfile?.subscription) {
+      setCurrentPlan({
+        planId: userProfile.subscription.planId,
+        status: userProfile.subscription.status,
+        nextBillingDate: userProfile.subscription.nextBillingDate,
+        billingCycle: userProfile.subscription.billingCycle,
+      });
+    }
+  }, [userProfile]);
   
   const handlePlanAction = (planId: string) => {
     if (planId === currentPlan.planId) return; // Do nothing if it's the current plan
@@ -149,6 +163,12 @@ export default function BillingPage() {
       description: `The checkout process for the '${planId}' plan is not yet implemented.`,
     });
   };
+
+  const getButtonText = (planId: string, isEnterprise?: boolean) => {
+    if (planId === currentPlan.planId) return 'Your Current Plan';
+    if (isEnterprise) return 'Contact Us';
+    return 'Upgrade';
+  }
 
   return (
     <div>
@@ -235,13 +255,13 @@ export default function BillingPage() {
                         ))}
                     </CardContent>
                     <CardFooter>
-                       <Button
-                            onClick={() => handlePlanAction(tier.id)}
+                        <Button
+                            onClick={() => tier.isEnterprise ? router.push('/#contact-us') : handlePlanAction(tier.id)}
                             disabled={currentPlan.planId === tier.id}
                             variant={currentPlan.planId === tier.id ? 'secondary' : 'default'}
                             className="w-full"
                         >
-                            {currentPlan.planId === tier.id ? 'Your Current Plan' : tier.id === 'enterprise' ? 'Contact Us' : 'Upgrade'}
+                           {getButtonText(tier.id, tier.isEnterprise)}
                         </Button>
                     </CardFooter>
                 </Card>
