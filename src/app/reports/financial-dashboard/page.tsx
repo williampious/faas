@@ -14,7 +14,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Ba
 import { format, parseISO, subMonths } from 'date-fns';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy, type QueryConstraint, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, type QueryConstraint, doc, getDoc } from 'firebase/firestore';
 import type { FarmingYear } from '@/types/season';
 import type { Farm } from '@/types/farm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
