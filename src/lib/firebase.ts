@@ -47,7 +47,11 @@ if (!isFirebaseClientConfigured) {
   if (!getApps().length) {
     try {
       console.log("Attempting to initialize Firebase app with config:", firebaseConfigValuesFromEnv);
-      appInstance = initializeApp(firebaseConfigValuesFromEnv as FirebaseOptions);
+      const firebaseConfigWithDbUrl = {
+        ...firebaseConfigValuesFromEnv,
+        databaseURL: `https://${firebaseConfigValuesFromEnv.projectId}.firebaseio.com`,
+      };
+      appInstance = initializeApp(firebaseConfigWithDbUrl as FirebaseOptions);
       console.log("Firebase app initialized successfully (client-side).");
     } catch (e: any) {
       console.error(
