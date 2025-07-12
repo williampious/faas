@@ -38,6 +38,7 @@ interface PricingTier {
   buttonText: string;
   buttonVariant?: 'default' | 'secondary' | 'outline';
   highlight?: boolean;
+  badge?: string;
   href: (planId: string, cycle: BillingCycle) => string;
 }
 
@@ -78,7 +79,7 @@ const pricingTiers: PricingTier[] = [
     name: 'Grower',
     icon: Star,
     description: "For growing farms and teams needing more capabilities.",
-    price: { monthly: 210, annually: 2100 },
+    price: { monthly: 209, annually: 2099 },
     priceDescription: 'per user / month',
     featureGroups: [
         {
@@ -110,8 +111,9 @@ const pricingTiers: PricingTier[] = [
     name: 'Business',
     icon: Gem,
     description: "For established agribusinesses requiring advanced tools.",
-    price: { monthly: 450, annually: 4500 },
+    price: { monthly: 449, annually: 4499 },
     priceDescription: 'per user / month',
+    badge: 'Best Value',
     featureGroups: [
         {
             title: 'Everything in Grower, plus:',
@@ -183,7 +185,7 @@ const faqItems = [
 
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('annually');
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
+  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
   return (
     <div className="container mx-auto px-4">
@@ -201,7 +203,7 @@ export default function PricingPage() {
           onCheckedChange={(checked) => setBillingCycle(checked ? 'annually' : 'monthly')}
         />
         <Label htmlFor="billing-cycle" className={cn("font-medium", billingCycle === 'annually' && 'text-primary')}>
-          Annually <span className="text-sm font-normal text-green-600">(Save up to 20%)</span>
+          Annually <span className="text-sm font-normal text-green-600">(Save up to 17%!)</span>
         </Label>
       </div>
 
@@ -210,10 +212,15 @@ export default function PricingPage() {
           <Card 
             key={tier.id} 
             className={cn(
-              "flex flex-col shadow-xl hover:shadow-2xl transition-shadow duration-300",
+              "flex flex-col shadow-xl hover:shadow-2xl transition-shadow duration-300 relative overflow-hidden",
               tier.highlight && "border-primary border-2 ring-4 ring-primary/20"
             )}
           >
+            {tier.badge && (
+                <div className="absolute top-2 -right-10 text-center bg-accent text-accent-foreground text-xs font-semibold py-1 px-10 transform rotate-45">
+                    {tier.badge}
+                </div>
+            )}
             <CardHeader className={cn("text-center pb-4", tier.highlight && "bg-primary/5")}>
               <tier.icon className={cn("h-12 w-12 mx-auto mb-3", tier.highlight ? "text-primary" : "text-muted-foreground")} />
               <CardTitle className="text-2xl font-semibold">{tier.name}</CardTitle>

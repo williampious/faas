@@ -58,7 +58,7 @@ const pricingTiers: PricingTier[] = [
     id: 'grower', 
     name: 'Grower', 
     icon: Star, 
-    price: '₵210/mo', 
+    price: '₵209/mo', 
     description: "For growing farms and teams needing more capabilities.",
     featureGroups: [
         {
@@ -84,7 +84,7 @@ const pricingTiers: PricingTier[] = [
     id: 'business', 
     name: 'Business', 
     icon: Gem, 
-    price: '₵450/mo', 
+    price: '₵449/mo', 
     description: "For established agribusinesses requiring advanced tools.",
     featureGroups: [
         {
