@@ -2,7 +2,7 @@
 'use client';
 
 import { PageHeader } from '@/components/layout/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Settings, User, Lock, FileText, ChevronRight, Info, AlertTriangle, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
