@@ -328,4 +328,13 @@ You can create these by following the link provided in the console error, or by 
 
 17. **Feeding Records:**
     *   Collection: `feedingRecords`, Fields: `farmId` (Asc), `date` (Desc), Scope: Collection
-```
+
+#### For Billing & Invoicing (Future Use):
+
+18. **Invoice History:**
+    *   Collection: `invoices`, Fields: `farmId` (Asc), `invoiceDate` (Desc), Scope: Collection
+    
+19. **Subscription Management:**
+    *   Collection: `subscriptions`, Fields: `farmId` (Asc), `status` (Asc), Scope: Collection
+
+    
