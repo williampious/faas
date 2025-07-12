@@ -1,3 +1,4 @@
+
 // src/app/hr/payroll/page.tsx
 'use client';
 
@@ -121,7 +122,6 @@ export default function PayrollPage() {
         notes: recordToEdit.notes || '',
       });
     } else {
-      setEditingRecord(null);
       form.reset({ userId: '', payPeriod: '', paymentDate: '', grossAmount: undefined, deductions: undefined, paymentMethod: undefined, notes: '' });
     }
     setIsModalOpen(true);
