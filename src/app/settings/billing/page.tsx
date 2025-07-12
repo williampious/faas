@@ -142,8 +142,12 @@ export default function BillingPage() {
   });
 
   useEffect(() => {
+    // Gracefully handle the case where userProfile might be null during initialization.
     if (userProfile?.subscription) {
         setCurrentPlan(userProfile.subscription);
+    } else if (userProfile && !userProfile.subscription) {
+        // If profile is loaded but has no subscription, default to starter
+        setCurrentPlan({ planId: 'starter', status: 'Active', nextBillingDate: null, billingCycle: 'annually' });
     }
   }, [userProfile]);
   
@@ -155,8 +159,6 @@ export default function BillingPage() {
         return;
     }
     
-    // For now, we'll assume annual billing cycle for upgrades.
-    // This can be enhanced with a toggle later.
     router.push(`/settings/billing/checkout?plan=${plan.id}&cycle=annually`);
   };
 

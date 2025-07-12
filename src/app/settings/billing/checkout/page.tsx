@@ -1,16 +1,19 @@
 
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CreditCard, Lock, CircleDollarSign } from 'lucide-react';
+import { ArrowLeft, CreditCard, Lock, CircleDollarSign, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { useUserProfile } from '@/contexts/user-profile-context';
+import { initializePaystackTransaction } from './actions';
+
 
 // Data can be moved to a shared file later
 const pricingTiers = [
@@ -24,6 +27,9 @@ function CheckoutPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { userProfile } = useUserProfile();
+
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const planId = searchParams.get('plan') as 'starter' | 'grower' | 'business' | 'enterprise' || 'starter';
   const cycle = searchParams.get('cycle') as 'monthly' | 'annually' || 'annually';
@@ -32,12 +38,28 @@ function CheckoutPageContent() {
   const price = cycle === 'annually' ? selectedPlan.price.annually : selectedPlan.price.monthly;
   const billingCycleText = cycle === 'annually' ? 'Billed Annually' : 'Billed Monthly';
   
-  const handleProceedToPayment = () => {
-    toast({
-      title: "Payment Gateway Not Implemented",
-      description: "This is where the app would redirect to Paystack to handle the payment.",
-      variant: "default",
-    });
+  const handleProceedToPayment = async () => {
+    if (!userProfile) {
+      toast({ title: "Error", description: "You must be logged in to make a payment.", variant: "destructive" });
+      return;
+    }
+    
+    setIsProcessing(true);
+    
+    const amountInKobo = price * 100; // Convert GHS to Kobo
+    const result = await initializePaystackTransaction(userProfile, amountInKobo, planId, cycle);
+
+    if (result.success && result.data?.authorization_url) {
+        // Redirect the user to Paystack's page to complete payment
+        router.push(result.data.authorization_url);
+    } else {
+        toast({
+            title: "Payment Initialization Failed",
+            description: result.message || "Could not start the payment process. Please try again.",
+            variant: "destructive",
+        });
+        setIsProcessing(false);
+    }
   };
   
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
@@ -97,11 +119,12 @@ function CheckoutPageContent() {
               </RadioGroup>
             </CardContent>
             <CardFooter className="flex-col items-start gap-4">
-               <Button size="lg" className="w-full" onClick={handleProceedToPayment} disabled>
-                  <Lock className="mr-2 h-4 w-4" /> Pay Now (Coming Soon)
+               <Button size="lg" className="w-full" onClick={handleProceedToPayment} disabled={isProcessing}>
+                  {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
+                  {isProcessing ? 'Initializing...' : 'Proceed to Paystack'}
                </Button>
                <p className="text-xs text-muted-foreground text-center w-full">
-                Your payment will be processed securely. By clicking "Pay Now", you agree to our Terms of Service.
+                You will be redirected to Paystack's secure payment page to complete your purchase.
                </p>
             </CardFooter>
           </Card>
