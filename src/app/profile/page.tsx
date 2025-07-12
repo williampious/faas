@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -388,9 +389,7 @@ export default function UserProfilePage() {
           </Button>
         )}
       />
-      <Dialog open={isPhotoUploadOpen} onOpenChange={setIsPhotoUploadOpen}>
-        <ProfilePhotoUploadDialog onUploadSuccess={() => setIsPhotoUploadOpen(false)} />
-      </Dialog>
+      
       {isEditMode ? (
         <Card className="shadow-lg">
           <CardHeader>
@@ -510,163 +509,166 @@ export default function UserProfilePage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="md:col-span-1 space-y-6">
-            <Card className="shadow-lg">
-              <CardHeader className="items-center text-center">
-                <div className="relative group">
-                    <Avatar className="w-24 h-24 mb-4 border-2 border-primary">
-                      <AvatarImage src={currentProfile.avatarUrl} alt={currentProfile.fullName} data-ai-hint="profile person" />
-                      <AvatarFallback>{currentProfile.fullName?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
-                    </Avatar>
-                    <DialogTrigger asChild>
-                        <button onClick={() => setIsPhotoUploadOpen(true)} className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Camera className="h-8 w-8 text-white" />
-                        </button>
-                    </DialogTrigger>
-                </div>
-                <CardTitle className="font-headline">{currentProfile.fullName}</CardTitle>
-                <div className="flex flex-wrap justify-center gap-2 mt-1">
-                  {currentProfile.role?.map(r => <Badge key={r} variant={r === 'Admin' ? 'default' : 'secondary'}>{r}</Badge>) ?? <Badge variant="outline">No Role</Badge>}
-                </div>
-              </CardHeader>
-              <CardContent className="text-sm">
-                <InfoItem icon={Mail} label="Email" value={currentProfile.emailAddress || 'Not provided'} />
-                <InfoItem icon={Phone} label="Phone" value={currentProfile.phoneNumber || 'Not set'} />
-                {currentProfile.dateOfBirth && <InfoItem icon={CalendarIcon} label="Date of Birth" value={formatTimestamp(currentProfile.dateOfBirth, 'MMMM d, yyyy')} />}
-                <InfoItem icon={Briefcase} label="Gender" value={currentProfile.gender || 'Not specified'}/>
-                {currentProfile.nationalId && <InfoItem label="National ID" value={currentProfile.nationalId} />}
-                {currentProfile.address && (
-                  <InfoItem icon={MapPin} label="Location" value={
-                    [currentProfile.address.street, currentProfile.address.city, currentProfile.address.region, currentProfile.address.country, currentProfile.address.postalCode].filter(Boolean).join(', ') || 'Not set'
-                  } />
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-headline text-lg flex items-center">
-                  <ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Account Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <InfoItem label="Status" value={<Badge variant={currentProfile.accountStatus === 'Active' ? 'default' : 'destructive'}>{currentProfile.accountStatus}</Badge>} />
-                <InfoItem label="Member Since" value={formatTimestamp(currentProfile.registrationDate, 'MMMM d, yyyy')} />
-                <InfoItem label="Last Updated" value={formatTimestamp(currentProfile.updatedAt)} />
-                <InfoItem label="User ID" value={currentProfile.userId} className="text-xs break-all" />
-                <InfoItem label="Firebase UID" value={currentProfile.firebaseUid} className="text-xs break-all" />
-                {currentProfile.farmId && <InfoItem label="Farm ID" value={currentProfile.farmId} className="text-xs break-all" />}
-              </CardContent>
-            </Card>
-            
-            {isAEO && (
-               <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle className="font-headline text-lg flex items-center">
-                     <MapPin className="mr-2 h-5 w-5 text-primary" /> AEO Assignment
-                  </CardTitle>
+        <Dialog open={isPhotoUploadOpen} onOpenChange={setIsPhotoUploadOpen}>
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="md:col-span-1 space-y-6">
+              <Card className="shadow-lg">
+                <CardHeader className="items-center text-center">
+                  <div className="relative group">
+                      <Avatar className="w-24 h-24 mb-4 border-2 border-primary">
+                        <AvatarImage src={currentProfile.avatarUrl} alt={currentProfile.fullName} data-ai-hint="profile person" />
+                        <AvatarFallback>{currentProfile.fullName?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
+                      </Avatar>
+                      <DialogTrigger asChild>
+                          <button className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Camera className="h-8 w-8 text-white" />
+                          </button>
+                      </DialogTrigger>
+                  </div>
+                  <CardTitle className="font-headline">{currentProfile.fullName}</CardTitle>
+                  <div className="flex flex-wrap justify-center gap-2 mt-1">
+                    {currentProfile.role?.map(r => <Badge key={r} variant={r === 'Admin' ? 'default' : 'secondary'}>{r}</Badge>) ?? <Badge variant="outline">No Role</Badge>}
+                  </div>
                 </CardHeader>
-                <CardContent className="text-sm space-y-2">
-                  <InfoItem label="Assigned Region" value={currentProfile.assignedRegion || 'Not set'} />
-                  <InfoItem label="Assigned District" value={currentProfile.assignedDistrict || 'Not set'} />
+                <CardContent className="text-sm">
+                  <InfoItem icon={Mail} label="Email" value={currentProfile.emailAddress || 'Not provided'} />
+                  <InfoItem icon={Phone} label="Phone" value={currentProfile.phoneNumber || 'Not set'} />
+                  {currentProfile.dateOfBirth && <InfoItem icon={CalendarIcon} label="Date of Birth" value={formatTimestamp(currentProfile.dateOfBirth, 'MMMM d, yyyy')} />}
+                  <InfoItem icon={Briefcase} label="Gender" value={currentProfile.gender || 'Not specified'}/>
+                  {currentProfile.nationalId && <InfoItem label="National ID" value={currentProfile.nationalId} />}
+                  {currentProfile.address && (
+                    <InfoItem icon={MapPin} label="Location" value={
+                      [currentProfile.address.street, currentProfile.address.city, currentProfile.address.region, currentProfile.address.country, currentProfile.address.postalCode].filter(Boolean).join(', ') || 'Not set'
+                    } />
+                  )}
                 </CardContent>
               </Card>
-            )}
 
-          </div>
-
-          <div className="md:col-span-2 space-y-6">
-            {currentProfile.farmDetails && Object.keys(currentProfile.farmDetails).length > 0 && (
               <Card className="shadow-lg">
                 <CardHeader>
                   <CardTitle className="font-headline text-lg flex items-center">
-                    <Building className="mr-2 h-5 w-5 text-primary" /> Farm & Hub Details
+                    <ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Account Details
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm space-y-2">
-                  <InfoItem label="Farm Hub ID" value={currentProfile.farmDetails.linkedFarmHubId} />
-                  <InfoItem label="Allocated Land" value={currentProfile.farmDetails.allocatedLandSizeAcres ? `${currentProfile.farmDetails.allocatedLandSizeAcres} acres` : 'N/A'} />
-                  <InfoItem label="Crops Grown" value={currentProfile.farmDetails.cropTypesBeingGrown?.join(', ')} />
-                  <InfoItem label="Irrigation Access" value={currentProfile.farmDetails.irrigationAccess !== undefined ? (currentProfile.farmDetails.irrigationAccess ? 'Yes' : 'No') : 'N/A'} />
-                  <InfoItem label="Productivity Score" value={currentProfile.farmDetails.productivityScore?.toString()} />
-                  {currentProfile.farmDetails.previousSeasonPerformance && <InfoItem label="Previous Season" value={currentProfile.farmDetails.previousSeasonPerformance} className="whitespace-pre-line"/>}
+                  <InfoItem label="Status" value={<Badge variant={currentProfile.accountStatus === 'Active' ? 'default' : 'destructive'}>{currentProfile.accountStatus}</Badge>} />
+                  <InfoItem label="Member Since" value={formatTimestamp(currentProfile.registrationDate, 'MMMM d, yyyy')} />
+                  <InfoItem label="Last Updated" value={formatTimestamp(currentProfile.updatedAt)} />
+                  <InfoItem label="User ID" value={currentProfile.userId} className="text-xs break-all" />
+                  <InfoItem label="Firebase UID" value={currentProfile.firebaseUid} className="text-xs break-all" />
+                  {currentProfile.farmId && <InfoItem label="Farm ID" value={currentProfile.farmId} className="text-xs break-all" />}
                 </CardContent>
               </Card>
-            )}
-
-            <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle className="font-headline text-lg flex items-center">
-                    <Settings className="mr-2 h-5 w-5 text-primary" /> Preferences & Notifications
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm space-y-3">
-                  <InfoItem label="Primary Language" value={currentProfile.primaryLanguage || 'Not set'} />
-                  <InfoItem label="Preferred Communication" value={currentProfile.preferredCommunicationChannel || 'Not set'} />
-                  
-                  <Separator />
-                  <h4 className="font-medium pt-1 text-muted-foreground">Notification Channels:</h4>
-                  <ul className="list-disc list-inside pl-4 text-xs">
-                    <li>Email: {currentProfile.notificationPreferences?.email ? 'Enabled' : 'Disabled'}</li>
-                    <li>SMS: {currentProfile.notificationPreferences?.sms ? 'Enabled' : 'Disabled'}</li>
-                    <li>Push Notifications: {currentProfile.notificationPreferences?.push ? 'Enabled' : 'Disabled'}</li>
-                    <li>WhatsApp: {currentProfile.notificationPreferences?.whatsApp ? 'Enabled' : 'Disabled'}</li>
-                  </ul>
-                  {!Object.values(currentProfile.notificationPreferences || {}).some(Boolean) && <p className="text-xs text-muted-foreground pl-4">No notification channels explicitly enabled.</p>}
-                  
-                  <Separator />
-                  <h4 className="font-medium pt-1 text-muted-foreground">Subscribed Alerts:</h4>
-                  <ul className="list-disc list-inside pl-4 text-xs">
-                    <li>Daily Summary: {currentProfile.alertsToggle?.dailySummary ? 'Subscribed' : 'Not Subscribed'}</li>
-                    <li>Weekly Summary: {currentProfile.alertsToggle?.weeklySummary ? 'Subscribed' : 'Not Subscribed'}</li>
-                    <li>Price Alerts: {currentProfile.alertsToggle?.priceAlerts ? 'Subscribed' : 'Not Subscribed'}</li>
-                    <li>Pest Alerts: {currentProfile.alertsToggle?.pestAlerts ? 'Subscribed' : 'Not Subscribed'}</li>
-                  </ul>
-                  {!Object.values(currentProfile.alertsToggle || {}).some(Boolean) && <p className="text-xs text-muted-foreground pl-4">No specific alerts subscribed.</p>}
-
-                  <Separator />
-                  <InfoItem label="Agricultural Tips" value={currentProfile.receiveAgriculturalTips ? 'Subscribed' : 'Not Subscribed'} />
-                  <InfoItem label="Weather Updates" value={currentProfile.receiveWeatherUpdates ? 'Subscribed' : 'Not Subscribed'} />
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg border-destructive/50">
-                <CardHeader>
-                    <CardTitle className="font-headline text-lg flex items-center text-destructive">
-                    <AlertTriangle className="mr-2 h-5 w-5" /> Advanced Settings
+              
+              {isAEO && (
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="font-headline text-lg flex items-center">
+                      <MapPin className="mr-2 h-5 w-5 text-primary" /> AEO Assignment
                     </CardTitle>
-                    <CardDescription>
-                    These are developer-focused actions. Use with caution.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive">Reset Local Settings</Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action will clear locally-stored browser settings, such as your saved weather location and livestock focus. It will not delete any of your farm's central data (like Plots, Financials, Tasks, etc.).
-                            <br/><br/>
-                            This is useful for troubleshooting display issues. This action cannot be undone.
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleResetLocalData}>Yes, Reset Local Settings</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                    </AlertDialog>
-                    <p className="text-xs text-muted-foreground mt-4">
-                        <strong>Note on User Data:</strong> To clear user and farm profiles from the central database, you must manually delete the documents from the 'users' and 'farms' collections in your Firebase Firestore console.
-                    </p>
-                </CardContent>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-2">
+                    <InfoItem label="Assigned Region" value={currentProfile.assignedRegion || 'Not set'} />
+                    <InfoItem label="Assigned District" value={currentProfile.assignedDistrict || 'Not set'} />
+                  </CardContent>
                 </Card>
+              )}
+
+            </div>
+
+            <div className="md:col-span-2 space-y-6">
+              {currentProfile.farmDetails && Object.keys(currentProfile.farmDetails).length > 0 && (
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="font-headline text-lg flex items-center">
+                      <Building className="mr-2 h-5 w-5 text-primary" /> Farm & Hub Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-2">
+                    <InfoItem label="Farm Hub ID" value={currentProfile.farmDetails.linkedFarmHubId} />
+                    <InfoItem label="Allocated Land" value={currentProfile.farmDetails.allocatedLandSizeAcres ? `${currentProfile.farmDetails.allocatedLandSizeAcres} acres` : 'N/A'} />
+                    <InfoItem label="Crops Grown" value={currentProfile.farmDetails.cropTypesBeingGrown?.join(', ')} />
+                    <InfoItem label="Irrigation Access" value={currentProfile.farmDetails.irrigationAccess !== undefined ? (currentProfile.farmDetails.irrigationAccess ? 'Yes' : 'No') : 'N/A'} />
+                    <InfoItem label="Productivity Score" value={currentProfile.farmDetails.productivityScore?.toString()} />
+                    {currentProfile.farmDetails.previousSeasonPerformance && <InfoItem label="Previous Season" value={currentProfile.farmDetails.previousSeasonPerformance} className="whitespace-pre-line"/>}
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="font-headline text-lg flex items-center">
+                      <Settings className="mr-2 h-5 w-5 text-primary" /> Preferences & Notifications
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-3">
+                    <InfoItem label="Primary Language" value={currentProfile.primaryLanguage || 'Not set'} />
+                    <InfoItem label="Preferred Communication" value={currentProfile.preferredCommunicationChannel || 'Not set'} />
+                    
+                    <Separator />
+                    <h4 className="font-medium pt-1 text-muted-foreground">Notification Channels:</h4>
+                    <ul className="list-disc list-inside pl-4 text-xs">
+                      <li>Email: {currentProfile.notificationPreferences?.email ? 'Enabled' : 'Disabled'}</li>
+                      <li>SMS: {currentProfile.notificationPreferences?.sms ? 'Enabled' : 'Disabled'}</li>
+                      <li>Push Notifications: {currentProfile.notificationPreferences?.push ? 'Enabled' : 'Disabled'}</li>
+                      <li>WhatsApp: {currentProfile.notificationPreferences?.whatsApp ? 'Enabled' : 'Disabled'}</li>
+                    </ul>
+                    {!Object.values(currentProfile.notificationPreferences || {}).some(Boolean) && <p className="text-xs text-muted-foreground pl-4">No notification channels explicitly enabled.</p>}
+                    
+                    <Separator />
+                    <h4 className="font-medium pt-1 text-muted-foreground">Subscribed Alerts:</h4>
+                    <ul className="list-disc list-inside pl-4 text-xs">
+                      <li>Daily Summary: {currentProfile.alertsToggle?.dailySummary ? 'Subscribed' : 'Not Subscribed'}</li>
+                      <li>Weekly Summary: {currentProfile.alertsToggle?.weeklySummary ? 'Subscribed' : 'Not Subscribed'}</li>
+                      <li>Price Alerts: {currentProfile.alertsToggle?.priceAlerts ? 'Subscribed' : 'Not Subscribed'}</li>
+                      <li>Pest Alerts: {currentProfile.alertsToggle?.pestAlerts ? 'Subscribed' : 'Not Subscribed'}</li>
+                    </ul>
+                    {!Object.values(currentProfile.alertsToggle || {}).some(Boolean) && <p className="text-xs text-muted-foreground pl-4">No specific alerts subscribed.</p>}
+
+                    <Separator />
+                    <InfoItem label="Agricultural Tips" value={currentProfile.receiveAgriculturalTips ? 'Subscribed' : 'Not Subscribed'} />
+                    <InfoItem label="Weather Updates" value={currentProfile.receiveWeatherUpdates ? 'Subscribed' : 'Not Subscribed'} />
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-lg border-destructive/50">
+                  <CardHeader>
+                      <CardTitle className="font-headline text-lg flex items-center text-destructive">
+                      <AlertTriangle className="mr-2 h-5 w-5" /> Advanced Settings
+                      </CardTitle>
+                      <CardDescription>
+                      These are developer-focused actions. Use with caution.
+                      </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="destructive">Reset Local Settings</Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              This action will clear locally-stored browser settings, such as your saved weather location and livestock focus. It will not delete any of your farm's central data (like Plots, Financials, Tasks, etc.).
+                              <br/><br/>
+                              This is useful for troubleshooting display issues. This action cannot be undone.
+                          </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleResetLocalData}>Yes, Reset Local Settings</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                      </AlertDialog>
+                      <p className="text-xs text-muted-foreground mt-4">
+                          <strong>Note on User Data:</strong> To clear user and farm profiles from the central database, you must manually delete the documents from the 'users' and 'farms' collections in your Firebase Firestore console.
+                      </p>
+                  </CardContent>
+                  </Card>
+            </div>
+            <ProfilePhotoUploadDialog onUploadSuccess={() => setIsPhotoUploadOpen(false)} />
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );
