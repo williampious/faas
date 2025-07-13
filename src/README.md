@@ -255,68 +255,65 @@ As the app's features grow, Firestore will require specific indexes for complex 
 
 You can create these by following the link provided in the console error, or by going to your **Firebase Console -> Firestore Database -> Indexes** tab and creating them manually. The app will not function correctly without them.
 
-### Required Indexes:
+### Comprehensive List of Required Indexes:
 
 #### For User and Directory Management:
 
-1.  **AEO Farmer Directory:**
+1.  **HR Employee Directory:**
+    *   Collection: `users`, Fields: `farmId` (Asc), `fullName` (Asc), Scope: Collection
+2.  **AEO Farmer Directory:**
     *   Collection: `users`, Fields: `managedByAEO` (Asc), `fullName` (Asc), Scope: Collection
     
-2.  **HR Employee Directory:**
-    *   Collection: `users`, Fields: `farmId` (Asc), `fullName` (Asc), Scope: Collection
+#### For Operational Modules:
 
-#### For Reports and Dashboards:
+3.  **AI Planting Advice History:**
+    *   Collection: `plantingAdviceRecords`, Fields: `farmId` (Asc), `createdAt` (Desc), Scope: Collection
+4.  **Farm Events:**
+    *   Collection: `farmEvents`, Fields: `farmId` (Asc), `createdAt` (Desc), Scope: Collection
+5.  **Farm & Financial Years:**
+    *   Collection: `farmingYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
+    *   Collection: `financialYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
+6.  **Animal Production (All modules):**
+    *   Collection: `animalHealthRecords`, Fields: `farmId` (Asc), `date` (Desc), Scope: Collection
+    *   Collection: `breedingRecords`, Fields: `farmId` (Asc), `matingDate` (Desc), Scope: Collection
+    *   Collection: `feedingRecords`, Fields: `farmId` (Asc), `date` (Desc), Scope: Collection
+7.  **Soil & Water Management:**
+    *   Collection: `soilTestRecords`, Fields: `farmId` (Asc), `testDate` (Desc), Scope: Collection
 
-3.  **Financial Dashboard & Ledger:**
+#### For Office Management Modules:
+
+8.  **Technology Management:**
+    *   Collection: `technologyAssets`, Fields: `farmId` (Asc), `purchaseDate` (Desc), Scope: Collection
+9.  **Facility Management:**
+    *   Collection: `facilityManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
+10. **Records Management:**
+    *   Collection: `recordsManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
+11. **Event Planning:**
+    *   Collection: `officeEvents`, Fields: `farmId` (Asc), `eventDate` (Desc), Scope: Collection
+12. **Safety & Security Management:**
+    *   Collection: `safetySecurityRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
+
+#### For AEO Tools:
+
+13. **AEO Knowledge Base:**
+    *   Collection: `knowledgeArticles`, Fields: `authorId` (Asc), `createdAt` (Desc), Scope: Collection
+14. **AEO Support Logs:**
+    *   Collection: `supportLogs`, Fields: `aeoId` (Asc), `interactionDate` (Desc), Scope: Collection
+
+#### For Financial Reports & Budgeting (Critical):
+
+15. **Transactions Ledger (multiple sort options):**
     *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Asc/Desc), Scope: Collection
     *   Collection: `transactions`, Fields: `farmId` (Asc), `category` (Asc/Desc), Scope: Collection
     *   Collection: `transactions`, Fields: `farmId` (Asc), `linkedModule` (Asc/Desc), Scope: Collection
     *   Collection: `transactions`, Fields: `farmId` (Asc), `amount` (Asc/Desc), Scope: Collection
+16. **Budgeting Module (date range queries):**
+    *   Collection: `transactions`, Fields: `farmId` (Asc), `type` (Asc), `date` (Asc/Desc), Scope: Collection
 
-4.  **Budgeting Module:**
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `type` (Asc), `date` (Asc), Scope: Collection
-    
-5.  **Profitability Report (Sorting):**
+#### For Profitability Report (Sorting):
+
+17. **Harvesting Records (multiple sort options):**
     *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `dateHarvested` (Asc/Desc), Scope: Collection
     *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `cropType` (Asc/Desc), Scope: Collection
     *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalSalesIncome` (Asc/Desc), Scope: Collection
     *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalHarvestCost` (Asc/Desc), Scope: Collection
-    
-#### For Operational Modules:
-
-6.  **AI Planting Advice History:**
-    *   Collection: `plantingAdviceRecords`, Fields: `farmId` (Asc), `createdAt` (Desc), Scope: Collection
-
-7.  **Farming Years & Seasons:**
-    *   Collection: `farmingYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
-
-8.  **Financial Years (Office Mgmt):**
-    *   Collection: `financialYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
-
-9.  **Soil & Water Management:**
-    *   Collection: `soilTestRecords`, Fields: `farmId` (Asc), `testDate` (Desc), Scope: Collection
-
-10. **Technology Management:**
-    *   Collection: `technologyAssets`, Fields: `farmId` (Asc), `purchaseDate` (Desc), Scope: Collection
-
-11. **Facility Management:**
-    *   Collection: `facilityManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
-
-12. **Records Management:**
-    *   Collection: `recordsManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
-
-13. **Event Planning:**
-    *   Collection: `officeEvents`, Fields: `farmId` (Asc), `eventDate` (Desc), Scope: Collection
-
-14. **Safety & Security Management:**
-    *   Collection: `safetySecurityRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
-
-15. **AEO Knowledge Base:**
-    *   Collection: `knowledgeArticles`, Fields: `authorId` (Asc), `createdAt` (Desc), Scope: Collection
-
-16. **Breeding Records:**
-    *   Collection: `breedingRecords`, Fields: `farmId` (Asc), `matingDate` (Desc), Scope: Collection
-
-17. **Feeding Records:**
-    *   Collection: `feedingRecords`, Fields: `farmId` (Asc), `date` (Desc), Scope: Collection
-```

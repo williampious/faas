@@ -285,13 +285,4 @@ As the app's features grow, Firestore will require specific indexes for complex 
 
 You can create these by following the link provided in the console error, or by going to your **Firebase Console -> Firestore Database -> Indexes** tab and creating them manually. The app will not function correctly without them.
 
-**Required Indexes So Far:**
-
-*   **AEO Farmer Directory:**
-    *   Collection: `users`, Fields: `managedByAEO` (Asc), `fullName` (Asc), Scope: Collection
-*   **HR Employee Directory:**
-    *   Collection: `users`, Fields: `farmId` (Asc), `fullName` (Asc), Scope: Collection
-*   **Financial Dashboard & Ledger (Multiple):**
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Asc/Desc)
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `category` (Asc/Desc)
-*   **And others as prompted by the application...** Review `src/README.md` for a comprehensive list.
+**For a comprehensive and up-to-date list of required indexes, please refer to `src/README.md`.**
