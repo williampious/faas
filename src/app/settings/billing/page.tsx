@@ -207,7 +207,7 @@ export default function BillingPage() {
   };
 
   const getButtonText = (planId: string, isEnterprise?: boolean) => {
-    if (planId === currentPlan?.planId) return 'Your Current Plan';
+    if (currentPlan && planId === currentPlan.planId) return 'Your Current Plan';
     if (isEnterprise) return 'Contact Us';
     return 'Upgrade';
   }
