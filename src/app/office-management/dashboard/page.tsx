@@ -59,7 +59,7 @@ export default function OfficeManagementDashboardPage() {
     { title: 'Safety & Security', description: 'Log compliance costs, insurance, and security contracts.', icon: Shield, href: '/office-management/safety-security' },
     { title: 'Records Management', description: 'Handle licensing, filing systems, and audit trails.', icon: FileArchive, href: '/office-management/records-management' },
     { title: 'Technology Management', description: 'Oversee IT assets, software subscriptions, and support costs.', icon: Laptop, href: '/office-management/technology-management' },
-    { title: 'Office Reports', description: 'Generate financial and operational reports for the office.', icon: BarChart, href: '/office-management/reports' },
+    { title: 'Office Reports', description: 'Generate financial and operational reports for the office.', icon: BarChart, href: '/office-management/reports', disabled: true },
   ];
 
   return (

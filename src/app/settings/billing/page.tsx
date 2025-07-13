@@ -292,7 +292,7 @@ export default function BillingPage() {
                                 <tier.icon className={cn("h-6 w-6 shrink-0", tier.id === 'starter' ? 'text-green-600' : 'text-primary')} />
                                 <div>
                                     <h4 className="font-semibold text-lg">{tier.name}</h4>
-                                    <p className="text-xs text-muted-foreground">{tier.description}</p>
+                                    <div className="text-xs text-muted-foreground">{tier.description}</div>
                                 </div>
                             </div>
                             <div className="text-right">
