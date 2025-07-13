@@ -54,19 +54,22 @@ const pricingTiers: PricingTier[] = [
         {
             title: 'Core Features',
             features: [
-              { text: '1 User Account', included: true },
-              { text: 'Basic Dashboard', included: true },
-              { text: 'Limited Task Management', included: true },
+              { text: '2 User Accounts (Admin + 1)', included: true },
+              { text: 'Basic Dashboard & Weather', included: true },
+              { text: 'Collaborative Task Board', included: true },
+              { text: 'Shared Farm Calendar', included: true },
+              { text: 'Resource Inventory', included: true },
               { text: '1 Farm Plot', included: true },
-              { text: 'Community Support', included: true },
             ],
         },
         {
-            title: 'Financials',
+            title: 'Financials & AI',
             features: [
+                { text: 'AI Planting Advice', included: true },
                 { text: 'Basic Cost Tracking', included: true },
-                { text: 'AI Planting Advice (Limited)', included: false },
-                { text: 'Budgeting Tools', included: false },
+                { text: 'Community Support', included: true },
+                { text: 'Farm & Office Modules', included: false },
+                { text: 'Advanced Financial Reporting', included: false },
             ]
         }
     ],
