@@ -87,7 +87,7 @@ service cloud.firestore {
       // Only the farm owner or an admin can update or delete the farm.
       allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || isUserAdmin());
     }
-
+    
     // Admin-only Collections
     match /promotionalCodes/{codeId} {
         // Only Admins can manage promotional codes
