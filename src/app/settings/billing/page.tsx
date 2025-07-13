@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CreditCard, Check, Star, Gem, Rocket, Mail, CircleDollarSign } from 'lucide-react';
+import { ArrowLeft, CreditCard, Check, Star, Gem, Rocket, Mail, CircleDollarSign, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { cn } from '@/lib/utils';
@@ -142,11 +142,9 @@ export default function BillingPage() {
   });
 
   useEffect(() => {
-    // Gracefully handle the case where userProfile might be null during initialization.
     if (userProfile?.subscription) {
         setCurrentPlan(userProfile.subscription);
     } else if (userProfile && !userProfile.subscription) {
-        // If profile is loaded but has no subscription, default to starter
         setCurrentPlan({ planId: 'starter', status: 'Active', nextBillingDate: null, billingCycle: 'annually' });
     }
   }, [userProfile]);
@@ -178,6 +176,9 @@ export default function BillingPage() {
                 icon={CreditCard}
                 description="Loading your subscription details..."
             />
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
         </div>
     );
   }
