@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -41,6 +41,7 @@ type SetupType = 'farmer' | 'aeo';
 
 export default function SetupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { user, isLoading: isProfileLoading, userProfile } = useUserProfile();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,6 +56,9 @@ export default function SetupPage() {
       resolver: zodResolver(aeoSetupSchema),
       defaultValues: { organization: '', assignedRegion: '', assignedDistrict: '' },
   });
+
+  const planId = searchParams.get('plan') || 'starter';
+  const cycle = searchParams.get('cycle') || 'annually';
 
   // Redirect if user is not logged in or already set up
   useEffect(() => {
@@ -86,7 +90,15 @@ export default function SetupPage() {
       batch.set(farmRef, { ...newFarm, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       batch.update(userRef, { farmId: farmRef.id, role: ['Admin'] as UserRole[] });
       await batch.commit();
-      toast({ title: "Farm Created!", description: `Welcome to ${data.name}. Redirecting you to the dashboard.` });
+      
+      toast({ title: "Farm Created!", description: `Welcome to ${data.name}.` });
+
+      // Redirect based on plan
+      if (planId === 'starter' || planId === 'enterprise') {
+        router.push('/dashboard');
+      } else {
+        router.push(`/settings/billing/checkout?plan=${planId}&cycle=${cycle}`);
+      }
     } catch (error: any) {
       console.error("Error creating farm:", error);
       toast({ title: "Error", description: `Failed to create farm: ${error.message}`, variant: "destructive" });
@@ -109,7 +121,13 @@ export default function SetupPage() {
               updatedAt: serverTimestamp(),
           });
           toast({ title: "Profile Set Up!", description: "Your AEO profile is complete. Redirecting to your dashboard." });
-          router.replace('/aeo/dashboard');
+
+           // Redirect based on plan
+          if (planId === 'starter' || planId === 'enterprise') {
+            router.push('/aeo/dashboard');
+          } else {
+            router.push(`/settings/billing/checkout?plan=${planId}&cycle=${cycle}`);
+          }
       } catch (error: any) {
           console.error("Error setting up AEO profile:", error);
           toast({ title: "Error", description: `Failed to set up profile: ${error.message}`, variant: "destructive" });

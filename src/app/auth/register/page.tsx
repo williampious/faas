@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ import Image from 'next/image';
 import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, collection, getDocs, query, limit, where } from 'firebase/firestore';
-import type { AgriFAASUserProfile, UserRole } from '@/types/user';
+import type { AgriFAASUserProfile, UserRole, SubscriptionDetails } from '@/types/user';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -32,6 +32,7 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -45,6 +46,9 @@ export default function RegisterPage() {
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
     setIsLoading(true);
     setError(null);
+
+    const planId = searchParams.get('plan') as 'starter' | 'grower' | 'business' | 'enterprise' || 'starter';
+    const cycle = searchParams.get('cycle') as 'monthly' | 'annually' || 'annually';
 
     if (!isFirebaseClientConfigured) {
       setError("Firebase client configuration is missing or incomplete. Please ensure all NEXT_PUBLIC_FIREBASE_... variables are correctly set in your .env.local file and that you have restarted your development server.");
@@ -64,6 +68,13 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       firebaseUser = userCredential.user;
       console.log('User registered with Firebase Auth:', firebaseUser.uid);
+      
+      const initialSubscription: SubscriptionDetails = {
+        planId: planId,
+        status: 'Trialing', // Or 'Pending Payment'
+        billingCycle: cycle,
+        nextBillingDate: null,
+      };
 
       // New users are created without a role. The Admin role is granted upon farm setup.
       const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
@@ -76,13 +87,17 @@ export default function RegisterPage() {
         registrationDate: new Date().toISOString(),
         phoneNumber: '',
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
+        subscription: initialSubscription, // Add the subscription details
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
       
       await setDoc(doc(db, usersCollectionName, firebaseUser.uid), profileForFirestore);
       console.log('User profile created in Firestore for user:', firebaseUser.uid);
-
+      
+      // After registration and profile creation, redirect to setup
+      // The setup page will then handle the redirect to checkout if needed
+      router.push(`/setup?plan=${planId}&cycle=${cycle}`);
 
     } catch (registrationError: any) {
       console.error('Registration Process Error:', registrationError);
