@@ -1,4 +1,5 @@
 
+
 /**
  * @fileOverview TypeScript type definitions for the AgriFAAS Connect User Profile.
  */
@@ -156,8 +157,8 @@ export interface SubscriptionDetails {
   planId: 'starter' | 'grower' | 'business' | 'enterprise';
   status: 'Active' | 'Canceled' | 'Trialing' | 'Past Due';
   billingCycle: 'monthly' | 'annually';
-  nextBillingDate?: string; // ISO date string
-  // customerId?: string; // To store Stripe/Paystack customer ID
+  nextBillingDate?: string | null;
+  trialEnds?: string | null; // Added for trial management
 }
 
 export interface AgriFAASUserProfile {

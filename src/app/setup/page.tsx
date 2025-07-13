@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -41,7 +42,6 @@ type SetupType = 'farmer' | 'aeo';
 
 export default function SetupPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { user, isLoading: isProfileLoading, userProfile } = useUserProfile();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,16 +57,11 @@ export default function SetupPage() {
       defaultValues: { organization: '', assignedRegion: '', assignedDistrict: '' },
   });
 
-  const planId = searchParams.get('plan') || 'starter';
-  const cycle = searchParams.get('cycle') || 'annually';
-
-  // Redirect if user is not logged in or already set up
   useEffect(() => {
     if (!isProfileLoading) {
       if (!user) {
         router.replace('/auth/signin');
       }
-      // Check for both farmId (farmer) and AEO role
       if (user && userProfile && (userProfile.farmId || userProfile.role?.includes('Agric Extension Officer'))) {
         router.replace('/dashboard');
       }
@@ -92,13 +87,8 @@ export default function SetupPage() {
       await batch.commit();
       
       toast({ title: "Farm Created!", description: `Welcome to ${data.name}.` });
+      router.push('/dashboard');
 
-      // Redirect based on plan
-      if (planId === 'starter' || planId === 'enterprise') {
-        router.push('/dashboard');
-      } else {
-        router.push(`/settings/billing/checkout?plan=${planId}&cycle=${cycle}`);
-      }
     } catch (error: any) {
       console.error("Error creating farm:", error);
       toast({ title: "Error", description: `Failed to create farm: ${error.message}`, variant: "destructive" });
@@ -121,13 +111,8 @@ export default function SetupPage() {
               updatedAt: serverTimestamp(),
           });
           toast({ title: "Profile Set Up!", description: "Your AEO profile is complete. Redirecting to your dashboard." });
+          router.push('/aeo/dashboard');
 
-           // Redirect based on plan
-          if (planId === 'starter' || planId === 'enterprise') {
-            router.push('/aeo/dashboard');
-          } else {
-            router.push(`/settings/billing/checkout?plan=${planId}&cycle=${cycle}`);
-          }
       } catch (error: any) {
           console.error("Error setting up AEO profile:", error);
           toast({ title: "Error", description: `Failed to set up profile: ${error.message}`, variant: "destructive" });
@@ -144,7 +129,6 @@ export default function SetupPage() {
     );
   }
 
-  // Initial Role Selection Screen
   if (!setupType) {
       return (
           <Card className="w-full">
@@ -172,7 +156,6 @@ export default function SetupPage() {
       );
   }
 
-  // Farmer Setup Form
   if (setupType === 'farmer') {
       return (
           <Card className="w-full animate-in fade-in-20">
@@ -203,7 +186,6 @@ export default function SetupPage() {
       );
   }
   
-  // AEO Setup Form
   if (setupType === 'aeo') {
       return (
           <Card className="w-full animate-in fade-in-20">
@@ -233,5 +215,5 @@ export default function SetupPage() {
       );
   }
 
-  return null; // Should not be reached
+  return null;
 }

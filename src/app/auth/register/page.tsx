@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -17,6 +18,7 @@ import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, collection, getDocs, query, limit, where } from 'firebase/firestore';
 import type { AgriFAASUserProfile, UserRole, SubscriptionDetails } from '@/types/user';
+import { add } from 'date-fns';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -69,25 +71,27 @@ export default function RegisterPage() {
       firebaseUser = userCredential.user;
       console.log('User registered with Firebase Auth:', firebaseUser.uid);
       
+      const trialEndDate = add(new Date(), { days: 14 });
+
       const initialSubscription: SubscriptionDetails = {
         planId: planId,
-        status: 'Trialing', // Or 'Pending Payment'
+        status: planId === 'starter' ? 'Active' : 'Trialing',
         billingCycle: cycle,
-        nextBillingDate: null,
+        nextBillingDate: null, // Set upon actual subscription
+        trialEnds: planId !== 'starter' ? trialEndDate.toISOString() : null, // Set trial end date
       };
 
-      // New users are created without a role. The Admin role is granted upon farm setup.
       const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
         userId: firebaseUser.uid,
         firebaseUid: firebaseUser.uid,
         fullName: data.fullName,
         emailAddress: firebaseUser.email || data.email,
-        role: [], // Role is assigned upon completing farm setup
+        role: [],
         accountStatus: 'Active',
         registrationDate: new Date().toISOString(),
         phoneNumber: '',
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
-        subscription: initialSubscription, // Add the subscription details
+        subscription: initialSubscription,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -96,8 +100,7 @@ export default function RegisterPage() {
       console.log('User profile created in Firestore for user:', firebaseUser.uid);
       
       // After registration and profile creation, redirect to setup
-      // The setup page will then handle the redirect to checkout if needed
-      router.push(`/setup?plan=${planId}&cycle=${cycle}`);
+      router.push(`/setup`);
 
     } catch (registrationError: any) {
       console.error('Registration Process Error:', registrationError);

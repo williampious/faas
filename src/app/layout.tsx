@@ -21,45 +21,72 @@ import { MainNav } from '@/components/layout/main-nav';
 import { Toaster } from "@/components/ui/toaster";
 import { ToastAction } from "@/components/ui/toast";
 import { Button } from '@/components/ui/button';
-import { UserCircle, LogOut, Loader2, AlertTriangle } from 'lucide-react';
+import { UserCircle, LogOut, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 import { UserProfileProvider, useUserProfile } from '@/contexts/user-profile-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { differenceInDays, parseISO } from 'date-fns';
+
+function TrialNotificationBanner() {
+    const { userProfile } = useUserProfile();
+    const router = useRouter();
+    const [isVisible, setIsVisible] = useState(false);
+    const [daysLeft, setDaysLeft] = useState(0);
+
+    useEffect(() => {
+        if (userProfile?.subscription?.status === 'Trialing' && userProfile.subscription.trialEnds) {
+            const endDate = parseISO(userProfile.subscription.trialEnds);
+            const today = new Date();
+            const remainingDays = differenceInDays(endDate, today);
+            
+            if (remainingDays >= 0) {
+                setDaysLeft(remainingDays);
+                setIsVisible(true);
+            }
+        } else {
+            setIsVisible(false);
+        }
+    }, [userProfile]);
+
+    if (!isVisible) return null;
+
+    const handleUpgrade = () => {
+        const planId = userProfile?.subscription?.planId || 'grower'; // Default to grower if something is wrong
+        const cycle = userProfile?.subscription?.billingCycle || 'annually';
+        router.push(`/settings/billing/checkout?plan=${planId}&cycle=${cycle}`);
+    };
+
+    return (
+        <div className="bg-yellow-100 dark:bg-yellow-900/30 border-b border-yellow-300 dark:border-yellow-700 p-2 text-center text-sm text-yellow-800 dark:text-yellow-200">
+            <Sparkles className="inline-block h-4 w-4 mr-2" />
+            You have **{daysLeft} {daysLeft === 1 ? 'day' : 'days'}** left in your trial. 
+            <Button variant="link" className="p-0 h-auto ml-1 text-yellow-800 dark:text-yellow-200 font-bold" onClick={handleUpgrade}>
+                Upgrade Now
+            </Button> 
+            to keep access to all features.
+        </div>
+    );
+}
 
 function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { toast } = useToast();
-  // userProfile can be used here for displaying name/avatar if needed in header
-  // const { userProfile } = useUserProfile(); 
-
+  
   const handleSignOut = async () => {
     if (!auth) {
-      console.error(
-        'Firebase auth instance is not available in layout.tsx. Cannot sign out. Check browser console for errors from src/lib/firebase.ts regarding Firebase initialization.'
-      );
-      toast({
-        title: "Sign Out Error",
-        description: "Firebase authentication service is not available. Please ensure Firebase is correctly configured and try again. If the issue persists, contact support.",
-        variant: "destructive",
-      });
+      console.error('Firebase auth instance is not available. Cannot sign out.');
+      toast({ title: "Sign Out Error", description: "Authentication service not available.", variant: "destructive" });
       return;
     }
     try {
       await signOut(auth);
-      toast({
-        title: "Signed Out",
-        description: "You have been successfully signed out.",
-      });
-      // UserProfileProvider will detect auth change and RootLayoutContent will redirect
+      toast({ title: "Signed Out", description: "You have been successfully signed out." });
     } catch (error: any) {
       console.error('Error signing out:', error);
-      toast({
-        title: "Sign Out Failed",
-        description: error.message || "An unexpected error occurred during sign out.",
-        variant: "destructive",
-      });
+      toast({ title: "Sign Out Failed", description: error.message, variant: "destructive" });
     }
   };
 
@@ -75,19 +102,12 @@ function AppShell({ children }: { children: ReactNode }) {
         </SidebarContent>
         <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border space-y-2">
           <Link href="/profile" passHref>
-             <Button
-                variant="ghost"
-                className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
-              >
+             <Button variant="ghost" className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square">
               <UserCircle className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
               <span className="truncate group-data-[collapsible=icon]:hidden">User Profile</span>
              </Button>
           </Link>
-          <Button
-            variant="ghost"
-            className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square"
-            onClick={handleSignOut}
-          >
+          <Button variant="ghost" className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square" onClick={handleSignOut}>
             <LogOut className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
             <span className="truncate group-data-[collapsible=icon]:hidden">Sign Out</span>
           </Button>
@@ -95,6 +115,7 @@ function AppShell({ children }: { children: ReactNode }) {
       </Sidebar>
       <SidebarInset>
         <div className="flex flex-col h-full">
+          <TrialNotificationBanner />
           <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm md:px-6 md:justify-end">
             <div className="md:hidden">
               <SidebarTrigger />
@@ -119,7 +140,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
-  const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features', '/installation-guide', '/pricing', '/partners', '/terms-of-service', '/privacy-policy'].includes(pathname);
+  const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features', '/installation-guide', '/pricing', '/partners', '/terms-of-service', '/privacy-policy', '/roles-permissions'].includes(pathname);
 
 
   useEffect(() => {
@@ -166,36 +187,23 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
         const isSetUp = userProfile.farmId || isAEO;
         const userDashboardPath = isAEO ? '/aeo/dashboard' : '/dashboard';
 
-        // 1. If user is NOT set up, redirect to setup page (unless they are already there)
         if (!isSetUp && !isSetupPage) {
           router.replace('/setup');
           return;
         }
 
-        // 2. If user IS set up, handle redirects away from inappropriate pages
         if (isSetUp) {
-            // Redirect from auth pages to their dashboard
-            if (isAuthPage) {
+            if (isAuthPage || isSetupPage) {
                 router.replace(userDashboardPath);
                 return;
             }
-            // Redirect from setup pages to their dashboard
-            if (isSetupPage) {
-                router.replace(userDashboardPath);
-                return;
-            }
-            // Redirect from public landing pages to their dashboard
             if (isPublicUnauthenticatedArea) {
                 router.replace(userDashboardPath);
                 return;
             }
         }
       }
-      // If user is authenticated but profile is not yet loaded, do nothing.
-      // The loading screen will be shown and this effect will re-run.
-
     } else { // User is NOT authenticated
-      // If user is not logged in, they can only access public landing and auth pages
       if (!isAuthPage && !isPublicUnauthenticatedArea) {
         router.replace('/auth/signin');
       }
@@ -215,59 +223,24 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   if (profileError && !pathname.startsWith('/auth/') && !isPublicUnauthenticatedArea && user) {
     const performSignOutFromErrorPage = async () => {
       if (!auth) {
-        console.error('Firebase auth instance is not available for sign out from error page.');
-        toast({
-          title: "Sign Out Error",
-          description: "Firebase authentication service is not available.",
-          variant: "destructive",
-        });
+        toast({ title: "Sign Out Error", description: "Firebase authentication service is not available.", variant: "destructive" });
         return;
       }
-      try {
-        await signOut(auth);
-        toast({
-          title: "Signed Out",
-          description: "You have been successfully signed out.",
-        });
-      } catch (error: any) {
-        console.error('Error signing out from error page:', error);
-        toast({
-          title: "Sign Out Failed",
-          description: error.message || "An unexpected error occurred during sign out.",
-          variant: "destructive",
-        });
-      }
+      try { await signOut(auth); toast({ title: "Signed Out" }); } 
+      catch (error: any) { toast({ title: "Sign Out Failed", description: error.message, variant: "destructive" }); }
     };
 
     return (
       <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-background">
         <Card className="w-full max-w-lg shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center justify-center text-xl text-destructive">
-              <AlertTriangle className="mr-2 h-6 w-6" />
-              Application Error
-            </CardTitle>
+            <CardTitle className="flex items-center justify-center text-xl text-destructive"><AlertTriangle className="mr-2 h-6 w-6" /> Application Error</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-2">
-              We encountered a problem loading your user profile:
-            </p>
-            <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md mb-4">
-              {profileError}
-            </p>
-            <p className="text-sm text-muted-foreground mb-1">
-              This might be a temporary issue or a problem with data permissions. You can try:
-            </p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground mb-4 text-left mx-auto max-w-xs">
-              <li>Refreshing the page.</li>
-              <li>Signing out and signing back in.</li>
-            </ul>
-            <p className="text-sm text-muted-foreground mb-4">
-              If the problem persists, please check your Firebase Firestore security rules or contact support. The error often indicates that the rules do not allow your authenticated user to read their own profile from the 'users' collection.
-            </p>
-            <Button onClick={performSignOutFromErrorPage} variant="destructive">
-              <LogOut className="mr-2 h-4 w-4" /> Sign Out
-            </Button>
+            <p className="text-muted-foreground mb-2">We encountered a problem loading your user profile:</p>
+            <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md mb-4">{profileError}</p>
+            <p className="text-sm text-muted-foreground mb-4">Please try refreshing the page or signing out. If the problem persists, contact support.</p>
+            <Button onClick={performSignOutFromErrorPage} variant="destructive"><LogOut className="mr-2 h-4 w-4" /> Sign Out</Button>
           </CardContent>
         </Card>
       </div>
@@ -277,15 +250,12 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   const isAuthPage = pathname.startsWith('/auth/');
   const isSetupPage = pathname.startsWith('/setup');
   
-  // A user is considered "set up" and can see the app shell if they have a farm ID OR they have the AEO role.
   const isSetUp = userProfile?.farmId || userProfile?.role?.includes('Agric Extension Officer');
   const showAppShell = user && isSetUp && !isAuthPage && !isSetupPage;
-
 
   if (showAppShell) {
     return <AppShell>{children}</AppShell>;
   } else {
-    // This will render the setup pages, auth pages, or public pages without the main app shell
     return <>{children}</>;
   }
 }
