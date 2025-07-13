@@ -77,18 +77,20 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             const plan = profileData.subscription?.planId || 'starter';
             const status = profileData.subscription?.status;
             
+            // Correctly determine if the plan has paid feature access
             const isGrowerOrHigher = plan === 'grower' || plan === 'business' || plan === 'enterprise';
             const isBusinessOrHigher = plan === 'business' || plan === 'enterprise';
             
-            // Allow access during trial period as well
+            // Access is only granted if the subscription is active (paid) or in trial
             const hasPaidAccess = status === 'Active' || status === 'Trialing';
 
+            // Corrected Logic: Access is based on plan and status, NOT on being an admin.
             setAccess({
-                canAccessFarmOps: userIsAdmin || (isGrowerOrHigher && hasPaidAccess),
-                canAccessAnimalOps: userIsAdmin || (isGrowerOrHigher && hasPaidAccess),
-                canAccessOfficeOps: userIsAdmin || (isBusinessOrHigher && hasPaidAccess),
-                canAccessHrOps: userIsAdmin || (isBusinessOrHigher && hasPaidAccess),
-                canAccessAeoTools: userIsAdmin || (isBusinessOrHigher && hasPaidAccess),
+                canAccessFarmOps: isGrowerOrHigher && hasPaidAccess,
+                canAccessAnimalOps: isGrowerOrHigher && hasPaidAccess,
+                canAccessOfficeOps: isBusinessOrHigher && hasPaidAccess,
+                canAccessHrOps: isBusinessOrHigher && hasPaidAccess,
+                canAccessAeoTools: isBusinessOrHigher && hasPaidAccess,
             });
             setError(null); 
           } else {
