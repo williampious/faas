@@ -6,15 +6,15 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CreditCard, Check, Star, Gem, Rocket, Mail, CircleDollarSign, Loader2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, Check, Star, Gem, Rocket, Mail, CircleDollarSign, Loader2, Tag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import type { SubscriptionDetails } from '@/types/user';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { validatePromoCode } from './checkout/actions';
 
 
 interface TierFeature {
@@ -130,6 +130,52 @@ const pricingTiers: PricingTier[] = [
   },
 ];
 
+function PromoCodeCard() {
+    const { toast } = useToast();
+    const [promoCode, setPromoCode] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleApplyCode = async () => {
+        if (!promoCode.trim()) {
+            toast({ title: 'Error', description: 'Please enter a promotional code.', variant: 'destructive' });
+            return;
+        }
+        setIsLoading(true);
+        const result = await validatePromoCode(promoCode);
+        if (result.success) {
+            toast({ title: 'Success!', description: result.message });
+            // In a real app, you would update the user's subscription record in Firestore here
+            // e.g., db.collection('users').doc(userId).update({ 'subscription.promo': { code: promoCode, discount: result.discountAmount }})
+        } else {
+            toast({ title: 'Invalid Code', description: result.message, variant: 'destructive' });
+        }
+        setIsLoading(false);
+    };
+
+    return (
+        <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center"><Tag className="mr-2 h-5 w-5 text-primary" /> Apply Promotional Code</CardTitle>
+                <CardDescription>Have a promo code? Apply it here to add a discount to your next bill.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex gap-2">
+                    <Input 
+                        placeholder="Enter your code" 
+                        value={promoCode} 
+                        onChange={(e) => setPromoCode(e.target.value)}
+                        disabled={isLoading}
+                    />
+                    <Button onClick={handleApplyCode} disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Apply
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 export default function BillingPage() {
   const router = useRouter();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
@@ -198,8 +244,8 @@ export default function BillingPage() {
         }
       />
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-1">
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1 space-y-6">
           <Card className="shadow-lg h-full">
             <CardHeader>
               <CardTitle>Your Current Plan</CardTitle>
@@ -228,9 +274,10 @@ export default function BillingPage() {
               </div>
             </CardContent>
           </Card>
+          <PromoCodeCard />
         </div>
 
-        <div className="md:col-span-2">
+        <div className="lg:col-span-2">
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Available Plans</CardTitle>

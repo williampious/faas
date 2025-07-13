@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CreditCard, Lock, CircleDollarSign, Loader2, Tag, TicketPercent } from 'lucide-react';
+import { ArrowLeft, CreditCard, Lock, CircleDollarSign, Loader2, Tag } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
@@ -14,8 +14,6 @@ import { Separator } from '@/components/ui/separator';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { initializePaystackTransaction, validatePromoCode } from './actions';
 import { Input } from '@/components/ui/input';
-import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
-
 
 // Data can be moved to a shared file later
 const pricingTiers = [
@@ -118,7 +116,7 @@ function CheckoutPageContent() {
                 <p className="font-bold text-2xl text-primary">{formatCurrency(price)}</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="promo-code">Promotional Code</Label>
+                <Label htmlFor="promo-code" className="flex items-center gap-2 text-sm text-muted-foreground"><Tag className="h-4 w-4" /> Have a code?</Label>
                 <div className="flex gap-2">
                     <Input id="promo-code" placeholder="Enter code" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} disabled={isApplyingCode}/>
                     <Button onClick={handleApplyPromoCode} disabled={isApplyingCode}>

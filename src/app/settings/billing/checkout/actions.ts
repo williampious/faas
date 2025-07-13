@@ -2,7 +2,6 @@
 'use server';
 
 import type { AgriFAASUserProfile } from "@/types/user";
-import type { PromotionalCode } from "@/types/promo-code";
 
 interface InitializePaymentResult {
   success: boolean;
@@ -20,12 +19,11 @@ interface PromoCodeValidationResult {
     discountAmount?: number;
 }
 
-// In a real application, this would be fetched from Firestore.
-// For now, we use a hardcoded list for demonstration.
-const validPromoCodes: PromotionalCode[] = [
-    { code: 'SAVE50', type: 'fixed', discountAmount: 50, usageLimit: 10, timesUsed: 2, expiryDate: '2025-12-31', isActive: true },
-    { code: 'AGRIFAAS100', type: 'fixed', discountAmount: 100, usageLimit: 5, timesUsed: 5, expiryDate: '2025-12-31', isActive: true },
-    { code: 'EXPIREDCODE', type: 'fixed', discountAmount: 20, usageLimit: 10, timesUsed: 1, expiryDate: '2023-01-01', isActive: true },
+// Hardcoded promo codes for demonstration. In a real app, this would query Firestore.
+const validPromoCodes: Array<{ code: string, type: 'fixed' | 'percentage', value: number, active: boolean }> = [
+    { code: 'SAVE50', type: 'fixed', value: 50, active: true },
+    { code: 'AGRIFAAS100', type: 'fixed', value: 100, active: true },
+    { code: 'EXPIREDCODE', type: 'fixed', value: 20, active: false }, // Simulating an inactive code
 ];
 
 export async function validatePromoCode(code: string): Promise<PromoCodeValidationResult> {
@@ -34,22 +32,16 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
     if (!promoCode) {
         return { success: false, message: 'Invalid promotional code.' };
     }
-    if (!promoCode.isActive) {
+    if (!promoCode.active) {
         return { success: false, message: 'This promotional code is no longer active.' };
     }
-    if (new Date() > new Date(promoCode.expiryDate)) {
-        return { success: false, message: 'This promotional code has expired.' };
-    }
-    if (promoCode.timesUsed >= promoCode.usageLimit) {
-        return { success: false, message: 'This promotional code has reached its usage limit.' };
-    }
-
-    // In a real app, you would also check if this specific user has used this code before.
+    
+    // Here you could add more complex logic like checking expiry dates, usage limits, or if the user has used it before.
     
     return { 
         success: true, 
-        message: `Success! A discount of GHS ${promoCode.discountAmount.toFixed(2)} has been applied.`,
-        discountAmount: promoCode.discountAmount 
+        message: `Success! A discount of GHS ${promoCode.value.toFixed(2)} has been applied.`,
+        discountAmount: promoCode.value 
     };
 }
 
