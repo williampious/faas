@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, LayoutList, CheckCircle, Construction, Cloud, Users, Beef, Tractor } from 'lucide-react';
+import { ArrowLeft, LayoutList, CheckCircle, Construction, Cloud, Users, Beef, Tractor, Sparkles, Building2, Briefcase } from 'lucide-react';
 import { LandingPageHeader } from '@/components/layout/landing-page-header';
 
 export default function FeaturesPage() {
@@ -14,7 +14,8 @@ export default function FeaturesPage() {
       icon: Cloud,
       features: [
         { name: "Cloud-Based Data Sync", description: "All your farm data is stored securely in the cloud, enabling real-time collaboration for your entire team. Access up-to-date information from any device." },
-        { name: "Role-Based Access Control", description: "Navigation and features adapt based on assigned user roles (Admin, Manager, Farmer, AEO, etc.), ensuring users only see what they need." },
+        { name: "Role-Based Access Control", description: "Navigation and features adapt based on assigned user roles (Admin, Manager, Farmer, etc.), ensuring users only see what they need." },
+        { name: "14-Day Free Trial", description: "Get full access to all features of our paid plans for 14 days when you sign up—no credit card required.", icon: Sparkles, iconColor: 'text-yellow-500' },
         { name: "Progressive Web App (PWA)", description: "Installable on mobile devices for an app-like experience. Includes an in-app notification when a new version is ready to be installed." },
       ]
     },
@@ -23,61 +24,54 @@ export default function FeaturesPage() {
       icon: Tractor,
       features: [
         { name: "Dashboard Overview", description: "At-a-glance summary of farm activities, calendar events, and key alerts." },
-        { name: "Land Preparation Tracking", description: "Log activities like clearing and ploughing in a central database, with detailed cost tracking that feeds the financial dashboard." },
-        { name: "Planting Records", description: "Record crop types, varieties, planting dates, and all associated costs in a central database, visible to your team." },
-        { name: "Crop Maintenance Logs", description: "Track irrigation, fertilization, pest/disease control, and other maintenance activities with integrated costing." },
-        { name: "Harvesting & Post-Harvest", description: "Log yield data, quality, storage, sales, and costs. Sales data automatically feeds into the financial dashboard as income." },
-        { name: "Plot/Field Management", description: "Define and manage individual farm plots or fields, including size, soil type, and location, visible to all farm members." },
+        { name: "Land Preparation Tracking", description: "Log activities like clearing and ploughing in a central database, with detailed cost tracking that feeds the financial dashboard. (Limited to 5 records on Starter plan)" },
+        { name: "Planting Records", description: "Record crop types, varieties, planting dates, and all associated costs in a central database, visible to your team. (Limited to 5 records on Starter plan)" },
+        { name: "Crop Maintenance Logs", description: "Track irrigation, fertilization, pest/disease control, and other maintenance activities with integrated costing. (Limited to 5 records on Starter plan)" },
+        { name: "Harvesting & Post-Harvest", description: "Log yield data, quality, storage, sales, and costs. Sales data automatically creates income records. (Limited to 5 records on Starter plan)" },
+        { name: "Plot/Field Management", description: "Define and manage individual farm plots or fields, including size and soil type. (Limited to 1 plot on Starter plan)" },
       ]
     },
     {
-      categoryTitle: "Livestock Production",
+      categoryTitle: "Livestock Production (Grower Plan & Up)",
       icon: Beef,
       features: [
-        { name: "Livestock Focus Setup", description: "Define primary animal type (e.g., Poultry, Cattle) and management system to tailor the available modules." },
         { name: "Housing & Infrastructure Management", description: "Log housing units (barns, pens), capacity, and track setup/maintenance costs centrally." },
         { name: "Health Care & Biosecurity", description: "Log vaccinations, health monitoring, and medication. Costs are automatically integrated with the financial ledger." },
-        { name: "Feeding & Nutrition", description: "Track feed types, schedules, inventory, and dietary needs.", comingSoon: true },
-        { name: "Breeding & Incubation", description: "Manage breeding ratios, incubation, fertility, and hatch rates.", comingSoon: true },
+        { name: "Feeding & Nutrition", description: "Track feed types, schedules, inventory, and dietary needs with associated costs." },
+        { name: "Breeding & Incubation", description: "Manage breeding ratios, incubation, fertility, and hatch rates with cost tracking." },
       ]
     },
     {
-      categoryTitle: "Planning & Support Tools",
+      categoryTitle: "Office & HR Management (Business Plan & Up)",
+      icon: Building2,
+      features: [
+        { name: "Office Management Suite", description: "Manage office-specific costs for facilities, technology assets, safety compliance, and event planning." },
+        { name: "Financial Year Management", description: "Define financial years to structure office reporting and budgeting cycles." },
+        { name: "HR Management Dashboard", description: "A central hub for managing employee records and payroll processing." },
+        { name: "Payroll Processing", description: "Log payroll records for employees, which automatically integrates with the main financial ledger as an expense." },
+      ]
+    },
+    {
+      categoryTitle: "Agric Extension Officer (AEO) Tools (Business Plan & Up)",
+      icon: Users,
+      features: [
+        { name: "AEO Dashboard", description: "Dedicated dashboard for AEOs to manage their activities and farmer interactions." },
+        { name: "Farmer Directory Management", description: "AEOs can add and view profiles of farmers they manage within their assigned regions and districts." },
+        { name: "Support & Communication Logs", description: "Record all interactions with farmers, from phone calls to field visits, to maintain a complete history." },
+        { name: "AEO Knowledge Base", description: "Create and manage a private repository of articles, best practices, and training materials." },
+      ]
+    },
+     {
+      categoryTitle: "Planning & Financials",
       icon: CheckCircle,
       features: [
-        { name: "Collaborative Farm Calendar", description: "Schedule and view tasks and important events on a shared team calendar. All data is stored centrally and synced in real-time." },
-        { name: "Team Task Management", description: "Kanban-style board to manage tasks through To Do, In Progress, and Done stages. All data is centrally stored, allowing for real-time team collaboration." },
+        { name: "Live Financial Dashboard", description: "Dynamic overview of total income and expenses, with charts for monthly trends and expense breakdown by category." },
+        { name: "Collaborative Budgeting Tool", description: "Create and manage budgets for specific seasons or periods. Track overall budget vs. actual spending in real-time." },
+        { name: "Collaborative Farm Calendar & Task Board", description: "Schedule events and manage tasks with your team on shared, real-time boards." },
         { name: "Centralized Resource Inventory", description: "Track stock levels of resources like seeds and fertilizers. Purchases are logged as expenses automatically." },
-        { name: "Weather Monitoring", description: "View mock weather data for a specified location to aid in planning." },
         { name: "AI Planting Advice", description: "Get AI-generated recommendations for planting schedules and fertilization. All advice is saved to a shared farm history." },
       ]
     },
-    {
-      categoryTitle: "User & System Management",
-      icon: Users,
-      features: [
-        { name: "Admin User Management", description: "Admins can view all users on their farm, manage roles, and add new team members via a secure invitation link system." },
-        { name: "User Profile Management", description: "Users can view and update their personal and contact information." },
-        { name: "Secure Setup Flow", description: "A new user is guided to either set up their own private farm (becoming the admin) or configure their profile as an Agric Extension Officer." },
-      ]
-    },
-    {
-        categoryTitle: "Agric Extension Officer (AEO) Tools",
-        icon: Users,
-        features: [
-            { name: "AEO Dashboard", description: "Dedicated dashboard for AEOs to manage their activities and farmer interactions." },
-            { name: "Farmer Directory Management", description: "AEOs can add and view profiles of farmers they manage within their assigned regions and districts." },
-            { name: "Detailed Farmer Profile View", description: "View comprehensive details of individual farmers, including farm details, challenges, and needs." },
-        ]
-    },
-    {
-        categoryTitle: "Financial & Reporting",
-        icon: CheckCircle,
-        features: [
-            { name: "Live Financial Dashboard", description: "Dynamic overview of total income and expenses, with charts for monthly trends and expense breakdown by category." },
-            { name: "Collaborative Budgeting Tool", description: "Create and manage budgets for specific seasons or periods. Track overall budget vs. actual spending in real-time." },
-        ]
-    }
   ];
 
   return (
@@ -101,8 +95,8 @@ export default function FeaturesPage() {
               {category.features.map((feature, featIndex) => (
                 <div key={featIndex} className="p-3 border-b last:border-b-0">
                   <h3 className="text-lg font-semibold text-foreground/90 flex items-center">
-                      {feature.comingSoon ? (
-                          <Construction className="mr-2 h-5 w-5 text-amber-600" />
+                      {feature.icon ? (
+                          <feature.icon className={cn("mr-2 h-5 w-5", feature.iconColor || 'text-green-600')} />
                       ) : (
                           <CheckCircle className="mr-2 h-5 w-5 text-green-600" />
                       )}

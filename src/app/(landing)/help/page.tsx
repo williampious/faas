@@ -11,7 +11,7 @@ export default function HelpPage() {
   const helpTopics = [
     {
       title: "Getting Started Guide",
-      description: "Learn how to register, choose your role (Farm Admin or AEO), set up your workspace, and invite team members.",
+      description: "Learn how to register for a 14-day free trial, choose your role (Farm Admin or AEO), set up your workspace, and invite team members.",
       link: "#getting-started"
     },
     {

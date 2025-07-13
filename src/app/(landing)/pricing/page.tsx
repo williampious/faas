@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { ArrowLeft, CheckCircle, HelpCircle, DollarSign, Award, Star, Gem, Rocket, Building, ShieldCheck, Check } from 'lucide-react';
+import { ArrowLeft, CheckCircle, HelpCircle, DollarSign, Award, Star, Gem, Rocket, Building, ShieldCheck, Check, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LandingPageHeader } from '@/components/layout/landing-page-header';
 
@@ -54,12 +54,12 @@ const pricingTiers: PricingTier[] = [
         {
             title: 'Core Features',
             features: [
-              { text: '2 User Accounts (Admin + 1)', included: true },
+              { text: '1 User Account', included: true },
               { text: 'Basic Dashboard & Weather', included: true },
-              { text: 'Collaborative Task Board', included: true },
-              { text: 'Shared Farm Calendar', included: true },
+              { text: 'Collaborative Task Board & Calendar', included: true },
               { text: 'Resource Inventory', included: true },
               { text: '1 Farm Plot', included: true },
+              { text: '5 records per core module', included: true },
             ],
         },
         {
@@ -68,8 +68,10 @@ const pricingTiers: PricingTier[] = [
                 { text: 'AI Planting Advice', included: true },
                 { text: 'Basic Cost Tracking', included: true },
                 { text: 'Community Support', included: true },
-                { text: 'Farm & Office Modules', included: false },
+                { text: 'Animal Production Module', included: false },
                 { text: 'Advanced Financial Reporting', included: false },
+                { text: 'Office & HR Management', included: false },
+                { text: 'AEO Tools', included: false },
             ]
         }
     ],
@@ -89,23 +91,23 @@ const pricingTiers: PricingTier[] = [
             title: 'Everything in Starter, plus:',
             features: [
               { text: 'Up to 5 Users', included: true },
-              { text: 'Full Farm Operations Suite', included: true },
-              { text: 'Full Task & Calendar Tools', included: true },
-              { text: 'Resource Inventory', included: true },
-              { text: 'Up to 10 Farm Plots', included: true },
+              { text: 'Full Farm Operations Suite (Unlimited Records)', included: true },
+              { text: 'Unlimited Farm Plots', included: true },
+              { text: 'Animal Production Module', included: true },
               { text: 'Email & Chat Support', included: true },
             ],
         },
         {
             title: 'Financials',
             features: [
-                { text: 'AI Planting Advice (Standard)', included: true },
-                { text: 'Basic Financial Dashboard', included: true },
+                { text: 'Full Financial Dashboard', included: true },
                 { text: 'Standard Budgeting Tools', included: true },
+                 { text: 'Office & HR Management', included: false },
+                { text: 'AEO Tools', included: false },
             ]
         }
     ],
-    buttonText: 'Choose Grower',
+    buttonText: 'Start 14-Day Free Trial',
     buttonVariant: 'secondary',
     href: (plan, cycle) => `/auth/register?plan=${plan}&cycle=${cycle}`,
   },
@@ -123,21 +125,13 @@ const pricingTiers: PricingTier[] = [
             features: [
               { text: 'Unlimited Users', included: true },
               { text: 'HR & Office Management Modules', included: true },
-              { text: 'Unlimited Farm Plots', included: true },
               { text: 'AEO Management Tools', included: true },
+              { text: 'Profitability Analysis Reports', included: true },
               { text: 'Priority Phone & Chat Support', included: true },
             ],
-        },
-        {
-            title: 'Financials & Reporting',
-            features: [
-                { text: 'Advanced AI Tools & History', included: true },
-                { text: 'Full Financial Reporting Suite', included: true },
-                { text: 'Profitability Analysis', included: true },
-            ]
         }
     ],
-    buttonText: 'Go Business',
+    buttonText: 'Start 14-Day Free Trial',
     buttonVariant: 'default',
     highlight: true,
     href: (plan, cycle) => `/auth/register?plan=${plan}&cycle=${cycle}`,
@@ -170,7 +164,7 @@ const pricingTiers: PricingTier[] = [
 const faqItems = [
     {
         question: "Is there a free trial for paid plans?",
-        answer: "While we don't offer a time-limited trial, our 'Starter' plan is free forever. This allows you to explore our core features with your team at your own pace before deciding to upgrade for more advanced capabilities."
+        answer: "Yes! All new users who sign up for a paid plan (Grower or Business) automatically receive a 14-day free trial with full access to all features of that plan—no credit card required upfront."
     },
     {
         question: "Can I change my plan later?",
@@ -181,8 +175,8 @@ const faqItems = [
         answer: "You do. We are custodians of your data, not owners. You retain full ownership of all the data you input into AgriFAAS Connect. You can export your data at any time. For more details, please see our Privacy Policy."
     },
     {
-        question: "What are modular add-ons?",
-        answer: "As we grow, we plan to introduce specialized modules (e.g., Advanced Analytics, Supply Chain Integration) that can be added to your plan for an additional fee, allowing you to build the perfect platform for your specific needs."
+        question: "What are the limitations of the free Starter plan?",
+        answer: "The Starter plan is great for getting to know the app. It's limited to 1 farm plot and allows up to 5 records for each of the main operational modules (Land Prep, Planting, Maintenance, and Harvesting). Paid plans offer unlimited records and advanced modules."
     }
 ];
 
@@ -262,6 +256,7 @@ export default function PricingPage() {
             <CardFooter className="mt-auto p-6">
               <Link href={tier.href(tier.id, billingCycle)} className="w-full">
                 <Button size="lg" variant={tier.buttonVariant} className="w-full">
+                  {tier.buttonText.includes('Trial') && <Sparkles className="mr-2 h-4 w-4" />}
                   {tier.buttonText}
                 </Button>
               </Link>

@@ -49,7 +49,7 @@ function SettingsItem({ title, description, icon: Icon, href, disabled = false }
 
 
 export default function SettingsPage() {
-  const appVersion = "1.1.0";
+  const appVersion = "1.1.0"; // Updated app version
   const { toast } = useToast();
 
   const settingsItems = [
@@ -128,53 +128,56 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
       
-      <Card className="mt-6 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center"><Info className="mr-2 h-5 w-5 text-primary" />About AgriFAAS Connect</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <p className="text-sm text-muted-foreground">Version: {appVersion}</p>
-            <p className="text-sm text-muted-foreground mt-2">©{new Date().getFullYear()} Cure Technologies Support Group (CTSG Ventures)</p>
-             <p className="text-xs text-muted-foreground mt-4">
-                For support, please visit our public <Link href="/help" className="text-primary hover:underline">Help Center</Link> or <Link href="/#contact-us" className="text-primary hover:underline">contact us</Link>.
-             </p>
-        </CardContent>
-      </Card>
+      <div className="grid md:grid-cols-2 gap-6 mt-6">
+        <Card className="shadow-lg">
+            <CardHeader>
+            <CardTitle className="flex items-center"><Info className="mr-2 h-5 w-5 text-primary" />About AgriFAAS Connect</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-sm text-muted-foreground">Version: {appVersion}</p>
+                <p className="text-sm text-muted-foreground mt-2">©{new Date().getFullYear()} Cure Technologies Support Group (CTSG Ventures)</p>
+                <p className="text-xs text-muted-foreground mt-4">
+                    For support, please visit our public <Link href="/help" className="text-primary hover:underline">Help Center</Link> or <Link href="/#contact-us" className="text-primary hover:underline">contact us</Link>.
+                </p>
+            </CardContent>
+        </Card>
 
-      <Card className="mt-6 shadow-lg border-destructive/50">
-          <CardHeader>
-              <CardTitle className="font-headline text-lg flex items-center text-destructive">
-              <AlertTriangle className="mr-2 h-5 w-5" /> Advanced Settings
-              </CardTitle>
-              <CardDescription>
-              These are developer-focused actions. Use with caution.
-              </CardDescription>
-          </CardHeader>
-          <CardContent>
-              <AlertDialog>
-              <AlertDialogTrigger asChild>
-                  <Button variant="destructive">Reset Local Settings</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                  <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                      This action will clear locally-stored browser settings, such as your saved weather location and livestock focus. It will not delete any of your farm's central data (like Plots, Financials, Tasks, etc.).
-                      <br/><br/>
-                      This is useful for troubleshooting display issues. This action cannot be undone.
-                  </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleResetLocalData}>Yes, Reset Local Settings</AlertDialogAction>
-                  </AlertDialogFooter>
-              </AlertDialogContent>
-              </AlertDialog>
-              <p className="text-xs text-muted-foreground mt-4">
-                  <strong>Note on User Data:</strong> To clear user and farm profiles from the central database, you must manually delete the documents from the 'users' and 'farms' collections in your Firebase Firestore console.
-              </p>
-          </CardContent>
-      </Card>
+        <Card className="shadow-lg border-destructive/50">
+            <CardHeader>
+                <CardTitle className="font-headline text-lg flex items-center text-destructive">
+                <AlertTriangle className="mr-2 h-5 w-5" /> Advanced Settings
+                </CardTitle>
+                <CardDescription>
+                These are developer-focused actions. Use with caution.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive">Reset Local Settings</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action will clear locally-stored browser settings, such as your saved weather location and livestock focus. It will not delete any of your farm's central data (like Plots, Financials, Tasks, etc.).
+                        <br/><br/>
+                        This is useful for troubleshooting display issues. This action cannot be undone.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleResetLocalData}>Yes, Reset Local Settings</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+                </AlertDialog>
+                <p className="text-xs text-muted-foreground mt-4">
+                    <strong>Note on User Data:</strong> To clear user and farm profiles from the central database, you must manually delete the documents from the 'users' and 'farms' collections in your Firebase Firestore console.
+                </p>
+            </CardContent>
+        </Card>
+      </div>
+
     </div>
   );
 }
