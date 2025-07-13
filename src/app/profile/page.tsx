@@ -43,6 +43,7 @@ const profileFormSchema = z.object({
   phoneNumber: z.string().optional().or(z.literal('')),
   dateOfBirth: z.date().optional(),
   gender: z.enum([...genderOptions, ""] as [string, ...string[]]).optional(),
+  
   address: z.object({
     street: z.string().optional(),
     city: z.string().optional(),
@@ -639,7 +640,7 @@ export default function UserProfilePage() {
                       <AlertTriangle className="mr-2 h-5 w-5" /> Advanced Settings
                       </CardTitle>
                       <CardDescription>
-                      These are developer-focused actions. Use with caution.
+                          This section contains developer-focused actions. Use with caution as they can affect your local app experience.
                       </CardDescription>
                   </CardHeader>
                   <CardContent>

@@ -156,9 +156,11 @@ function PromoCodeCard() {
         <Card className="shadow-lg">
             <CardHeader>
                 <CardTitle className="flex items-center"><Tag className="mr-2 h-5 w-5 text-primary" /> Apply Promotional Code</CardTitle>
-                <CardDescription>Have a promo code? Apply it here to add a discount to your next bill.</CardDescription>
             </CardHeader>
             <CardContent>
+                <CardDescription className="mb-4">
+                    Have a promo code? Apply it here to add a discount to your next bill.
+                </CardDescription>
                 <div className="flex gap-2">
                     <Input 
                         placeholder="Enter your code" 
@@ -183,11 +185,11 @@ export default function BillingPage() {
   const [currentPlan, setCurrentPlan] = useState<SubscriptionDetails | null>(null);
 
   useEffect(() => {
-    if (userProfile?.subscription) {
+    if (userProfile && userProfile.subscription) {
         setCurrentPlan(userProfile.subscription);
     } else if (userProfile && !userProfile.subscription) {
         // If user profile is loaded but there's no subscription object, default to starter
-        setCurrentPlan({ planId: 'starter', status: 'Active', nextBillingDate: null, billingCycle: 'annually' });
+        setCurrentPlan({ planId: 'starter', status: 'Active', nextBillingDate: null, billingCycle: 'annually', trialEnds: null });
     }
   }, [userProfile]);
   
@@ -242,35 +244,37 @@ export default function BillingPage() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-6">
-          <Card className="shadow-lg h-full">
-            <CardHeader>
-              <CardTitle>Your Current Plan</CardTitle>
-              <CardDescription>Details about your active subscription.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 bg-primary/10 rounded-lg text-center">
-                  <div className="text-sm text-primary font-semibold">You are on the</div>
-                  <div className="text-3xl font-bold text-primary capitalize">{currentPlan.planId}</div>
-                  <div className="text-sm text-primary">Plan</div>
-                </div>
-                <div className="text-sm space-y-2">
-                  <div className="flex items-center gap-2">
-                    <strong>Status:</strong> <Badge variant="default">{currentPlan.status}</Badge>
-                  </div>
-                  {currentPlan.nextBillingDate ? (
-                     <div className="flex items-center gap-2"><strong>Next Billing Date:</strong> <span>{currentPlan.nextBillingDate}</span></div>
-                  ) : currentPlan.planId !== 'starter' ? null : (
-                    <div>This is a free plan.</div>
-                  )}
-                </div>
-                <Button variant="outline" className="w-full" disabled>
-                  Manage Payment Method (Coming Soon)
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          <PromoCodeCard />
+            {currentPlan && (
+                <Card className="shadow-lg h-full">
+                    <CardHeader>
+                    <CardTitle>Your Current Plan</CardTitle>
+                    <CardDescription>Details about your active subscription.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                    <div className="space-y-4">
+                        <div className="p-4 bg-primary/10 rounded-lg text-center">
+                        <div className="text-sm text-primary font-semibold">You are on the</div>
+                        <div className="text-3xl font-bold text-primary capitalize">{currentPlan.planId}</div>
+                        <div className="text-sm text-primary">Plan</div>
+                        </div>
+                        <div className="text-sm space-y-2">
+                        <div className="flex items-center gap-2">
+                            <strong>Status:</strong> <Badge variant="default">{currentPlan.status}</Badge>
+                        </div>
+                        {currentPlan.nextBillingDate ? (
+                            <div className="flex items-center gap-2"><strong>Next Billing Date:</strong> <span>{currentPlan.nextBillingDate}</span></div>
+                        ) : currentPlan.planId !== 'starter' ? null : (
+                            <div>This is a free plan.</div>
+                        )}
+                        </div>
+                        <Button variant="outline" className="w-full" disabled>
+                        Manage Payment Method (Coming Soon)
+                        </Button>
+                    </div>
+                    </CardContent>
+                </Card>
+            )}
+            <PromoCodeCard />
         </div>
 
         <div className="lg:col-span-2">
