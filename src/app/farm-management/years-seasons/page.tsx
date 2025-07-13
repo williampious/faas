@@ -20,7 +20,7 @@ import { useRouter } from 'next/navigation';
 import type { FarmingYear, FarmingSeason } from '@/types/season';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 
 const yearFormSchema = z.object({
   name: z.string().min(3, { message: "Year name must be at least 3 characters." }).max(50),
