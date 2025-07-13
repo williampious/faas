@@ -1,4 +1,3 @@
-
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
@@ -47,11 +46,9 @@ if (!isFirebaseClientConfigured) {
   if (!getApps().length) {
     try {
       console.log("Attempting to initialize Firebase app with config:", firebaseConfigValuesFromEnv);
-      const firebaseConfigWithDbUrl = {
-        ...firebaseConfigValuesFromEnv,
-        databaseURL: `https://${firebaseConfigValuesFromEnv.projectId}.firebaseio.com`,
-      };
-      appInstance = initializeApp(firebaseConfigWithDbUrl as FirebaseOptions);
+      // Removed the unnecessary databaseURL property from the config.
+      // The modern SDKs infer this correctly from the projectId.
+      appInstance = initializeApp(firebaseConfigValuesFromEnv as FirebaseOptions);
       console.log("Firebase app initialized successfully (client-side).");
     } catch (e: any) {
       console.error(
