@@ -43,20 +43,6 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         </Link>
-
-         <Link href="/admin/promo-codes" passHref>
-          <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium">Promo Codes</CardTitle>
-              <TicketPercent className="h-6 w-6 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Create and manage promotional codes for user subscriptions.
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
       </div>
 
       <Card className="mt-8 bg-muted/30 p-4">
