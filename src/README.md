@@ -88,6 +88,12 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || isUserAdmin());
     }
 
+    // Admin-only Collections
+    match /promotionalCodes/{codeId} {
+        // Only Admins can manage promotional codes
+        allow read, write, create, delete: if isUserAdmin();
+    }
+
     // Rules for Multi-Tenant Data Collections
     match /plots/{plotId} {
       allow create: if isFarmMember(request.resource.data.farmId);
@@ -317,3 +323,8 @@ You can create these by following the link provided in the console error, or by 
     *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `cropType` (Asc/Desc), Scope: Collection
     *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalSalesIncome` (Asc/Desc), Scope: Collection
     *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalHarvestCost` (Asc/Desc), Scope: Collection
+    
+#### For Admin-only Features:
+
+18. **Promotional Codes:**
+    *   Collection: `promotionalCodes`, Fields: `createdAt` (Desc), Scope: Collection
