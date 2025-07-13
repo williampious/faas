@@ -7,7 +7,7 @@ import { Settings, User, Lock, FileText, ChevronRight, Info, AlertTriangle, Cred
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDesc, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
@@ -159,11 +159,11 @@ export default function SettingsPage() {
                 <AlertDialogContent>
                     <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
+                    <AlertDialogDesc>
                         This action will clear locally-stored browser settings, such as your saved weather location and livestock focus. It will not delete any of your farm's central data (like Plots, Financials, Tasks, etc.).
                         <br/><br/>
                         This is useful for troubleshooting display issues. This action cannot be undone.
-                    </AlertDialogDescription>
+                    </AlertDialogDesc>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
