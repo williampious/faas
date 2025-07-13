@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 export default function AnimalProductionLayout({ children }: { children: ReactNode }) {
-  const { userProfile, isLoading, user } = useUserProfile();
+  const { user, userProfile, isLoading, access } = useUserProfile();
   const router = useRouter();
 
   useEffect(() => {
@@ -41,13 +41,8 @@ export default function AnimalProductionLayout({ children }: { children: ReactNo
     );
   }
   
-  const hasAdminRole = userProfile.role?.includes('Admin');
-  const plan = userProfile.subscription?.planId || 'starter';
-  // Access is granted to Grower plan or higher, or if the user is an Admin
-  const hasPaidPlanAccess = plan === 'grower' || plan === 'business' || plan === 'enterprise';
-  const hasAccess = hasAdminRole || hasPaidPlanAccess;
-
-  if (!hasAccess) {
+  if (!access.canAccessAnimalOps) {
+    const plan = userProfile.subscription?.planId || 'starter';
     return (
       <div className="container mx-auto py-10 flex justify-center">
         <Card className="w-full max-w-lg text-center shadow-lg">

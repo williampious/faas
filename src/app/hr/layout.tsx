@@ -4,13 +4,13 @@
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
-import { Loader2, AlertTriangle, Briefcase, Sparkles } from 'lucide-react';
+import { Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 export default function HRManagementLayout({ children }: { children: ReactNode }) {
-  const { userProfile, isLoading, user } = useUserProfile();
+  const { user, userProfile, isLoading, access } = useUserProfile();
   const router = useRouter();
 
   useEffect(() => {
@@ -41,15 +41,8 @@ export default function HRManagementLayout({ children }: { children: ReactNode }
     );
   }
   
-  const hasAdminRole = userProfile.role?.includes('Admin');
-  const plan = userProfile.subscription?.planId || 'starter';
-  const hasPaidPlanAccess = plan === 'business' || plan === 'enterprise';
-
-  // Admins always have access, regardless of plan.
-  // Other users need a specific plan.
-  const hasAccess = hasAdminRole || hasPaidPlanAccess;
-
-  if (!hasAccess) {
+  if (!access.canAccessHrOps) {
+    const plan = userProfile.subscription?.planId || 'starter';
     return (
       <div className="container mx-auto py-10 flex justify-center">
         <Card className="w-full max-w-lg text-center shadow-lg">

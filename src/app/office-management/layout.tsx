@@ -10,16 +10,12 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 export default function OfficeManagementLayout({ children }: { children: ReactNode }) {
-  const { userProfile, isLoading, user } = useUserProfile();
+  const { user, userProfile, isLoading, access } = useUserProfile();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) {
-      return; // Wait until loading is complete
-    }
-
+    if (isLoading) return;
     if (!user) {
-      // Not logged in, redirect to sign-in
       router.replace('/auth/signin?redirect=/office-management/dashboard');
       return;
     }
@@ -35,7 +31,6 @@ export default function OfficeManagementLayout({ children }: { children: ReactNo
   }
   
   if (!userProfile) {
-    // This case will likely be handled by the root layout, but as a fallback:
     return (
         <div className="container mx-auto py-10 flex justify-center">
           <Card className="w-full max-w-lg text-center shadow-lg">
@@ -46,15 +41,8 @@ export default function OfficeManagementLayout({ children }: { children: ReactNo
     );
   }
   
-  const hasAdminRole = userProfile.role?.includes('Admin');
-  const plan = userProfile.subscription?.planId || 'starter';
-  const hasPaidPlanAccess = plan === 'business' || plan === 'enterprise';
-
-  // Admins always have access, regardless of plan.
-  // Other users need a specific plan.
-  const hasAccess = hasAdminRole || hasPaidPlanAccess;
-
-  if (!hasAccess) {
+  if (!access.canAccessOfficeOps) {
+    const plan = userProfile.subscription?.planId || 'starter';
     return (
       <div className="container mx-auto py-10 flex justify-center">
         <Card className="w-full max-w-lg text-center shadow-lg">

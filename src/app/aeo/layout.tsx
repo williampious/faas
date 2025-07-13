@@ -10,14 +10,11 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 export default function AeoLayout({ children }: { children: ReactNode }) {
-  const { userProfile, isLoading, user } = useUserProfile();
+  const { user, userProfile, isLoading, access } = useUserProfile();
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) {
-      return;
-    }
-
+    if (isLoading) return;
     if (!user) {
       router.replace('/auth/signin?redirect=/aeo/dashboard');
       return;
@@ -45,18 +42,8 @@ export default function AeoLayout({ children }: { children: ReactNode }) {
   }
 
   const isRoleAEO = userProfile.role?.includes('Agric Extension Officer');
-  const isAdmin = userProfile.role?.includes('Admin');
   
-  const plan = userProfile.subscription?.planId || 'starter';
-  const hasPaidPlanAccess = plan === 'business' || plan === 'enterprise';
-
-  const hasAccess = (isRoleAEO || isAdmin) && (hasPaidPlanAccess || isAdmin);
-
-  if (!hasAccess) {
-    const reason = !(isRoleAEO || isAdmin) 
-      ? "You do not have the required 'Agric Extension Officer' role." 
-      : "The AEO module is a premium feature available on the Business plan or higher.";
-
+  if (!isRoleAEO && !access.canAccessAeoTools) {
     return (
       <div className="container mx-auto py-10 flex justify-center">
         <Card className="w-full max-w-lg text-center shadow-lg">
@@ -67,23 +54,39 @@ export default function AeoLayout({ children }: { children: ReactNode }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-lg text-muted-foreground mb-4">{reason}</p>
-            {!(isRoleAEO || isAdmin) ? (
-              <p className="text-sm text-muted-foreground">Please contact your administrator if you believe this is an error.</p>
-            ) : (
-              <>
-                 <p className="text-muted-foreground mb-4">
-                    Your current plan is <span className="font-semibold capitalize text-primary">{plan}</span>. Please upgrade your subscription to unlock AEO tools.
-                </p>
-                <Link href="/settings/billing">
-                    <Button>Upgrade Your Plan</Button>
-                </Link>
-              </>
-            )}
+            <p className="text-lg text-muted-foreground mb-4">You do not have the required 'Agric Extension Officer' role to access this module.</p>
+            <p className="text-sm text-muted-foreground">Please contact your administrator if you believe this is an error.</p>
           </CardContent>
         </Card>
       </div>
     );
+  }
+
+  if (isRoleAEO && !access.canAccessAeoTools) {
+      const plan = userProfile.subscription?.planId || 'starter';
+      return (
+        <div className="container mx-auto py-10 flex justify-center">
+        <Card className="w-full max-w-lg text-center shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-center text-xl text-primary">
+                <Sparkles className="mr-2 h-6 w-6" />
+                Upgrade to Access This Feature
+            </CardTitle>
+             <CardDescription>
+                The AEO module is available on the Business plan and higher.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Your current plan is <span className="font-semibold capitalize text-primary">{plan}</span>. Please upgrade your subscription to unlock AEO tools.
+            </p>
+            <Link href="/settings/billing">
+                <Button>Upgrade Your Plan</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+      );
   }
 
   return <>{children}</>;

@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { AgriFAASUserProfile } from '@/types/user';
@@ -7,13 +8,30 @@ import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
+interface UserAccess {
+  canAccessFarmOps: boolean;
+  canAccessAnimalOps: boolean;
+  canAccessOfficeOps: boolean;
+  canAccessHrOps: boolean;
+  canAccessAeoTools: boolean;
+}
+
 interface UserProfileContextType {
   user: User | null;
   userProfile: AgriFAASUserProfile | null;
   isLoading: boolean;
   isAdmin: boolean;
   error: string | null;
+  access: UserAccess;
 }
+
+const defaultAccess: UserAccess = {
+    canAccessFarmOps: false,
+    canAccessAnimalOps: false,
+    canAccessOfficeOps: false,
+    canAccessHrOps: false,
+    canAccessAeoTools: false,
+};
 
 const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
 
@@ -23,6 +41,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [access, setAccess] = useState<UserAccess>(defaultAccess);
 
   useEffect(() => {
     if (!isFirebaseClientConfigured) {
@@ -51,11 +70,31 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
           if (docSnap.exists()) {
             const profileData = docSnap.data() as AgriFAASUserProfile;
             setUserProfile(profileData);
-            setIsAdmin(profileData.role?.includes('Admin') || false);
+            
+            const userIsAdmin = profileData.role?.includes('Admin') || false;
+            setIsAdmin(userIsAdmin);
+
+            const plan = profileData.subscription?.planId || 'starter';
+            const status = profileData.subscription?.status;
+            
+            const isGrowerOrHigher = plan === 'grower' || plan === 'business' || plan === 'enterprise';
+            const isBusinessOrHigher = plan === 'business' || plan === 'enterprise';
+            
+            // Allow access during trial period as well
+            const hasPaidAccess = status === 'Active' || status === 'Trialing';
+
+            setAccess({
+                canAccessFarmOps: userIsAdmin || (isGrowerOrHigher && hasPaidAccess),
+                canAccessAnimalOps: userIsAdmin || (isGrowerOrHigher && hasPaidAccess),
+                canAccessOfficeOps: userIsAdmin || (isBusinessOrHigher && hasPaidAccess),
+                canAccessHrOps: userIsAdmin || (isBusinessOrHigher && hasPaidAccess),
+                canAccessAeoTools: userIsAdmin || (isBusinessOrHigher && hasPaidAccess),
+            });
             setError(null); 
           } else {
             setUserProfile(null);
             setIsAdmin(false);
+            setAccess(defaultAccess);
             console.warn(`User profile not found in Firestore for UID: ${currentUser.uid}. This may occur if registration didn't complete, the profile was deleted, or if this is an old user account without a profile document.`);
             setError(`User profile document not found in Firestore for your account (UID: ${currentUser.uid}). This likely means the profile creation during registration failed or the document was deleted. Please try registering again or contact support if you believe this is an error.`);
           }
@@ -69,12 +108,14 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
           }
           setUserProfile(null);
           setIsAdmin(false);
+          setAccess(defaultAccess);
           setIsLoading(false);
         });
       } else {
         // User is signed out, clear everything
         setUserProfile(null);
         setIsAdmin(false);
+        setAccess(defaultAccess);
         setIsLoading(false);
         setError(null); 
       }
@@ -92,7 +133,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <UserProfileContext.Provider value={{ user, userProfile, isLoading, isAdmin, error }}>
+    <UserProfileContext.Provider value={{ user, userProfile, isLoading, isAdmin, error, access }}>
       {children}
     </UserProfileContext.Provider>
   );
