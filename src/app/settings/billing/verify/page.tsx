@@ -23,34 +23,23 @@ function VerificationPageContent() {
 
   useEffect(() => {
     const reference = searchParams.get('reference');
-    const planId = searchParams.get('planId') as 'starter' | 'grower' | 'business' | 'enterprise';
-    const billingCycle = searchParams.get('billingCycle') as 'monthly' | 'annually';
 
-    if (!reference || !planId || !billingCycle) {
+    if (!reference) {
       setStatus('failed');
-      setMessage("Transaction details are missing from the URL. Unable to verify payment.");
+      setMessage("Transaction reference is missing from the URL. Unable to verify payment.");
       return;
     }
     
-    if (!userProfile) {
-        // This can happen on initial load, we wait for the userProfile to be available
-        return;
-    }
-
+    // We can show a processing state even before the user profile is loaded.
     const verifyPayment = async () => {
-      const result = await verifyPaystackTransaction({
-        reference,
-        planId,
-        billingCycle,
-        userId: userProfile.userId,
-      });
+      const result = await verifyPaystackTransaction({ reference });
 
       if (result.success) {
         setStatus('success');
         setMessage(result.message);
         toast({
-            title: "Subscription Activated!",
-            description: "Your new plan is now active."
+            title: "Payment Confirmed!",
+            description: "Your subscription details will be updated shortly via our server."
         });
       } else {
         setStatus('failed');
@@ -64,7 +53,7 @@ function VerificationPageContent() {
     };
 
     verifyPayment();
-  }, [searchParams, userProfile, toast]);
+  }, [searchParams, toast]);
 
   return (
     <div>

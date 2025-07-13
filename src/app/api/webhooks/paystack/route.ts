@@ -3,46 +3,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { adminDb } from '@/lib/firebase-admin';
-import type { SubscriptionDetails } from '@/types/user';
-import { add, format } from 'date-fns';
+import { updateUserSubscription } from '@/app/settings/billing/actions';
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
-const USERS_COLLECTION = 'users';
-
-// Data can be moved to a shared file later
-const pricingTiers = [
-  { id: 'starter', name: 'Starter' },
-  { id: 'grower', name: 'Grower' },
-  { id: 'business', name: 'Business' },
-  { id: 'enterprise', name: 'Enterprise' },
-];
-
-async function updateUserSubscription(userId: string, planId: 'starter' | 'grower' | 'business' | 'enterprise', billingCycle: 'monthly' | 'annually'): Promise<void> {
-    if (!userId || !planId || !billingCycle) {
-        throw new Error(`Missing required data for subscription update: userId=${userId}, planId=${planId}, billingCycle=${billingCycle}`);
-    }
-
-    const userDocRef = adminDb.collection(USERS_COLLECTION).doc(userId);
-
-    const nextBillingDate = billingCycle === 'annually' 
-      ? add(new Date(), { years: 1 })
-      : add(new Date(), { months: 1 });
-
-    const newSubscription: SubscriptionDetails = {
-      planId,
-      status: 'Active',
-      billingCycle: billingCycle,
-      nextBillingDate: format(nextBillingDate, 'yyyy-MM-dd'),
-    };
-
-    await userDocRef.update({
-      subscription: newSubscription,
-      updatedAt: new Date().toISOString(),
-    });
-
-    console.log(`[Webhook] Successfully updated subscription for user ${userId} to ${planId} (${billingCycle}).`);
-}
 
 export async function POST(request: NextRequest) {
   if (!PAYSTACK_SECRET_KEY) {
@@ -89,7 +52,7 @@ export async function POST(request: NextRequest) {
 
       console.log(`[Paystack Webhook] Processing charge.success for user ${user_id}, plan ${plan_id}`);
       
-      // Update user's subscription in Firestore
+      // Update user's subscription in Firestore using the centralized server action
       await updateUserSubscription(user_id, plan_id, billing_cycle);
     }
     
