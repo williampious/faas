@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Shovel, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Shovel, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,8 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import type { FarmingYear, FarmingSeason } from '@/types/season';
+import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
+import Link from 'next/link';
 
 
 const activityTypes = ['Field Clearing', 'Weeding', 'Ploughing', 'Harrowing', 'Levelling', 'Manure Spreading', 'Herbicide Application'] as const;
@@ -83,6 +85,7 @@ const ACTIVITIES_COLLECTION = 'landPreparationActivities';
 const TRANSACTIONS_COLLECTION = 'transactions';
 const FARMING_YEARS_COLLECTION = 'farmingYears';
 const ACTIVITY_FORM_ID = 'land-prep-activity-form';
+const STARTER_PLAN_RECORD_LIMIT = 5;
 
 export default function LandPreparationPage() {
   const [activities, setActivities] = useState<LandPreparationActivity[]>([]);
@@ -95,6 +98,9 @@ export default function LandPreparationPage() {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   
   const [farmingYears, setFarmingYears] = useState<FarmingYear[]>([]);
+
+  const isStarterPlan = userProfile?.subscription?.planId === 'starter';
+  const hasReachedRecordLimit = isStarterPlan && activities.length >= STARTER_PLAN_RECORD_LIMIT;
 
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
@@ -148,6 +154,15 @@ export default function LandPreparationPage() {
   }, [userProfile, isProfileLoading]);
 
   const handleOpenModal = (activityToEdit?: LandPreparationActivity) => {
+    if (hasReachedRecordLimit && !activityToEdit) {
+      toast({
+        title: "Record Limit Reached",
+        description: `The Starter plan is limited to ${STARTER_PLAN_RECORD_LIMIT} records. Please upgrade to add more.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (activityToEdit) {
       setEditingActivity(activityToEdit);
       form.reset({
@@ -318,12 +333,25 @@ export default function LandPreparationPage() {
             <Button variant="outline" onClick={() => router.push('/farm-management')}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Farm Management
             </Button>
-            <Button onClick={() => handleOpenModal()}>
+            <Button onClick={() => handleOpenModal()} disabled={hasReachedRecordLimit}>
               <PlusCircle className="mr-2 h-4 w-4" /> Log New Activity
             </Button>
           </div>
         }
       />
+
+       {hasReachedRecordLimit && (
+        <Alert className="mb-6 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700">
+            <Sparkles className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            <AlertTitle className="text-yellow-800 dark:text-yellow-200">Starter Plan Limit Reached</AlertTitle>
+            <ShadcnAlertDescription className="text-yellow-700 dark:text-yellow-300">
+                You have reached the {STARTER_PLAN_RECORD_LIMIT}-record limit for Land Preparation activities on the Starter plan. To log more records, please upgrade your subscription.
+                <Link href="/settings/billing">
+                  <Button variant="link" className="p-0 h-auto ml-1 text-yellow-800 dark:text-yellow-200 font-bold">Upgrade Plan</Button>
+                </Link>
+            </ShadcnAlertDescription>
+        </Alert>
+      )}
 
       <Dialog open={isModalOpen} onOpenChange={(isOpen) => {
         setIsModalOpen(isOpen);
@@ -332,9 +360,7 @@ export default function LandPreparationPage() {
         <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{editingActivity ? 'Edit Activity' : 'Log New Land Preparation Activity'}</DialogTitle>
-            <DialogDescription>
-              {editingActivity ? 'Update the details and costs of this activity.' : 'Enter details and costs for the new activity.'}
-            </DialogDescription>
+            <DialogDescription>{editingActivity ? 'Update the details and costs of this activity.' : 'Enter details and costs for the new activity.'}</DialogDescription>
           </DialogHeader>
           <div className="flex-grow overflow-y-auto pr-2 py-4">
             <Form {...form}>
@@ -438,7 +464,7 @@ export default function LandPreparationPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Logged Land Preparation Activities</CardTitle>
+          <CardTitle>Logged Land Preparation Activities ({activities.length}/{isStarterPlan ? STARTER_PLAN_RECORD_LIMIT : 'Unlimited'})</CardTitle>
           <CardDescription>
             View all recorded activities and their total costs. Edit or delete as needed.
           </CardDescription>
@@ -492,9 +518,9 @@ export default function LandPreparationPage() {
             <CardTitle className="text-base font-semibold text-muted-foreground">About Land Preparation Costing</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; Data in this module is now stored centrally in Firestore, not in your browser. All users from your farm will see the same list.</p>
+            <p>&bull; Data in this module is now stored centrally in Firestore, ensuring all farm members see the same information.</p>
             <p>&bull; Log activities and itemize costs by category (Material/Input, Labor, Equipment, etc.).</p>
-            <p>&bull; The total cost for each activity is automatically calculated and logged in the central `transactions` collection, which feeds the Financial Dashboard.</p>
+            <p>&bull; The total cost for each activity is automatically calculated and logged in the central financial ledger, which feeds the Financial Dashboard.</p>
         </CardContent>
       </Card>
     </div>

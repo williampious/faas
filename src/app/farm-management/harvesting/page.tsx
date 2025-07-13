@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Wheat, PlusCircle, Trash2, Edit2, ArrowLeft, DollarSign, Loader2, AlertTriangle } from 'lucide-react';
+import { Wheat, PlusCircle, Trash2, Edit2, ArrowLeft, DollarSign, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,8 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import type { FarmingYear } from '@/types/season';
 import { v4 as uuidv4 } from 'uuid';
+import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
+import Link from 'next/link';
 
 const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
@@ -81,6 +83,7 @@ const RECORDS_COLLECTION = 'harvestingRecords';
 const TRANSACTIONS_COLLECTION = 'transactions';
 const FARMING_YEARS_COLLECTION = 'farmingYears';
 const ACTIVITY_FORM_ID = 'harvesting-record-form';
+const STARTER_PLAN_RECORD_LIMIT = 5;
 
 export default function HarvestingPage() {
   const [records, setRecords] = useState<HarvestingRecord[]>([]);
@@ -92,6 +95,9 @@ export default function HarvestingPage() {
   const router = useRouter();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const [farmingYears, setFarmingYears] = useState<FarmingYear[]>([]);
+
+  const isStarterPlan = userProfile?.subscription?.planId === 'starter';
+  const hasReachedRecordLimit = isStarterPlan && records.length >= STARTER_PLAN_RECORD_LIMIT;
 
   const form = useForm<HarvestRecordFormValues>({
     resolver: zodResolver(harvestRecordFormSchema),
@@ -144,6 +150,15 @@ export default function HarvestingPage() {
   }, [userProfile, isProfileLoading]);
 
   const handleOpenModal = (recordToEdit?: HarvestingRecord) => {
+    if (hasReachedRecordLimit && !recordToEdit) {
+      toast({
+        title: "Record Limit Reached",
+        description: `The Starter plan is limited to ${STARTER_PLAN_RECORD_LIMIT} records. Please upgrade to add more.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (recordToEdit) {
       setEditingRecord(recordToEdit);
       form.reset({
@@ -296,12 +311,25 @@ export default function HarvestingPage() {
             <Button variant="outline" onClick={() => router.push('/farm-management')}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Farm Management
             </Button>
-            <Button onClick={() => handleOpenModal()}>
+            <Button onClick={() => handleOpenModal()} disabled={hasReachedRecordLimit}>
               <PlusCircle className="mr-2 h-4 w-4" /> Log New Harvest Record
             </Button>
           </div>
         }
       />
+
+      {hasReachedRecordLimit && (
+        <Alert className="mb-6 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700">
+            <Sparkles className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            <AlertTitle className="text-yellow-800 dark:text-yellow-200">Starter Plan Limit Reached</AlertTitle>
+            <ShadcnAlertDescription className="text-yellow-700 dark:text-yellow-300">
+                You have reached the {STARTER_PLAN_RECORD_LIMIT}-record limit for Harvesting activities on the Starter plan. To log more records, please upgrade your subscription.
+                <Link href="/settings/billing">
+                  <Button variant="link" className="p-0 h-auto ml-1 text-yellow-800 dark:text-yellow-200 font-bold">Upgrade Plan</Button>
+                </Link>
+            </ShadcnAlertDescription>
+        </Alert>
+      )}
 
       <Dialog open={isModalOpen} onOpenChange={(isOpen) => {
         setIsModalOpen(isOpen);
@@ -381,7 +409,7 @@ export default function HarvestingPage() {
         </DialogContent>
       </Dialog>
       <Card className="shadow-lg">
-        <CardHeader><CardTitle>Logged Harvest Records</CardTitle><CardDescription>View all recorded harvest activities, yields, sales and their total costs/income. Edit or delete as needed.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Logged Harvest Records ({records.length}/{isStarterPlan ? STARTER_PLAN_RECORD_LIMIT : 'Unlimited'})</CardTitle><CardDescription>View all recorded harvest activities, yields, sales and their total costs/income. Edit or delete as needed.</CardDescription></CardHeader>
         <CardContent>
           {records.length > 0 ? (
             <Table>

@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { ShieldAlert, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,8 @@ import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
+import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
+import Link from 'next/link';
 
 
 const maintenanceActivityTypes = [
@@ -92,6 +94,7 @@ type ActivityFormValues = z.infer<typeof activityFormSchema>;
 const ACTIVITIES_COLLECTION = 'cropMaintenanceActivities';
 const TRANSACTIONS_COLLECTION = 'transactions';
 const ACTIVITY_FORM_ID = 'crop-maintenance-form';
+const STARTER_PLAN_RECORD_LIMIT = 5;
 
 export default function CropMaintenancePage() {
   const [activities, setActivities] = useState<CropMaintenanceActivity[]>([]);
@@ -102,6 +105,9 @@ export default function CropMaintenancePage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+
+  const isStarterPlan = userProfile?.subscription?.planId === 'starter';
+  const hasReachedRecordLimit = isStarterPlan && activities.length >= STARTER_PLAN_RECORD_LIMIT;
 
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
@@ -146,6 +152,15 @@ export default function CropMaintenancePage() {
   }, [userProfile, isProfileLoading]);
 
   const handleOpenModal = (activityToEdit?: CropMaintenanceActivity) => {
+    if (hasReachedRecordLimit && !activityToEdit) {
+      toast({
+        title: "Record Limit Reached",
+        description: `The Starter plan is limited to ${STARTER_PLAN_RECORD_LIMIT} records. Please upgrade to add more.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (activityToEdit) {
       setEditingActivity(activityToEdit);
       form.reset({
@@ -298,12 +313,25 @@ export default function CropMaintenancePage() {
             <Button variant="outline" onClick={() => router.push('/farm-management')}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Farm Management
             </Button>
-            <Button onClick={() => handleOpenModal()}>
+            <Button onClick={() => handleOpenModal()} disabled={hasReachedRecordLimit}>
               <PlusCircle className="mr-2 h-4 w-4" /> Log New Maintenance Activity
             </Button>
           </div>
         }
       />
+
+      {hasReachedRecordLimit && (
+        <Alert className="mb-6 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700">
+            <Sparkles className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            <AlertTitle className="text-yellow-800 dark:text-yellow-200">Starter Plan Limit Reached</AlertTitle>
+            <ShadcnAlertDescription className="text-yellow-700 dark:text-yellow-300">
+                You have reached the {STARTER_PLAN_RECORD_LIMIT}-record limit for Crop Maintenance activities on the Starter plan. To log more records, please upgrade your subscription.
+                <Link href="/settings/billing">
+                  <Button variant="link" className="p-0 h-auto ml-1 text-yellow-800 dark:text-yellow-200 font-bold">Upgrade Plan</Button>
+                </Link>
+            </ShadcnAlertDescription>
+        </Alert>
+      )}
 
       <Dialog open={isModalOpen} onOpenChange={(isOpen) => {
         setIsModalOpen(isOpen);
@@ -357,7 +385,7 @@ export default function CropMaintenancePage() {
         </DialogContent>
       </Dialog>
       <Card className="shadow-lg">
-        <CardHeader><CardTitle>Logged Crop Maintenance Activities</CardTitle><CardDescription>View all recorded maintenance activities and their total costs. Edit or delete as needed.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Logged Crop Maintenance Activities ({activities.length}/{isStarterPlan ? STARTER_PLAN_RECORD_LIMIT : 'Unlimited'})</CardTitle><CardDescription>View all recorded maintenance activities and their total costs. Edit or delete as needed.</CardDescription></CardHeader>
         <CardContent>
           {activities.length > 0 ? (
             <Table>
