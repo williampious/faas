@@ -180,41 +180,39 @@ export default function BillingPage() {
   const router = useRouter();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   
-  const [currentPlan, setCurrentPlan] = useState<SubscriptionDetails>({
-      planId: 'starter',
-      status: 'Active',
-      nextBillingDate: null,
-      billingCycle: 'annually',
-  });
+  const [currentPlan, setCurrentPlan] = useState<SubscriptionDetails | null>(null);
 
   useEffect(() => {
     if (userProfile?.subscription) {
         setCurrentPlan(userProfile.subscription);
     } else if (userProfile && !userProfile.subscription) {
+        // If user profile is loaded but there's no subscription object, default to starter
         setCurrentPlan({ planId: 'starter', status: 'Active', nextBillingDate: null, billingCycle: 'annually' });
     }
   }, [userProfile]);
   
   const handlePlanAction = (plan: PricingTier) => {
-    if (plan.id === currentPlan.planId) return;
+    if (plan.id === currentPlan?.planId) return;
 
     if (plan.isEnterprise) {
         router.push('/#contact-us');
         return;
     }
     
-    router.push(`/settings/billing/checkout?plan=${plan.id}&cycle=annually`);
+    // Default to 'annually' if current cycle is somehow not set
+    const cycle = currentPlan?.billingCycle || 'annually';
+    router.push(`/settings/billing/checkout?plan=${plan.id}&cycle=${cycle}`);
   };
 
   const getButtonText = (planId: string, isEnterprise?: boolean) => {
-    if (planId === currentPlan.planId) return 'Your Current Plan';
+    if (planId === currentPlan?.planId) return 'Your Current Plan';
     if (isEnterprise) return 'Contact Us';
     return 'Upgrade';
   }
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
-  if (isProfileLoading || !userProfile) {
+  if (isProfileLoading || !userProfile || !currentPlan) {
     return (
         <div>
             <PageHeader
@@ -223,13 +221,11 @@ export default function BillingPage() {
                 description="Loading your subscription details..."
             />
             <div className="flex justify-center items-center py-20">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <Loader2 className="h-12 w-12 text-primary animate-spin" />
             </div>
         </div>
     );
   }
-
-  const currentPlanDetails = pricingTiers.find(p => p.id === currentPlan.planId) || pricingTiers[0];
 
   return (
     <div>
