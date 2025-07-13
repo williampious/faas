@@ -15,9 +15,9 @@ import { useState } from 'react';
 import { Loader2, UserPlus } from 'lucide-react';
 import Image from 'next/image';
 import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, signOut, type User } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, collection, getDocs, query, limit, where } from 'firebase/firestore';
-import type { AgriFAASUserProfile, UserRole, SubscriptionDetails } from '@/types/user';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import type { AgriFAASUserProfile, SubscriptionDetails } from '@/types/user';
 import { add } from 'date-fns';
 
 const registerSchema = z.object({
@@ -44,48 +44,26 @@ export default function RegisterPage() {
       password: '',
     },
   });
-
-  const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
-    setIsLoading(true);
-    setError(null);
-
+  
+  const createProfileDocument = async (user: User, data: RegisterFormValues) => {
     const planId = searchParams.get('plan') as 'starter' | 'grower' | 'business' | 'enterprise' || 'starter';
     const cycle = searchParams.get('cycle') as 'monthly' | 'annually' || 'annually';
 
-    if (!isFirebaseClientConfigured) {
-      setError("Firebase client configuration is missing or incomplete. Please ensure all NEXT_PUBLIC_FIREBASE_... variables are correctly set in your .env.local file and that you have restarted your development server.");
-      setIsLoading(false);
-      return;
-    }
+    const trialEndDate = add(new Date(), { days: 14 });
 
-    if (!auth || !db) {
-      setError("Firebase authentication or database service is not available. This could be due to a network issue or Firebase services not being fully enabled in your project console. Please check your setup and internet connection.");
-      setIsLoading(false);
-      return;
-    }
-    
-    let firebaseUser: User | null = null;
-
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      firebaseUser = userCredential.user;
-      console.log('User registered with Firebase Auth:', firebaseUser.uid);
-      
-      const trialEndDate = add(new Date(), { days: 14 });
-
-      const initialSubscription: SubscriptionDetails = {
+    const initialSubscription: SubscriptionDetails = {
         planId: planId,
         status: planId === 'starter' ? 'Active' : 'Trialing',
         billingCycle: cycle,
-        nextBillingDate: null, // Set upon actual subscription
-        trialEnds: planId !== 'starter' ? trialEndDate.toISOString() : null, // Set trial end date
-      };
+        nextBillingDate: null,
+        trialEnds: planId !== 'starter' ? trialEndDate.toISOString() : null,
+    };
 
-      const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
-        userId: firebaseUser.uid,
-        firebaseUid: firebaseUser.uid,
+    const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
+        userId: user.uid,
+        firebaseUid: user.uid,
         fullName: data.fullName,
-        emailAddress: firebaseUser.email || data.email,
+        emailAddress: user.email || data.email,
         role: [],
         accountStatus: 'Active',
         registrationDate: new Date().toISOString(),
@@ -94,42 +72,71 @@ export default function RegisterPage() {
         subscription: initialSubscription,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      };
+    };
+
+    await setDoc(doc(db, usersCollectionName, user.uid), profileForFirestore);
+    console.log('User profile created in Firestore for user:', user.uid);
+  };
+
+
+  const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
+    setIsLoading(true);
+    setError(null);
+
+    if (!isFirebaseClientConfigured || !auth || !db) {
+      setError("Firebase client configuration is missing or incomplete. Please contact support.");
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      // Create user in Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      // If successful, create their Firestore profile
+      await createProfileDocument(userCredential.user, data);
       
-      await setDoc(doc(db, usersCollectionName, firebaseUser.uid), profileForFirestore);
-      console.log('User profile created in Firestore for user:', firebaseUser.uid);
-      
-      // After registration and profile creation, redirect to setup
       router.push(`/setup`);
 
     } catch (registrationError: any) {
-      console.error('Registration Process Error:', registrationError);
-      
-      let displayError = `Registration failed: ${registrationError.message || 'An unknown error occurred. Please try again.'}`;
-
+      // This is the critical part: handle the "email-already-in-use" error
       if (registrationError.code === 'auth/email-already-in-use') {
-        displayError = 'This email address is already in use. Please try a different email or sign in.';
-      } else if (registrationError.code === 'auth/weak-password') {
-        displayError = 'The password is too weak. Please use a stronger password.';
-      } else if (registrationError.code === 'permission-denied') {
-        displayError = 'Firestore Permission Denied: Could not save your profile. Please ensure Firestore rules allow user profile creation during registration. Contact support if this persists.';
-        console.error("Detailed Firestore Permission Denied Error during registration:", registrationError.details || registrationError);
-      } else if (registrationError.code === 'auth/network-request-failed') {
-        displayError = 'Network error: Could not connect to authentication servers. Please check your internet connection and ensure Firebase configuration (especially authDomain) is correct.';
-      }
-      
-      if (firebaseUser) {
-        console.warn('Authentication succeeded but a subsequent step in registration failed. Attempting to sign out user:', firebaseUser.uid, 'Original error details:', registrationError);
         try {
-          await signOut(auth);
-          console.log('User signed out due to incomplete registration process.');
-          displayError = `Account creation was interrupted: ${registrationError.message || 'Profile setup failed.'} Your initial account step was rolled back. Please try registering again or contact support.`;
-        } catch (signOutError: any) {
-          console.error('CRITICAL: Failed to sign out user after registration error:', signOutError);
-          displayError = `Critical error during registration. An account may have been partially created. Please contact support. (Error: ${registrationError.message} / SignoutFail: ${signOutError.message})`;
+          // Attempt to sign in the user, as their auth account exists
+          const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+          const existingUser = userCredential.user;
+          
+          // Now check if their Firestore profile document exists
+          const userDocRef = doc(db, usersCollectionName, existingUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (!userDocSnap.exists()) {
+            // This is the "missing profile" scenario. Create it for them.
+            console.warn(`User ${existingUser.uid} exists in Auth but not Firestore. Creating profile now.`);
+            await createProfileDocument(existingUser, data);
+            
+            // Now that the profile is created, proceed to setup
+            router.push(`/setup`);
+          } else {
+            // The user exists in Auth AND Firestore. They should just sign in.
+             setError('This account already exists. Please use the "Sign In" page.');
+             signOut(auth); // Sign them out as this is the registration page.
+          }
+        } catch (signInError: any) {
+            // This happens if the email exists but they entered the wrong password.
+            if (signInError.code === 'auth/wrong-password' || signInError.code === 'auth/invalid-credential') {
+                 setError('An account with this email already exists, but the password was incorrect. Please sign in or use "Forgot Password".');
+            } else {
+                 console.error('Error during sign-in attempt on registration page:', signInError);
+                 setError(`An unexpected error occurred. Please try again or sign in. (Code: ${signInError.code})`);
+            }
         }
+      } else if (registrationError.code === 'auth/weak-password') {
+        setError('The password is too weak. Please use a stronger password.');
+      } else {
+        // Handle other registration errors
+        console.error('Registration Process Error:', registrationError);
+        setError(`Registration failed: ${registrationError.message || 'An unknown error occurred.'}`);
       }
-      setError(displayError);
     } finally {
       setIsLoading(false);
     }
