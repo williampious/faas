@@ -34,7 +34,7 @@ interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  group?: 'Workspace' | 'Operations' | 'Planning & Reports' | 'HR' | 'AEO' | 'System';
+  group?: 'Workspace' | 'Operations' | 'Planning & Reports' | 'Specialized Tools' | 'System';
   roles?: UserRole[];
   adminOnly?: boolean;
 }
@@ -48,22 +48,17 @@ const allNavItems: NavItem[] = [
   // Operations
   { href: '/farm-management', label: 'Farm Operations', icon: Tractor, group: 'Operations', roles: ['Admin', 'Manager', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
   { href: '/animal-production', label: 'Animal Production', icon: Beef, group: 'Operations', roles: ['Admin', 'Manager', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
-  
-  // Office Management is now under Specialized Tools
+  { href: '/resource-inventory', label: 'Inventory', icon: ListChecks, group: 'Operations', roles: ['Admin', 'Manager', 'FieldOfficer', 'Farmer', 'Agric Extension Officer', 'Farm Staff'] },
   
   // Planning & Reports
   { href: '/reports/financial-dashboard', label: 'Financials', icon: FileText, group: 'Planning & Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager', 'OfficeManager'] },
   { href: '/reports/budgeting', label: 'Budgeting', icon: Banknote, group: 'Planning & Reports', roles: ['Admin', 'Manager', 'Investor', 'Farmer', 'FinanceManager', 'OfficeManager'] },
   { href: '/planting-advice', label: 'AI Advice', icon: BrainCircuit, group: 'Planning & Reports', roles: ['Admin', 'Manager', 'Farmer', 'Agric Extension Officer'] },
   
-  // HR Tools (Specialized)
-  { href: '/hr/dashboard', label: 'HR Management', icon: Briefcase, group: 'HR', roles: ['HRManager', 'Admin'] },
-  
-  // AEO Tools (Specialized)
-  { href: '/aeo/dashboard', label: 'AEO Toolkit', icon: Compass, group: 'AEO', roles: ['Agric Extension Officer', 'Admin'] },
-  
-  // Office Management (Specialized)
-  { href: '/office-management/dashboard', label: 'Office Mgmt', icon: Briefcase, group: 'Operations', roles: ['Admin', 'OfficeManager', 'FinanceManager'] },
+  // Specialized Tools
+  { href: '/hr/dashboard', label: 'HR Management', icon: Briefcase, group: 'Specialized Tools', roles: ['HRManager', 'Admin'] },
+  { href: '/office-management/dashboard', label: 'Office Mgmt', icon: Briefcase, group: 'Specialized Tools', roles: ['Admin', 'OfficeManager', 'FinanceManager'] },
+  { href: '/aeo/dashboard', label: 'AEO Toolkit', icon: Compass, group: 'Specialized Tools', roles: ['Agric Extension Officer', 'Admin'] },
   
   // System
   { href: '/admin/dashboard', label: 'Admin Panel', icon: ShieldHalf, group: 'System', adminOnly: true },
@@ -101,7 +96,7 @@ export function MainNav() {
     return acc;
   }, {} as Record<string, NavItem[]>);
   
-  const groupOrder: Array<keyof typeof groupedItems> = ['Workspace', 'Operations', 'Planning & Reports', 'HR', 'AEO', 'System'];
+  const groupOrder: Array<keyof typeof groupedItems> = ['Workspace', 'Operations', 'Planning & Reports', 'Specialized Tools', 'HR', 'AEO', 'System'];
 
 
   const renderNavItem = (item: NavItem) => (
