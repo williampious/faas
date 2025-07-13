@@ -418,7 +418,9 @@ export default function UserProfilePage() {
                         </FormControl></PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
                             <Calendar mode="single" selected={field.value} onSelect={field.onChange}
-                              disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                              captionLayout="dropdown-buttons"
+                              fromYear={1920}
+                              toYear={new Date().getFullYear()}
                               initialFocus/>
                           </PopoverContent>
                         </Popover><FormMessage />
