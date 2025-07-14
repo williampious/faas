@@ -20,7 +20,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
-import type { PaymentSource, CostCategory, OperationalTransaction } from '@/types/finance';
+import type { PaymentSource, CostCategory, OperationalTransaction, CostItem } from '@/types/finance';
 import { paymentSources, costCategories } from '@/types/finance';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
@@ -48,11 +48,6 @@ const costItemSchema = z.object({
 });
 
 type CostItemFormValues = z.infer<typeof costItemSchema>;
-
-interface CostItem extends CostItemFormValues {
-  id: string;
-  total: number;
-}
 
 interface LandPreparationActivity {
   id: string;
