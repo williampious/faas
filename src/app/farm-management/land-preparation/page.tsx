@@ -509,9 +509,7 @@ export default function LandPreparationPage() {
         </CardContent>
       </Card>
        <Card className="mt-6 bg-muted/30 p-4">
-        <CardHeader className="p-0 pb-2">
-            <CardTitle className="text-base font-semibold text-muted-foreground">About Land Preparation Costing</CardTitle>
-        </CardHeader>
+        <CardHeader className="p-0 pb-2"><CardTitle className="text-base font-semibold text-muted-foreground">About Land Preparation Costing</CardTitle></CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
             <p>&bull; Data in this module is now stored centrally in Firestore, ensuring all farm members see the same information.</p>
             <p>&bull; Log activities and itemize costs by category (Material/Input, Labor, Equipment, etc.).</p>

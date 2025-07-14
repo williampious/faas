@@ -22,7 +22,6 @@ export type LinkedModule =
   | 'Breeding'
   | 'Resource Inventory'
   | 'Payroll'
-  | 'Soil & Water Management'
   | 'Technology Management'
   | 'Facility Management'
   | 'Records Management'
