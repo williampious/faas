@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { PageHeader } from '@/components/layout/page-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CreditCard, Check, Star, Gem, Rocket, Mail, CircleDollarSign, Loader2, Tag } from 'lucide-react';
+import { ArrowLeft, CreditCard, Check, Star, Gem, Rocket, Mail, Loader2, Tag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { cn } from '@/lib/utils';
@@ -182,16 +182,13 @@ export default function BillingPage() {
   const router = useRouter();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   
-  const [currentPlan, setCurrentPlan] = useState<SubscriptionDetails | null>(null);
-
-  useEffect(() => {
-    if (userProfile && userProfile.subscription) {
-        setCurrentPlan(userProfile.subscription);
-    } else if (userProfile && !userProfile.subscription) {
-        // If user profile is loaded but there's no subscription object, default to starter
-        setCurrentPlan({ planId: 'starter', status: 'Active', nextBillingDate: null, billingCycle: 'annually', trialEnds: null });
-    }
-  }, [userProfile]);
+  const currentPlan: SubscriptionDetails = userProfile?.subscription || {
+    planId: 'starter',
+    status: 'Active',
+    billingCycle: 'annually',
+    trialEnds: null,
+    nextBillingDate: null
+  };
   
   const handlePlanAction = (plan: PricingTier) => {
     if (plan.id === currentPlan?.planId) return;
@@ -201,7 +198,6 @@ export default function BillingPage() {
         return;
     }
     
-    // Default to 'annually' if current cycle is somehow not set
     const cycle = currentPlan?.billingCycle || 'annually';
     router.push(`/settings/billing/checkout?plan=${plan.id}&cycle=${cycle}`);
   };
@@ -214,7 +210,7 @@ export default function BillingPage() {
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 
-  if (isProfileLoading || !userProfile || !currentPlan) {
+  if (isProfileLoading || !userProfile) {
     return (
         <div>
             <PageHeader
@@ -244,36 +240,34 @@ export default function BillingPage() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-6">
-            {currentPlan && (
-                <Card className="shadow-lg h-full">
-                    <CardHeader>
-                    <CardTitle>Your Current Plan</CardTitle>
-                    <CardDescription>Details about your active subscription.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                    <div className="space-y-4">
-                        <div className="p-4 bg-primary/10 rounded-lg text-center">
-                        <div className="text-sm text-primary font-semibold">You are on the</div>
-                        <div className="text-3xl font-bold text-primary capitalize">{currentPlan.planId}</div>
-                        <div className="text-sm text-primary">Plan</div>
-                        </div>
-                        <div className="text-sm space-y-2">
-                        <div className="flex items-center gap-2">
-                            <strong>Status:</strong> <Badge variant="default">{currentPlan.status}</Badge>
-                        </div>
-                        {currentPlan.nextBillingDate ? (
-                            <div className="flex items-center gap-2"><strong>Next Billing Date:</strong> <span>{currentPlan.nextBillingDate}</span></div>
-                        ) : currentPlan.planId !== 'starter' ? null : (
-                            <div>This is a free plan.</div>
-                        )}
-                        </div>
-                        <Button variant="outline" className="w-full" disabled>
-                        Manage Payment Method (Coming Soon)
-                        </Button>
+            <Card className="shadow-lg h-full">
+                <CardHeader>
+                <CardTitle>Your Current Plan</CardTitle>
+                <CardDescription>Details about your active subscription.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <div className="space-y-4">
+                    <div className="p-4 bg-primary/10 rounded-lg text-center">
+                    <div className="text-sm text-primary font-semibold">You are on the</div>
+                    <div className="text-3xl font-bold text-primary capitalize">{currentPlan.planId}</div>
+                    <div className="text-sm text-primary">Plan</div>
                     </div>
-                    </CardContent>
-                </Card>
-            )}
+                    <div className="text-sm space-y-2">
+                    <div className="flex items-center gap-2">
+                        <strong>Status:</strong> <Badge variant="default">{currentPlan.status}</Badge>
+                    </div>
+                    {currentPlan.nextBillingDate ? (
+                        <div className="flex items-center gap-2"><strong>Next Billing Date:</strong> <span>{currentPlan.nextBillingDate}</span></div>
+                    ) : currentPlan.planId !== 'starter' ? null : (
+                        <div>This is a free plan.</div>
+                    )}
+                    </div>
+                    <Button variant="outline" className="w-full" disabled>
+                    Manage Payment Method (Coming Soon)
+                    </Button>
+                </div>
+                </CardContent>
+            </Card>
             <PromoCodeCard />
         </div>
 
