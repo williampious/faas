@@ -20,9 +20,9 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
-import type { PaymentSource, CostCategory, OperationalTransaction, CostItem } from '@/types/finance';
+import type { OperationalTransaction, CostItem } from '@/types/finance';
 import { paymentSources, costCategories } from '@/types/finance';
-import type { PlantingRecord, PlantingMethod } from '@/types/planting';
+import type { PlantingRecord } from '@/types/planting';
 import { plantingMethods } from '@/types/planting';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
@@ -177,18 +177,21 @@ export default function PlantingPage() {
     const batch = writeBatch(db);
 
     try {
+      let recordId: string;
       if (editingRecord) {
-        const recordRef = doc(db, RECORDS_COLLECTION, editingRecord.id);
+        recordId = editingRecord.id;
+        const recordRef = doc(db, RECORDS_COLLECTION, recordId);
         batch.update(recordRef, recordData);
         
-        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", editingRecord.id));
+        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", recordId));
         const oldTransSnap = await getDocs(transQuery);
         oldTransSnap.forEach(doc => batch.delete(doc.ref));
         
-        recordData.id = editingRecord.id;
+        recordData.id = recordId;
 
       } else {
         const recordRef = doc(collection(db, RECORDS_COLLECTION));
+        recordId = recordRef.id;
         batch.set(recordRef, { ...recordData, createdAt: serverTimestamp() });
         recordData.id = recordRef.id;
       }
@@ -213,7 +216,11 @@ export default function PlantingPage() {
       await batch.commit();
 
       if (editingRecord) {
-        setRecords(records.map(r => r.id === editingRecord.id ? { ...r, ...recordData, id: editingRecord.id } : r));
+        const updatedRecord: PlantingRecord = {
+          ...editingRecord,
+          ...recordData
+        };
+        setRecords(records.map(r => r.id === editingRecord.id ? updatedRecord : r));
         toast({ title: "Record Updated", description: `Planting record for ${data.cropType} has been updated.` });
       } else {
         const newRecordForState: PlantingRecord = {
@@ -340,7 +347,7 @@ export default function PlantingPage() {
                   <FormField control={form.control} name="notes" render={({ field }) => (<FormItem><FormLabel>Notes (Optional)</FormLabel><FormControl><Textarea placeholder="Any additional details about planting conditions, spacing etc." {...field} /></FormControl><FormMessage /></FormItem>)} />
                 </section>
                 <section className="space-y-4 p-4 border rounded-lg">
-                  <div className="flex justify-between items-center"><h3 className="text-lg font-semibold text-primary">Cost Items</h3><Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: costCategories[0], paymentSource: paymentSources[0], unit: '', quantity: 1, unitPrice: 0 })}><PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item</Button></div>
+                  <div className="flex justify-between items-center"><h3 className="text-lg font-semibold text-primary">Cost Items</h3><Button type="button" size="sm" variant="outline" onClick={() => append({ description: '', category: 'Material/Input', paymentSource: 'Cash', unit: '', quantity: 1, unitPrice: 0 })}><PlusCircle className="mr-2 h-4 w-4" /> Add Cost Item</Button></div>
                   {fields.map((field, index) => (
                     <div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
