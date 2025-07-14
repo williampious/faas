@@ -145,10 +145,10 @@ export default function SettingsPage() {
         <Card className="shadow-lg border-destructive/50">
             <CardHeader>
                 <CardTitle className="font-headline text-lg flex items-center text-destructive">
-                <AlertTriangle className="mr-2 h-5 w-5" /> Advanced Settings
+                  <AlertTriangle className="mr-2 h-5 w-5" /> Advanced Settings
                 </CardTitle>
                 <CardDescription>
-                These are developer-focused actions. Use with caution.
+                  These are developer-focused actions. Use with caution.
                 </CardDescription>
             </CardHeader>
             <CardContent>
