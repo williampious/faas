@@ -24,6 +24,7 @@ const validPromoCodes: Array<{ code: string, type: 'fixed' | 'percentage', value
     { code: 'SAVE50', type: 'fixed', value: 50, active: true },
     { code: 'AGRIFAAS100', type: 'fixed', value: 100, active: true },
     { code: 'EXPIREDCODE', type: 'fixed', value: 20, active: false }, // Simulating an inactive code
+    { code: 'FREEBIZYEAR', type: 'fixed', value: 4499, active: true }, // 100% discount on annual business plan
 ];
 
 export async function validatePromoCode(code: string): Promise<PromoCodeValidationResult> {
