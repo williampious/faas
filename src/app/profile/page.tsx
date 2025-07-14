@@ -442,17 +442,17 @@ export default function UserProfilePage() {
               <Dialog open={isPhotoUploadOpen} onOpenChange={setIsPhotoUploadOpen}>
                 <Card className="shadow-lg">
                   <CardHeader className="items-center text-center">
-                    <div className="relative group">
-                        <Avatar className="w-24 h-24 mb-4 border-2 border-primary">
-                          <AvatarImage src={currentProfile.avatarUrl} alt={currentProfile.fullName} data-ai-hint="profile person" />
-                          <AvatarFallback>{currentProfile.fullName?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
-                        </Avatar>
-                        <DialogTrigger asChild>
-                            <button className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Camera className="h-8 w-8 text-white" />
-                            </button>
-                        </DialogTrigger>
-                    </div>
+                    <DialogTrigger asChild>
+                      <button className="relative group rounded-full">
+                          <Avatar className="w-24 h-24 mb-4 border-2 border-primary">
+                            <AvatarImage src={currentProfile.avatarUrl} alt={currentProfile.fullName} data-ai-hint="profile person" />
+                            <AvatarFallback>{currentProfile.fullName?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
+                          </Avatar>
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Camera className="h-8 w-8 text-white" />
+                          </div>
+                      </button>
+                    </DialogTrigger>
                     <CardTitle className="font-headline">{currentProfile.fullName}</CardTitle>
                     <div className="flex flex-wrap justify-center gap-2 mt-1">
                       {currentProfile.role?.map(r => <Badge key={r} variant={r === 'Admin' ? 'default' : 'secondary'}>{r}</Badge>) ?? <Badge variant="outline">No Role</Badge>}
@@ -586,4 +586,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
