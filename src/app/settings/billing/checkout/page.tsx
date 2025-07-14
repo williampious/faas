@@ -6,13 +6,14 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CreditCard, Lock, CircleDollarSign, Loader2, Tag } from 'lucide-react';
+import { ArrowLeft, CreditCard, Lock, CircleDollarSign, Loader2, Tag, CheckCircle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { initializePaystackTransaction, validatePromoCode } from './actions';
+import { updateUserSubscription } from '../actions';
 import { Input } from '@/components/ui/input';
 
 // Data can be moved to a shared file later
@@ -42,6 +43,7 @@ function CheckoutPageContent() {
   const price = cycle === 'annually' ? selectedPlan.price.annually : selectedPlan.price.monthly;
   const finalPrice = Math.max(0, price - appliedDiscount);
   const billingCycleText = cycle === 'annually' ? 'Billed Annually' : 'Billed Monthly';
+  const isFreeCheckout = finalPrice <= 0;
   
   const handleApplyPromoCode = async () => {
       if (!promoCode.trim()) {
@@ -65,25 +67,36 @@ function CheckoutPageContent() {
 
   const handleProceedToPayment = async () => {
     if (!userProfile) {
-      toast({ title: "Error", description: "You must be logged in to make a payment.", variant: "destructive" });
+      toast({ title: "Error", description: "You must be logged in to proceed.", variant: "destructive" });
       return;
     }
     
     setIsProcessing(true);
-    
-    const amountInKobo = finalPrice * 100; // Convert GHS to Kobo
-    const result = await initializePaystackTransaction(userProfile, amountInKobo, planId, cycle);
 
-    if (result.success && result.data?.authorization_url) {
-        // Redirect the user to Paystack's page to complete payment
-        router.push(result.data.authorization_url);
+    if (isFreeCheckout) {
+        // Handle free activation directly
+        const result = await updateUserSubscription(userProfile.userId, planId, cycle);
+        if (result.success) {
+            toast({ title: "Plan Activated!", description: "Your new plan is now active." });
+            router.push('/dashboard');
+        } else {
+            toast({ title: "Activation Failed", description: result.message, variant: "destructive" });
+            setIsProcessing(false);
+        }
     } else {
-        toast({
-            title: "Payment Initialization Failed",
-            description: result.message || "Could not start the payment process. Please try again.",
-            variant: "destructive",
-        });
-        setIsProcessing(false);
+        // Proceed with Paystack for paid transactions
+        const amountInKobo = finalPrice * 100;
+        const result = await initializePaystackTransaction(userProfile, amountInKobo, planId, cycle);
+        if (result.success && result.data?.authorization_url) {
+            router.push(result.data.authorization_url);
+        } else {
+            toast({
+                title: "Payment Initialization Failed",
+                description: result.message || "Could not start the payment process. Please try again.",
+                variant: "destructive",
+            });
+            setIsProcessing(false);
+        }
     }
   };
   
@@ -150,30 +163,40 @@ function CheckoutPageContent() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Payment Method</CardTitle>
-              <CardDescription>Choose how you'd like to pay.</CardDescription>
+              <CardDescription>{isFreeCheckout ? 'No payment required.' : 'Choose how you\'d like to pay.'}</CardDescription>
             </CardHeader>
             <CardContent>
-              <RadioGroup defaultValue="momo" className="space-y-3">
-                <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-primary/50">
-                  <RadioGroupItem value="momo" id="momo" />
-                   <CircleDollarSign className="h-6 w-6 text-yellow-500" />
-                  <span className="font-medium">Mobile Money</span>
-                </Label>
-                <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-primary/50">
-                  <RadioGroupItem value="card" id="card" />
-                  <CreditCard className="h-6 w-6 text-blue-500" />
-                  <span className="font-medium">Credit/Debit Card</span>
-                </Label>
-              </RadioGroup>
+              {!isFreeCheckout && (
+                <RadioGroup defaultValue="momo" className="space-y-3">
+                  <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-primary/50">
+                    <RadioGroupItem value="momo" id="momo" />
+                    <CircleDollarSign className="h-6 w-6 text-yellow-500" />
+                    <span className="font-medium">Mobile Money</span>
+                  </Label>
+                  <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-primary/50">
+                    <RadioGroupItem value="card" id="card" />
+                    <CreditCard className="h-6 w-6 text-blue-500" />
+                    <span className="font-medium">Credit/Debit Card</span>
+                  </Label>
+                </RadioGroup>
+              )}
+              {isFreeCheckout && (
+                <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <p className="font-semibold text-green-700 dark:text-green-200">Your plan is free upon checkout. No payment is needed.</p>
+                </div>
+              )}
             </CardContent>
             <CardFooter className="flex-col items-start gap-4">
                <Button size="lg" className="w-full" onClick={handleProceedToPayment} disabled={isProcessing}>
-                  {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
-                  {isProcessing ? 'Initializing...' : `Pay ${formatCurrency(finalPrice)} via Paystack`}
+                  {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isFreeCheckout ? <CheckCircle className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
+                  {isProcessing ? 'Activating...' : isFreeCheckout ? 'Activate Your Plan' : `Pay ${formatCurrency(finalPrice)} via Paystack`}
                </Button>
-               <p className="text-xs text-muted-foreground text-center w-full">
-                You will be redirected to Paystack's secure payment page to complete your purchase.
-               </p>
+               {!isFreeCheckout && (
+                 <p className="text-xs text-muted-foreground text-center w-full">
+                  You will be redirected to Paystack's secure payment page to complete your purchase.
+                 </p>
+               )}
             </CardFooter>
           </Card>
         </div>
