@@ -79,24 +79,26 @@ function CheckoutPageContent() {
         if (result.success) {
             toast({ title: "Plan Activated!", description: "Your new plan is now active." });
             router.push('/dashboard');
+            return; // <-- CRITICAL FIX: Stop execution here
         } else {
             toast({ title: "Activation Failed", description: result.message, variant: "destructive" });
             setIsProcessing(false);
+            return; // Stop execution on failure as well
         }
+    }
+    
+    // This code only runs if it's a paid checkout
+    const amountInKobo = finalPrice * 100;
+    const result = await initializePaystackTransaction(userProfile, amountInKobo, planId, cycle);
+    if (result.success && result.data?.authorization_url) {
+        router.push(result.data.authorization_url);
     } else {
-        // Proceed with Paystack for paid transactions
-        const amountInKobo = finalPrice * 100;
-        const result = await initializePaystackTransaction(userProfile, amountInKobo, planId, cycle);
-        if (result.success && result.data?.authorization_url) {
-            router.push(result.data.authorization_url);
-        } else {
-            toast({
-                title: "Payment Initialization Failed",
-                description: result.message || "Could not start the payment process. Please try again.",
-                variant: "destructive",
-            });
-            setIsProcessing(false);
-        }
+        toast({
+            title: "Payment Initialization Failed",
+            description: result.message || "Could not start the payment process. Please try again.",
+            variant: "destructive",
+        });
+        setIsProcessing(false);
     }
   };
   
