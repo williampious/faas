@@ -103,90 +103,6 @@ function InfoItem({ icon: Icon, label, value, className }: InfoItemProps) {
   );
 }
 
-function ProfilePhotoUploadDialog({ onUploadSuccess }: { onUploadSuccess: () => void }) {
-  const { user } = useUserProfile();
-  const { toast } = useToast();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (selectedFile) {
-      const objectUrl = URL.createObjectURL(selectedFile);
-      setPreviewUrl(objectUrl);
-      return () => URL.revokeObjectURL(objectUrl);
-    }
-  }, [selectedFile]);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      setSelectedFile(file);
-    } else {
-      toast({ title: "Invalid File", description: "Please select an image file.", variant: "destructive" });
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!selectedFile || !user || !storage) {
-      toast({ title: "Error", description: "No file selected or user not logged in.", variant: "destructive" });
-      return;
-    }
-
-    setIsUploading(true);
-    const filePath = `profile-photos/${user.uid}/${selectedFile.name}`;
-    const fileRef = storageRef(storage, filePath);
-
-    try {
-      await uploadBytes(fileRef, selectedFile);
-      const downloadURL = await getDownloadURL(fileRef);
-      
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, { avatarUrl: downloadURL });
-
-      toast({ title: "Success", description: "Profile photo updated successfully!" });
-      onUploadSuccess(); // This will close the dialog and potentially refresh data
-    } catch (error: any) {
-      console.error("Error uploading profile photo:", error);
-      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Update Profile Photo</DialogTitle>
-      </DialogHeader>
-      <div className="py-4 space-y-4">
-        <div className="flex justify-center">
-          {previewUrl ? (
-            <Image src={previewUrl} alt="Preview" width={128} height={128} className="rounded-full object-cover h-32 w-32 border-2 border-primary" />
-          ) : (
-            <div className="h-32 w-32 rounded-full bg-muted flex items-center justify-center">
-              <Camera className="h-12 w-12 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-        <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>
-          {selectedFile ? 'Change Photo' : 'Select Photo'}
-        </Button>
-      </div>
-      <DialogFooter>
-        <DialogClose asChild>
-          <Button type="button" variant="ghost">Cancel</Button>
-        </DialogClose>
-        <Button onClick={handleUpload} disabled={isUploading || !selectedFile}>
-          {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isUploading ? 'Uploading...' : 'Upload & Save'}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  );
-}
 
 export default function UserProfilePage() {
   const { userProfile, isLoading: isProfileLoading, error: profileError, user } = useUserProfile();
@@ -195,24 +111,36 @@ export default function UserProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isAEO = userProfile?.role?.includes('Agric Extension Officer') || false;
   const [isPhotoUploadOpen, setIsPhotoUploadOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {},
   });
+  
+  // Effect to handle photo preview
+  useEffect(() => {
+    if (selectedFile) {
+      const objectUrl = URL.createObjectURL(selectedFile);
+      setPreviewUrl(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+  }, [selectedFile]);
 
+  // Effect to populate form when profile loads or edit mode changes
   useEffect(() => {
     if (userProfile) {
       let dob: Date | undefined;
       const dobValue = userProfile.dateOfBirth as any;
       if (dobValue) {
-          if (typeof dobValue.toDate === 'function') { // Firestore Timestamp
+          if (typeof dobValue.toDate === 'function') {
               dob = dobValue.toDate();
-          } else if (typeof dobValue === 'string') { // ISO String
+          } else if (typeof dobValue === 'string') {
               const parsed = parseISO(dobValue);
-              if (isValid(parsed)) {
-                  dob = parsed;
-              }
+              if (isValid(parsed)) dob = parsed;
           }
       }
       
@@ -250,12 +178,34 @@ export default function UserProfilePage() {
     }
   }, [userProfile, form, isEditMode]);
 
+  const handlePhotoUpload = async () => {
+    if (!selectedFile || !user || !storage) {
+      toast({ title: "Error", description: "No file selected or user not logged in.", variant: "destructive" });
+      return;
+    }
+    setIsUploading(true);
+    const filePath = `profile-photos/${user.uid}/${selectedFile.name}`;
+    const fileRef = storageRef(storage, filePath);
+    try {
+      await uploadBytes(fileRef, selectedFile);
+      const downloadURL = await getDownloadURL(fileRef);
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, { avatarUrl: downloadURL });
+      toast({ title: "Success", description: "Profile photo updated successfully!" });
+      setIsPhotoUploadOpen(false);
+    } catch (error: any) {
+      console.error("Error uploading profile photo:", error);
+      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
     if (!user || !userProfile) {
       toast({ title: "Error", description: "User not found. Cannot save profile.", variant: "destructive" });
       return;
     }
-
     setIsSubmitting(true);
     try {
       const profileDataToUpdate: Partial<AgriFAASUserProfile> = {
@@ -288,23 +238,10 @@ export default function UserProfilePage() {
   };
   
   const handleResetLocalData = () => {
-    const keysToRemove = [
-      'weatherLocation',
-      'livestockProductionFocus_v1'
-    ];
-
-    keysToRemove.forEach(key => {
-      localStorage.removeItem(key);
-    });
-
-    toast({
-      title: "Local Data Reset",
-      description: "Local browser settings have been cleared. The page will now reload.",
-    });
-
-    setTimeout(() => {
-      window.location.reload();
-    }, 1500);
+    const keysToRemove = ['weatherLocation', 'livestockProductionFocus_v1'];
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    toast({ title: "Local Data Reset", description: "Local browser settings have been cleared. The page will now reload." });
+    setTimeout(() => window.location.reload(), 1500);
   };
 
   if (isProfileLoading) {
@@ -322,8 +259,7 @@ export default function UserProfilePage() {
         <Card className="w-full max-w-lg text-center shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center justify-center text-xl text-destructive">
-              <AlertTriangle className="mr-2 h-6 w-6" />
-              Error Loading Profile
+              <AlertTriangle className="mr-2 h-6 w-6" /> Error Loading Profile
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -342,8 +278,7 @@ export default function UserProfilePage() {
         <Card className="w-full max-w-lg text-center shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center justify-center text-xl">
-              <UserCircle className="mr-2 h-6 w-6 text-muted-foreground" />
-              Profile Not Found
+              <UserCircle className="mr-2 h-6 w-6 text-muted-foreground" /> Profile Not Found
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -356,26 +291,19 @@ export default function UserProfilePage() {
   }
 
   const currentProfile = userProfile;
-
   const formatTimestamp = (timestamp: any, dateFormat: string = 'PPpp'): string => {
     if (!timestamp) return 'N/A';
-    if (typeof timestamp.toDate === 'function') { // Firestore Timestamp
-      const dateObj = timestamp.toDate();
-      return isValid(dateObj) ? format(dateObj, dateFormat) : 'Invalid Date';
-    }
-    if (timestamp instanceof Date) { // JavaScript Date Object
-      return isValid(timestamp) ? format(timestamp, dateFormat) : 'Invalid JS Date';
-    }
-    if (typeof timestamp === 'string') { // ISO String
-      const parsedDate = parseISO(timestamp);
-      return isValid(parsedDate) ? format(parsedDate, dateFormat) : 'Invalid Date String';
-    }
-    if (typeof timestamp === 'number') { // Number (milliseconds epoch)
-      const dateFromNum = new Date(timestamp);
-      return isValid(dateFromNum) ? format(dateFromNum, dateFormat) : 'Invalid Timestamp Number';
-    }
-    console.warn("UserProfilePage: Timestamp field is of an unexpected type:", timestamp);
-    return 'Invalid Date Format';
+    try {
+      if (typeof timestamp.toDate === 'function') {
+        const date = timestamp.toDate();
+        if (isValid(date)) return format(date, dateFormat);
+      }
+      if (typeof timestamp === 'string') {
+        const date = parseISO(timestamp);
+        if (isValid(date)) return format(date, dateFormat);
+      }
+    } catch (e) { console.error("Date formatting error:", e); }
+    return 'Invalid Date';
   };
 
   return (
@@ -419,10 +347,7 @@ export default function UserProfilePage() {
                         </FormControl></PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
                             <Calendar mode="single" selected={field.value} onSelect={field.onChange}
-                              captionLayout="dropdown-buttons"
-                              fromYear={1920}
-                              toYear={new Date().getFullYear()}
-                              initialFocus/>
+                              captionLayout="dropdown-buttons" fromYear={1920} toYear={new Date().getFullYear()} initialFocus/>
                           </PopoverContent>
                         </Popover><FormMessage />
                       </FormItem>
@@ -512,47 +437,61 @@ export default function UserProfilePage() {
           </CardContent>
         </Card>
       ) : (
-        <Dialog open={isPhotoUploadOpen} onOpenChange={setIsPhotoUploadOpen}>
           <div className="grid md:grid-cols-3 gap-6">
             <div className="md:col-span-1 space-y-6">
-              <Card className="shadow-lg">
-                <CardHeader className="items-center text-center">
-                  <div className="relative group">
-                      <Avatar className="w-24 h-24 mb-4 border-2 border-primary">
-                        <AvatarImage src={currentProfile.avatarUrl} alt={currentProfile.fullName} data-ai-hint="profile person" />
-                        <AvatarFallback>{currentProfile.fullName?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
-                      </Avatar>
-                      <DialogTrigger asChild>
-                          <button className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Camera className="h-8 w-8 text-white" />
-                          </button>
-                      </DialogTrigger>
+              <Dialog open={isPhotoUploadOpen} onOpenChange={setIsPhotoUploadOpen}>
+                <Card className="shadow-lg">
+                  <CardHeader className="items-center text-center">
+                    <div className="relative group">
+                        <Avatar className="w-24 h-24 mb-4 border-2 border-primary">
+                          <AvatarImage src={currentProfile.avatarUrl} alt={currentProfile.fullName} data-ai-hint="profile person" />
+                          <AvatarFallback>{currentProfile.fullName?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <DialogTrigger asChild>
+                            <button className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Camera className="h-8 w-8 text-white" />
+                            </button>
+                        </DialogTrigger>
+                    </div>
+                    <CardTitle className="font-headline">{currentProfile.fullName}</CardTitle>
+                    <div className="flex flex-wrap justify-center gap-2 mt-1">
+                      {currentProfile.role?.map(r => <Badge key={r} variant={r === 'Admin' ? 'default' : 'secondary'}>{r}</Badge>) ?? <Badge variant="outline">No Role</Badge>}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="text-sm">
+                    <InfoItem icon={Mail} label="Email" value={currentProfile.emailAddress || 'Not provided'} />
+                    <InfoItem icon={Phone} label="Phone" value={currentProfile.phoneNumber || 'Not set'} />
+                    {currentProfile.dateOfBirth && <InfoItem icon={CalendarIcon} label="Date of Birth" value={formatTimestamp(currentProfile.dateOfBirth, 'MMMM d, yyyy')} />}
+                    <InfoItem icon={Briefcase} label="Gender" value={currentProfile.gender || 'Not specified'}/>
+                    {currentProfile.nationalId && <InfoItem label="National ID" value={currentProfile.nationalId} />}
+                    {currentProfile.address && (
+                      <InfoItem icon={MapPin} label="Location" value={
+                        [currentProfile.address.street, currentProfile.address.city, currentProfile.address.region, currentProfile.address.country, currentProfile.address.postalCode].filter(Boolean).join(', ') || 'Not set'
+                      } />
+                    )}
+                  </CardContent>
+                </Card>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>Update Profile Photo</DialogTitle></DialogHeader>
+                  <div className="py-4 space-y-4">
+                    <div className="flex justify-center">
+                      {previewUrl ? (
+                        <Image src={previewUrl} alt="Preview" width={128} height={128} className="rounded-full object-cover h-32 w-32 border-2 border-primary" />
+                      ) : (
+                        <Avatar className="h-32 w-32 border-2 border-dashed"><AvatarImage src={currentProfile.avatarUrl} /><AvatarFallback><Camera className="h-12 w-12 text-muted-foreground" /></AvatarFallback></Avatar>
+                      )}
+                    </div>
+                    <input type="file" accept="image/*" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="hidden" />
+                    <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>{selectedFile ? 'Change Photo' : 'Select Photo'}</Button>
                   </div>
-                  <CardTitle className="font-headline">{currentProfile.fullName}</CardTitle>
-                  <div className="flex flex-wrap justify-center gap-2 mt-1">
-                    {currentProfile.role?.map(r => <Badge key={r} variant={r === 'Admin' ? 'default' : 'secondary'}>{r}</Badge>) ?? <Badge variant="outline">No Role</Badge>}
-                  </div>
-                </CardHeader>
-                <CardContent className="text-sm">
-                  <InfoItem icon={Mail} label="Email" value={currentProfile.emailAddress || 'Not provided'} />
-                  <InfoItem icon={Phone} label="Phone" value={currentProfile.phoneNumber || 'Not set'} />
-                  {currentProfile.dateOfBirth && <InfoItem icon={CalendarIcon} label="Date of Birth" value={formatTimestamp(currentProfile.dateOfBirth, 'MMMM d, yyyy')} />}
-                  <InfoItem icon={Briefcase} label="Gender" value={currentProfile.gender || 'Not specified'}/>
-                  {currentProfile.nationalId && <InfoItem label="National ID" value={currentProfile.nationalId} />}
-                  {currentProfile.address && (
-                    <InfoItem icon={MapPin} label="Location" value={
-                      [currentProfile.address.street, currentProfile.address.city, currentProfile.address.region, currentProfile.address.country, currentProfile.address.postalCode].filter(Boolean).join(', ') || 'Not set'
-                    } />
-                  )}
-                </CardContent>
-              </Card>
+                  <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="ghost">Cancel</Button></DialogClose>
+                    <Button onClick={handlePhotoUpload} disabled={isUploading || !selectedFile}>{isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{isUploading ? 'Uploading...' : 'Upload & Save'}</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle className="font-headline text-lg flex items-center">
-                    <ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Account Details
-                  </CardTitle>
-                </CardHeader>
+              <Card className="shadow-lg"><CardHeader><CardTitle className="font-headline text-lg flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Account Details</CardTitle></CardHeader>
                 <CardContent className="text-sm space-y-2">
                   <InfoItem label="Status" value={<Badge variant={currentProfile.accountStatus === 'Active' ? 'default' : 'destructive'}>{currentProfile.accountStatus}</Badge>} />
                   <InfoItem label="Member Since" value={formatTimestamp(currentProfile.registrationDate, 'MMMM d, yyyy')} />
@@ -564,12 +503,7 @@ export default function UserProfilePage() {
               </Card>
               
               {isAEO && (
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="font-headline text-lg flex items-center">
-                      <MapPin className="mr-2 h-5 w-5 text-primary" /> AEO Assignment
-                    </CardTitle>
-                  </CardHeader>
+                <Card className="shadow-lg"><CardHeader><CardTitle className="font-headline text-lg flex items-center"><MapPin className="mr-2 h-5 w-5 text-primary" /> AEO Assignment</CardTitle></CardHeader>
                   <CardContent className="text-sm space-y-2">
                     <InfoItem label="Assigned Region" value={currentProfile.assignedRegion || 'Not set'} />
                     <InfoItem label="Assigned District" value={currentProfile.assignedDistrict || 'Not set'} />
@@ -581,12 +515,7 @@ export default function UserProfilePage() {
 
             <div className="md:col-span-2 space-y-6">
               {currentProfile.farmDetails && Object.keys(currentProfile.farmDetails).length > 0 && (
-                <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="font-headline text-lg flex items-center">
-                      <Building className="mr-2 h-5 w-5 text-primary" /> Farm & Hub Details
-                    </CardTitle>
-                  </CardHeader>
+                <Card className="shadow-lg"><CardHeader><CardTitle className="font-headline text-lg flex items-center"><Building className="mr-2 h-5 w-5 text-primary" /> Farm & Hub Details</CardTitle></CardHeader>
                   <CardContent className="text-sm space-y-2">
                     <InfoItem label="Farm Hub ID" value={currentProfile.farmDetails.linkedFarmHubId} />
                     <InfoItem label="Allocated Land" value={currentProfile.farmDetails.allocatedLandSizeAcres ? `${currentProfile.farmDetails.allocatedLandSizeAcres} acres` : 'N/A'} />
@@ -598,12 +527,7 @@ export default function UserProfilePage() {
                 </Card>
               )}
 
-              <Card className="shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="font-headline text-lg flex items-center">
-                      <Settings className="mr-2 h-5 w-5 text-primary" /> Preferences & Notifications
-                    </CardTitle>
-                  </CardHeader>
+              <Card className="shadow-lg"><CardHeader><CardTitle className="font-headline text-lg flex items-center"><Settings className="mr-2 h-5 w-5 text-primary" /> Preferences & Notifications</CardTitle></CardHeader>
                   <CardContent className="text-sm space-y-3">
                     <InfoItem label="Primary Language" value={currentProfile.primaryLanguage || 'Not set'} />
                     <InfoItem label="Preferred Communication" value={currentProfile.preferredCommunicationChannel || 'Not set'} />
@@ -634,27 +558,15 @@ export default function UserProfilePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="shadow-lg border-destructive/50">
-                  <CardHeader>
-                      <CardTitle className="font-headline text-lg flex items-center text-destructive">
-                      <AlertTriangle className="mr-2 h-5 w-5" /> Advanced Settings
-                      </CardTitle>
-                      <CardDescription>
-                          This section contains developer-focused actions. Use with caution as they can affect your local app experience.
-                      </CardDescription>
-                  </CardHeader>
+                <Card className="shadow-lg border-destructive/50"><CardHeader><CardTitle className="font-headline text-lg flex items-center text-destructive"><AlertTriangle className="mr-2 h-5 w-5" /> Advanced Settings</CardTitle><CardDescription>These are developer-focused actions. Use with caution.</CardDescription></CardHeader>
                   <CardContent>
                       <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                          <Button variant="destructive">Reset Local Settings</Button>
-                      </AlertDialogTrigger>
+                      <AlertDialogTrigger asChild><Button variant="destructive">Reset Local Settings</Button></AlertDialogTrigger>
                       <AlertDialogContent>
-                          <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                           <AlertDialogDescription>
                               This action will clear locally-stored browser settings, such as your saved weather location and livestock focus. It will not delete any of your farm's central data (like Plots, Financials, Tasks, etc.).
-                              <br/><br/>
-                              This is useful for troubleshooting display issues. This action cannot be undone.
+                              <br/><br/>This is useful for troubleshooting display issues. This action cannot be undone.
                           </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -669,10 +581,9 @@ export default function UserProfilePage() {
                   </CardContent>
                   </Card>
             </div>
-            <ProfilePhotoUploadDialog onUploadSuccess={() => setIsPhotoUploadOpen(false)} />
           </div>
-        </Dialog>
       )}
     </div>
   );
 }
+
