@@ -2,7 +2,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, ExternalLink, Handshake } from 'lucide-react';
@@ -36,16 +35,12 @@ export default function PartnersPage() {
       <div className="grid md:grid-cols-2 gap-8 justify-center">
         {partners.map((partner, index) => (
           <Card key={index} className="flex flex-col overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 max-w-sm w-full mx-auto">
-            <CardHeader className="p-0 bg-white">
-              <div className="relative aspect-video">
-                <Image
-                  src={partner.logo}
-                  alt={`${partner.name} Logo`}
-                  fill
-                  objectFit="contain"
-                  className="p-4"
-                />
-              </div>
+            <CardHeader className="p-0 bg-white flex justify-center items-center h-48">
+              <img
+                src={partner.logo}
+                alt={`${partner.name} Logo`}
+                className="max-h-full max-w-full object-contain p-4"
+              />
             </CardHeader>
             <CardContent className="p-6 flex-grow">
               <CardTitle className="text-xl text-primary mb-2">{partner.name}</CardTitle>
