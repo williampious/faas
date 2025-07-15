@@ -15,6 +15,12 @@ const partners = [
     logo: "/alx-logo.png", // Path to the logo in the /public directory
     website: "https://alx-ventures.com/",
     description: "Helping us TRANSFORM OUR IDEAS INTO ACTION.",
+  },
+  {
+    name: "NOVAC",
+    logo: "/novac-logo.png", // Path to the logo in the /public directory
+    website: "https://www.curetechnologies.org", // Placeholder link, update as needed
+    description: "A transformative Farming-as-a-Service (FaaS) investment model that allows individuals to earn passive income through agriculture. No farming experience needed – our expert team handles everything from land preparation to harvesting and sales. Secure, scalable, and impact-driven – supporting job creation, food security, and economic growth, Powered By Cure Technologies",
   }
 ];
 
@@ -22,14 +28,14 @@ export default function PartnersPage() {
   return (
     <div className="container mx-auto px-4">
       <LandingPageHeader
-        title="Our Key Partner"
-        description="We are proud to collaborate with ALX Africa to help transform our ideas into action."
+        title="Our Key Partners"
+        description="We are proud to collaborate with our partners to help transform our ideas into action."
         icon={Handshake}
       />
 
-      <div className="flex justify-center">
+      <div className="grid md:grid-cols-2 gap-8 justify-center">
         {partners.map((partner, index) => (
-          <Card key={index} className="flex flex-col overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 max-w-sm w-full">
+          <Card key={index} className="flex flex-col overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 max-w-sm w-full mx-auto">
             <CardHeader className="p-0 bg-white">
               <div className="relative aspect-video">
                 <Image
