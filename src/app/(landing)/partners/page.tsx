@@ -19,7 +19,7 @@ const partners = [
   {
     name: "NOVAC",
     logo: "/novac-logo.png", // Path to the logo in the /public directory
-    website: "https://www.curetechnologies.org", // Placeholder link, update as needed
+    website: "https://curetechnologies.org/novac/",
     description: "A transformative Farming-as-a-Service (FaaS) investment model that allows individuals to earn passive income through agriculture. No farming experience needed – our expert team handles everything from land preparation to harvesting and sales. Secure, scalable, and impact-driven – supporting job creation, food security, and economic growth, Powered By Cure Technologies",
   }
 ];
