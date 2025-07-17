@@ -34,8 +34,8 @@ if (!admin.apps.length) {
 }
 
 // Export the initialized services
-const adminDb = admin.firestore();
-const adminAuth = admin.auth();
-const adminApp = admin.app();
+const adminDb = admin.apps.length ? admin.firestore() : undefined;
+const adminAuth = admin.apps.length ? admin.auth() : undefined;
+const adminApp = admin.apps.length ? admin.app() : undefined;
 
 export { adminDb, adminAuth, adminApp };
