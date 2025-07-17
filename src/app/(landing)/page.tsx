@@ -283,7 +283,14 @@ export default function LandingPage() {
             <p className="flex items-center justify-center">
               <Phone className="mr-2 h-4 w-4" /> Contact:
               <a href="tel:+233249499338" className="hover:text-primary hover:underline ml-1">+233 24 949 9338</a> /
-              <a href="tel:+233277118442" className="hover:text-primary hover:underline ml-1">+233 27 711 8442</a>
+              <a href="tel:+233277118442" className="hover:text-primary hover:underline ml-1">+233 27 711 8442</a> /
+              <a href="tel:+233203721037" className="hover:text-primary hover:underline ml-1">+233 20 372 1037</a>
+            </p>
+             <p className="flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+               WhatsApp:
+              <a href="https://wa.me/233249499338" target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline ml-1">+233 24 949 9338</a> /
+              <a href="https://wa.me/447309342040" target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline ml-1">+44 7309 342040</a>
             </p>
             <p className="flex items-center justify-center">
               <MapPin className="mr-2 h-4 w-4" /> Office: 4th Floor, 1 Airport Square, Airport City, Accra Ghana.
