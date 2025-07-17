@@ -1,46 +1,41 @@
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
-let adminApp: admin.app.App;
-let adminDb: admin.firestore.Firestore;
-let adminAuth: admin.auth.Auth;
-
-try {
-  if (admin.apps.length > 0 && admin.apps[0]) {
-    adminApp = admin.apps[0];
-  } else {
+// Check if the app is already initialized
+if (!admin.apps.length) {
+  try {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const projectId = process.env.FIREBASE_PROJECT_ID;
 
+    // Validate that all required environment variables are present
     if (!privateKey || !clientEmail || !projectId) {
-      throw new Error("Firebase Admin SDK credentials (private key, client email, project ID) are not set in environment variables.");
+      throw new Error("Firebase Admin SDK credentials are not fully set in environment variables. Required: FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL, FIREBASE_PROJECT_ID.");
     }
     
-    adminApp = admin.initializeApp({
+    admin.initializeApp({
       credential: admin.credential.cert({
         projectId: projectId,
         clientEmail: clientEmail,
+        // The replace is crucial for parsing the private key from environment variables
         privateKey: privateKey.replace(/\\n/g, '\n'),
       }),
+      // The storageBucket is needed for other potential admin operations
       storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     });
     console.log('[Firebase Admin] SDK initialized successfully.');
-  }
-  
-  adminDb = admin.firestore(adminApp);
-  adminAuth = admin.auth(adminApp);
 
-} catch (error: any) {
-    console.error(
+  } catch (error: any) {
+      console.error(
         "CRITICAL ERROR: [Firebase Admin] SDK initialization failed. Server-side features will not work. Error: ", 
         error.message
     );
-    // In case of error, we assign null to prevent crashes on import, but functions will fail.
-    // @ts-ignore
-    adminDb = null;
-    // @ts-ignore
-    adminAuth = null;
+  }
 }
+
+// Export the initialized services
+const adminDb = admin.firestore();
+const adminAuth = admin.auth();
+const adminApp = admin.app();
 
 export { adminDb, adminAuth, adminApp };
