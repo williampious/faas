@@ -2,14 +2,13 @@
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
-let adminDb: admin.firestore.Firestore;
-let adminAuth: admin.auth.Auth;
-let adminApp: admin.app.App;
-
 // This function ensures the Admin SDK is initialized only once.
-function getAdminApp(): admin.app.App {
+function initializeAdminApp(): admin.app.App {
   if (admin.apps.length > 0) {
-    return admin.apps[0]!;
+    const existingApp = admin.apps[0];
+    if (existingApp) {
+      return existingApp;
+    }
   }
 
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
@@ -34,7 +33,11 @@ function getAdminApp(): admin.app.App {
       console.log('[Firebase Admin] SDK initialized successfully via environment variables.');
       return app;
     } catch (error: any) {
-      console.error('[Firebase Admin] SDK initialization error via environment variables:', error);
+      if (error.code === 'auth/invalid-credential') {
+        console.error('[Firebase Admin] SDK Initialization Failed: Invalid credentials. Please verify your FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL, and FIREBASE_PROJECT_ID environment variables.');
+      } else {
+        console.error('[Firebase Admin] SDK initialization error via environment variables:', error);
+      }
       throw error; // Re-throw to indicate failure
     }
   } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -57,22 +60,21 @@ function getAdminApp(): admin.app.App {
   }
 }
 
-// Initialize and export the services.
-try {
-    adminApp = getAdminApp();
-    adminDb = admin.firestore(adminApp);
-    adminAuth = admin.auth(adminApp);
-} catch (e) {
-    console.error("Failed to initialize Firebase Admin services.", e);
-    // Set to null/undefined or handle the error as appropriate for your app's startup.
-    // @ts-ignore
-    adminApp = null;
-    // @ts-ignore
-    adminDb = null;
-    // @ts-ignore
-    adminAuth = null;
+// These are now getters that ensure initialization before returning the service instance.
+const getAdminDb = () => {
+    const app = initializeAdminApp();
+    return admin.firestore(app);
 }
 
+const getAdminAuth = () => {
+    const app = initializeAdminApp();
+    return admin.auth(app);
+}
+
+// We can still export the singleton app instance for direct use if needed.
+const adminApp = initializeAdminApp();
+const adminDb = getAdminDb();
+const adminAuth = getAdminAuth();
 
 export { adminDb, adminAuth, adminApp };
 export default admin;
