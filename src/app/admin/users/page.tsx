@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { v4 as uuidv4 } from 'uuid';
-import { sendEmail } from '@/services/email-service';
+import { sendInvitationEmail } from './actions';
 
 
 const usersCollectionName = 'users';
@@ -235,8 +235,8 @@ export default function AdminUsersPage() {
         setGeneratedInviteLink(inviteLink);
         setInviteeName(data.fullName);
 
-        // Send email notification
-        const emailResult = await sendEmail({
+        // Send email notification by calling the server action
+        const emailResult = await sendInvitationEmail({
             to: data.email,
             subject: `You're invited to join ${userProfile.fullName}'s farm on AgriFAAS Connect!`,
             html: `
