@@ -63,9 +63,10 @@ service cloud.firestore {
 
     // User Profile Rules
     match /users/{userId} {
-      // Allow a user to create their own initial profile document upon registration.
-      // This is crucial for the registration flow.
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // Allow user creation by a logged-in user for their own account (registration),
+      // OR by an Admin for any account (invitations).
+      allow create: if request.auth != null &&
+                       (request.auth.uid == userId || isUserAdmin());
 
       // Allow a user to read their own profile, an admin to read any profile,
       // and an AEO to read profiles of farmers they manage.
@@ -232,6 +233,11 @@ service cloud.firestore {
       // An AEO can read/update/delete their own articles.
       // NOTE: Farmers cannot read this yet. A future rule change would be needed for sharing.
       allow read, update, delete: if isUserAEO() && request.auth.uid == resource.data.authorId;
+    }
+    
+    match /supportLogs/{logId} {
+        allow create: if isUserAEO() && request.auth.uid == request.resource.data.aeoId;
+        allow read, update, delete: if isUserAEO() && request.auth.uid == resource.data.aeoId;
     }
 
     match /transactions/{transactionId} {

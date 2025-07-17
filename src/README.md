@@ -49,9 +49,10 @@ service cloud.firestore {
 
     // User Profile Rules
     match /users/{userId} {
-      // Allow a user to create their own initial profile document upon registration.
-      // This is crucial for the registration flow.
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // Allow user creation by a logged-in user for their own account (registration),
+      // OR by an Admin for any account (invitations).
+      allow create: if request.auth != null &&
+                       (request.auth.uid == userId || isUserAdmin());
 
       // Allow a user to read their own profile, an admin to read any profile,
       // and an AEO to read profiles of farmers they manage.
@@ -92,6 +93,7 @@ service cloud.firestore {
         // Only Admins can manage promotional codes
         allow read, write, create, delete: if isUserAdmin();
     }
+
 
     // Rules for Multi-Tenant Data Collections
     match /plots/{plotId} {
@@ -218,6 +220,11 @@ service cloud.firestore {
       // NOTE: Farmers cannot read this yet. A future rule change would be needed for sharing.
       allow read, update, delete: if isUserAEO() && request.auth.uid == resource.data.authorId;
     }
+    
+    match /supportLogs/{logId} {
+        allow create: if isUserAEO() && request.auth.uid == request.resource.data.aeoId;
+        allow read, update, delete: if isUserAEO() && request.auth.uid == resource.data.aeoId;
+    }
 
     match /transactions/{transactionId} {
       allow create: if isFarmMember(request.resource.data.farmId);
@@ -327,5 +334,3 @@ You can create these by following the link provided in the console error, or by 
 
 18. **Promotional Codes:**
     *   Collection: `promotionalCodes`, Fields: `createdAt` (Desc), Scope: Collection
-
-    
