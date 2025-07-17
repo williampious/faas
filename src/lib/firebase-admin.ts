@@ -1,5 +1,4 @@
 
-
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
@@ -8,9 +7,9 @@ let adminAuth: admin.auth.Auth;
 let adminApp: admin.app.App;
 
 // This function ensures the Admin SDK is initialized only once.
-function initializeAdminApp() {
+function getAdminApp(): admin.app.App {
   if (admin.apps.length > 0) {
-    return admin.app();
+    return admin.apps[0]!;
   }
 
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
@@ -50,29 +49,30 @@ function initializeAdminApp() {
       throw error;
     }
   } else {
-    console.warn(
-        "🛑 [Firebase Admin] SDK credentials not set. Server-side features will fail. " +
+    console.error(
+        "CRITICAL ERROR: [Firebase Admin] SDK credentials not set. Server-side features will fail. " +
         "Set `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` in your hosting environment."
     );
-    // Return null or throw an error to signal that initialization failed
-    return null;
+    throw new Error("Firebase Admin SDK not initialized. Missing credentials.");
   }
 }
 
-// Get the initialized app instance
-adminApp = initializeAdminApp()!;
-
-// If the app was initialized, get the other services
-if (adminApp) {
-  adminDb = admin.firestore(adminApp);
-  adminAuth = admin.auth(adminApp);
-} else {
-  // If adminApp is null, we set these to null as well to make the error obvious
-  // @ts-ignore
-  adminDb = null;
-  // @ts-ignore
-  adminAuth = null;
+// Initialize and export the services.
+try {
+    adminApp = getAdminApp();
+    adminDb = admin.firestore(adminApp);
+    adminAuth = admin.auth(adminApp);
+} catch (e) {
+    console.error("Failed to initialize Firebase Admin services.", e);
+    // Set to null/undefined or handle the error as appropriate for your app's startup.
+    // @ts-ignore
+    adminApp = null;
+    // @ts-ignore
+    adminDb = null;
+    // @ts-ignore
+    adminAuth = null;
 }
+
 
 export { adminDb, adminAuth, adminApp };
 export default admin;
