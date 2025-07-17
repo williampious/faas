@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy, Trash2, Info } from 'lucide-react';
+import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy, Trash2, Info, Mail } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { AgriFAASUserProfile, UserRole, AccountStatus } from '@/types/user';
 import { db, isFirebaseClientConfigured } from '@/lib/firebase';
@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { v4 as uuidv4 } from 'uuid';
+import { sendEmail } from '@/services/email-service';
 
 
 const usersCollectionName = 'users';
@@ -55,6 +56,8 @@ export default function AdminUsersPage() {
   const [isInvitingUser, setIsInvitingUser] = useState(false);
   const [inviteUserError, setInviteUserError] = useState<string | null>(null);
   const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
+  const [inviteeName, setInviteeName] = useState<string | null>(null);
+
 
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<AgriFAASUserProfile | null>(null);
@@ -74,16 +77,14 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      // Wait until the profile (which contains farmId) is loaded
       if (isAuthLoading || !userProfile) {
-        if (!isAuthLoading) { // If not loading and no profile, clear data
+        if (!isAuthLoading) { 
             setUsers([]);
             setIsLoading(false);
         }
         return;
       }
 
-      // Ensure the user is an admin and has a farmId
       if (!currentUserIsAdmin || !userProfile?.farmId) {
          setError("You do not have permission to view this page or your user profile is missing farm information.");
          setIsLoading(false);
@@ -100,7 +101,6 @@ export default function AdminUsersPage() {
       }
 
       try {
-        // Correctly query for users ONLY within the admin's farm
         const usersQuery = query(
           collection(db, usersCollectionName), 
           where("farmId", "==", userProfile.farmId),
@@ -189,8 +189,8 @@ export default function AdminUsersPage() {
         setInviteUserError("Firebase is not configured correctly. Cannot invite user.");
         return;
     }
-    if (!userProfile?.farmId) {
-      setInviteUserError("Your admin profile is missing a farm ID. Cannot invite users to a farm.");
+    if (!userProfile?.farmId || !userProfile.fullName) {
+      setInviteUserError("Your admin profile is missing a farm ID or name. Cannot invite users to a farm.");
       return;
     }
 
@@ -224,7 +224,7 @@ export default function AdminUsersPage() {
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        farmId: userProfile.farmId, // Always assign to admin's farm
+        farmId: userProfile.farmId,
     };
 
 
@@ -233,7 +233,36 @@ export default function AdminUsersPage() {
 
         const inviteLink = `${window.location.origin}/auth/complete-registration?token=${invitationToken}`;
         setGeneratedInviteLink(inviteLink);
+        setInviteeName(data.fullName);
 
+        // Send email notification
+        const emailResult = await sendEmail({
+            to: data.email,
+            subject: `You're invited to join ${userProfile.fullName}'s farm on AgriFAAS Connect!`,
+            html: `
+              <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                <h2>Hello ${data.fullName},</h2>
+                <p>You have been invited by <strong>${userProfile.fullName}</strong> to join their farm on AgriFAAS Connect, a collaborative farm management platform.</p>
+                <p>To accept the invitation and set up your account, please click the link below:</p>
+                <p style="text-align: center;">
+                  <a href="${inviteLink}" style="background-color: #8CC63F; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Complete Your Registration</a>
+                </p>
+                <p>If you cannot click the button, please copy and paste this link into your browser:</p>
+                <p><a href="${inviteLink}">${inviteLink}</a></p>
+                <p>This invitation link is unique to you and should not be shared.</p>
+                <br>
+                <p>Thank you,</p>
+                <p>The AgriFAAS Connect Team</p>
+              </div>
+            `,
+        });
+
+        if (emailResult.success) {
+            toast({title: "User Invited Successfully!", description: `${data.fullName} has been invited and an email has been sent.`});
+        } else {
+            toast({title: "User Invited (Email Failed)", description: `An invitation record was created, but the email could not be sent. Please copy the link manually. Error: ${emailResult.message}`, variant: "destructive", duration: 10000});
+        }
+        
         const displayProfile: AgriFAASUserProfile = {
             ...newUserProfile,
             userId: temporaryUserId,
@@ -241,8 +270,6 @@ export default function AdminUsersPage() {
             updatedAt: new Date().toISOString(),
         } as AgriFAASUserProfile;
         setUsers(prevUsers => [...prevUsers, displayProfile].sort((a,b) => (a.fullName || '').localeCompare(b.fullName || '')));
-
-        toast({title: "User Invited", description: `${data.fullName} has been invited to your farm. Share the invitation link with them to complete registration.`});
 
     } catch (err: any) {
         console.error("Error inviting new user:", err);
@@ -351,7 +378,7 @@ export default function AdminUsersPage() {
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
             <DialogHeader>
                 <DialogTitle className="flex items-center"><UserPlus className="mr-2 h-5 w-5" />Invite New User to Your Farm</DialogTitle>
-                <DialogDescription>Enter the user's details to generate an invitation link. They will use this link to set their own password and join your farm.</DialogDescription>
+                <DialogDescription>Enter the user's details to send them an email invitation to join your farm.</DialogDescription>
             </DialogHeader>
             <div className="flex-grow overflow-y-auto pr-2 py-4">
                 <Form {...inviteUserForm}>
@@ -365,17 +392,14 @@ export default function AdminUsersPage() {
                         )}
                         {generatedInviteLink ? (
                           <div className="space-y-3 p-4 border rounded-md bg-green-50 dark:bg-green-900/20">
-                            <p className="text-sm font-medium text-green-700 dark:text-green-300">Invitation Link Generated!</p>
-                            <p className="text-xs text-muted-foreground">Share this link with the user to complete their registration:</p>
+                            <p className="text-sm font-medium text-green-700 dark:text-green-300">Invitation Sent to {inviteeName}!</p>
+                            <p className="text-xs text-muted-foreground">If they did not receive the email, you can copy this link and send it to them manually:</p>
                             <div className="flex items-center gap-2">
                               <Input type="text" readOnly value={generatedInviteLink} className="text-xs" />
                               <Button type="button" size="icon" variant="ghost" onClick={() => copyToClipboard(generatedInviteLink)}>
                                 <Copy className="h-4 w-4" />
                               </Button>
                             </div>
-                             <p className="text-xs text-muted-foreground mt-2">
-                                <strong>Note:</strong> This link points to your current development server. To test it, open it in a different browser or an incognito window. It may not be accessible from other devices without access to this development environment.
-                             </p>
                              <Button type="button" variant="outline" size="sm" onClick={() => { 
                                inviteUserForm.reset({ fullName: '', email: '', roles: ['Farmer'] }); 
                                setInviteUserError(null); 
@@ -433,8 +457,8 @@ export default function AdminUsersPage() {
                 <DialogClose asChild><Button variant="outline" disabled={isInvitingUser} onClick={() => setGeneratedInviteLink(null)}>Close</Button></DialogClose>
                 {!generatedInviteLink && (
                   <Button type="submit" form="invite-user-form" disabled={isInvitingUser}>
-                      {isInvitingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {isInvitingUser ? 'Processing...' : 'Generate Invitation Link'}
+                      {isInvitingUser ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                      {isInvitingUser ? 'Processing...' : 'Send Invitation'}
                   </Button>
                 )}
             </DialogFooter>
@@ -610,8 +634,8 @@ export default function AdminUsersPage() {
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
             <p>&bull; This page lists all users associated with **your farm**.</p>
-            <p>&bull; Use "Invite New User" to generate an invitation link for a new team member to join your farm.</p>
-            <p>&bull; For users with 'Invited' status, you can copy their invitation link again if needed. Their roles/status cannot be edited until they complete registration.</p>
+            <p>&bull; Use "Invite New User" to send an email invitation with a registration link to a new team member.</p>
+            <p>&bull; For users with 'Invited' status, you can copy their invitation link again if they did not receive the email. Their roles/status cannot be edited until they complete registration.</p>
             <p>&bull; <strong>Profile Deletion:</strong> The "Delete" button removes the user's data from Firestore only. It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. This action is primarily for cleaning up test data or revoking invitations.</p>
         </CardContent>
       </Card>
