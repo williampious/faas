@@ -1,4 +1,3 @@
-
 // src/app/api/webhooks/paystack/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
