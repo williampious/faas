@@ -5,6 +5,8 @@ import { updateUserSubscription } from '@/app/settings/billing/actions';
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
+// This is an API Route Handler, so it does NOT use the 'use server' directive.
+// It is already a server-only module by definition in Next.js.
 export async function POST(request: NextRequest) {
   if (!PAYSTACK_SECRET_KEY) {
     console.error('[Paystack Webhook] Paystack secret key is not configured.');
