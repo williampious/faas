@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Utensils, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Utensils, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -29,6 +31,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import type { FarmingYear } from '@/types/season';
 import { v4 as uuidv4 } from 'uuid';
+import { cn } from '@/lib/utils';
 
 const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
@@ -51,7 +54,7 @@ const costItemSchema = z.object({
 type CostItemFormValues = z.infer<typeof costItemSchema>;
 
 const feedingRecordFormSchema = z.object({
-  date: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid date is required." }),
+  date: z.date({ required_error: "A date is required." }),
   animalsFed: z.string().min(1, "This field is required.").max(150),
   feedType: z.string().min(1, "Feed type is required."),
   quantity: z.preprocess(safeParseFloat, z.number().min(0.01, "Quantity must be greater than 0.")),
@@ -83,7 +86,7 @@ export default function FeedingPage() {
   const form = useForm<FeedingRecordFormValues>({
     resolver: zodResolver(feedingRecordFormSchema),
     defaultValues: {
-      date: '', animalsFed: '', feedType: '',
+      animalsFed: '', feedType: '',
       quantity: undefined, quantityUnit: 'kg', notes: '', costItems: [],
     },
   });
@@ -146,13 +149,14 @@ export default function FeedingPage() {
       setEditingRecord(recordToEdit);
       form.reset({
         ...recordToEdit,
+        date: parseISO(recordToEdit.date),
         notes: recordToEdit.notes || '',
         costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || uuidv4()})) || [],
       });
     } else {
       setEditingRecord(null);
       form.reset({
-        date: '', animalsFed: '', feedType: '',
+        animalsFed: '', feedType: '',
         quantity: undefined, quantityUnit: 'kg', notes: '', costItems: [],
         farmingYearId: undefined, farmingSeasonId: undefined,
       });
@@ -172,6 +176,7 @@ export default function FeedingPage() {
     const recordData: any = {
         farmId: userProfile.farmId,
         ...data,
+        date: format(data.date, 'yyyy-MM-dd'),
         totalCost,
         costItems: processedCostItems,
         updatedAt: serverTimestamp(),
@@ -199,7 +204,7 @@ export default function FeedingPage() {
         const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
         const newTransaction: Omit<OperationalTransaction, 'id'> = {
           farmId: userProfile.farmId,
-          date: data.date,
+          date: recordData.date,
           description: item.description,
           amount: item.total,
           type: 'Expense',
@@ -315,7 +320,23 @@ export default function FeedingPage() {
                      <FormField control={form.control} name="farmingYearId" render={({ field }) => (<FormItem><FormLabel>Farming Year*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Year" /></SelectTrigger></FormControl><SelectContent>{farmingYears.map(year => <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                      <FormField control={form.control} name="farmingSeasonId" render={({ field }) => (<FormItem><FormLabel>Farming Season*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={!watchedFarmingYearId}><FormControl><SelectTrigger><SelectValue placeholder="Select Season" /></SelectTrigger></FormControl><SelectContent>{farmingYears.find(y => y.id === watchedFarmingYearId)?.seasons.map(season => <SelectItem key={season.id} value={season.id}>{season.name}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                    </div>
-                  <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Date*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="date" render={({ field }) => (
+                    <FormItem className="flex flex-col"><FormLabel>Date*</FormLabel>
+                      <Popover><PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>)}
+                  />
                   <FormField control={form.control} name="animalsFed" render={({ field }) => (<FormItem><FormLabel>Animals/Group Fed*</FormLabel><FormControl><Input placeholder="e.g., Broiler House 1, All Goats" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   
                   <FormField control={form.control} name="feedType" render={({ field }) => (

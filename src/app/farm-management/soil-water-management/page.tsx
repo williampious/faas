@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Layers, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Layers, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -27,6 +29,7 @@ import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
+import { cn } from '@/lib/utils';
 
 const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
@@ -43,7 +46,7 @@ const costItemSchema = z.object({
 type CostItemFormValues = z.infer<typeof costItemSchema>;
 
 const soilTestFormSchema = z.object({
-  testDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid date is required." }),
+  testDate: z.date({ required_error: "A date is required." }),
   plotName: z.string().min(1, { message: "Plot name is required." }).max(100),
   phLevel: z.preprocess(safeParseFloat, z.number().min(0).max(14).optional()),
   nitrogenPPM: z.preprocess(safeParseFloat, z.number().min(0).optional()),
@@ -73,7 +76,7 @@ export default function SoilWaterManagementPage() {
   const form = useForm<SoilTestFormValues>({
     resolver: zodResolver(soilTestFormSchema),
     defaultValues: {
-      testDate: '', plotName: '', phLevel: undefined, nitrogenPPM: undefined, phosphorusPPM: undefined,
+      plotName: '', phLevel: undefined, nitrogenPPM: undefined, phosphorusPPM: undefined,
       potassiumPPM: undefined, organicMatterPercent: undefined, labName: '', notes: '', costItems: [],
     },
   });
@@ -115,11 +118,11 @@ export default function SoilWaterManagementPage() {
   const handleOpenModal = (recordToEdit?: SoilTestRecord) => {
     if (recordToEdit) {
       setEditingRecord(recordToEdit);
-      form.reset({ ...recordToEdit, costItems: recordToEdit.costItems?.map(ci => ({...ci, id: ci.id || uuidv4()})) || [] });
+      form.reset({ ...recordToEdit, testDate: parseISO(recordToEdit.testDate), costItems: recordToEdit.costItems?.map(ci => ({...ci, id: ci.id || uuidv4()})) || [] });
     } else {
       setEditingRecord(null);
       form.reset({
-        testDate: '', plotName: '', phLevel: undefined, nitrogenPPM: undefined, phosphorusPPM: undefined,
+        plotName: '', phLevel: undefined, nitrogenPPM: undefined, phosphorusPPM: undefined,
         potassiumPPM: undefined, organicMatterPercent: undefined, labName: '', notes: '', costItems: [],
       });
     }
@@ -136,6 +139,7 @@ export default function SoilWaterManagementPage() {
     const recordData: any = {
       farmId: userProfile.farmId,
       ...data,
+      testDate: format(data.testDate, 'yyyy-MM-dd'),
       totalCost,
       costItems: (data.costItems || []).map(ci => ({
         ...ci,
@@ -167,7 +171,7 @@ export default function SoilWaterManagementPage() {
         const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
         const newTransaction: Omit<OperationalTransaction, 'id'> = {
           farmId: userProfile.farmId,
-          date: data.testDate,
+          date: recordData.testDate,
           description: `Soil Test: ${item.description}`,
           amount: item.total,
           type: 'Expense',
@@ -270,7 +274,23 @@ export default function SoilWaterManagementPage() {
               <form id={ACTIVITY_FORM_ID} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <section className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-semibold text-primary">Test Details</h3>
-                  <FormField control={form.control} name="testDate" render={({ field }) => (<FormItem><FormLabel>Test Date*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                   <FormField control={form.control} name="testDate" render={({ field }) => (
+                    <FormItem className="flex flex-col"><FormLabel>Test Date*</FormLabel>
+                      <Popover><PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>)}
+                  />
                   <FormField control={form.control} name="plotName" render={({ field }) => (<FormItem><FormLabel>Plot/Field Name*</FormLabel><FormControl><Input placeholder="e.g., North Field, Plot A" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="labName" render={({ field }) => (<FormItem><FormLabel>Lab Name (Optional)</FormLabel><FormControl><Input placeholder="e.g., CSIR-SARI Lab" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 </section>

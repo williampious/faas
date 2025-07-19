@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Wheat, PlusCircle, Trash2, Edit2, ArrowLeft, DollarSign, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
+import { Wheat, PlusCircle, Trash2, Edit2, ArrowLeft, DollarSign, Loader2, AlertTriangle, Sparkles, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -31,6 +33,7 @@ import type { FarmingYear } from '@/types/season';
 import { v4 as uuidv4 } from 'uuid';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
@@ -53,7 +56,7 @@ const saleItemSchema = z.object({
   quantitySold: z.preprocess(safeParseFloat, z.number().min(0.01, "Quantity sold must be greater than 0.")),
   unitOfSale: z.string().min(1, "Unit of sale is required.").max(50),
   pricePerUnit: z.preprocess(safeParseFloat, z.number().min(0.01, "Price per unit must be greater than 0.")),
-  saleDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid sale date is required." }),
+  saleDate: z.date({ required_error: "A sale date is required." }),
   paymentSource: z.enum(paymentSources, { required_error: "Payment source is required."}),
   totalSaleAmount: z.number().optional(),
 });
@@ -63,7 +66,7 @@ type SaleItemFormValues = z.infer<typeof saleItemSchema>;
 const harvestRecordFormSchema = z.object({
   cropType: z.string().min(1, { message: "Crop type is required." }).max(100),
   variety: z.string().max(100).optional(),
-  dateHarvested: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid date is required." }),
+  dateHarvested: z.date({ required_error: "A date is required." }),
   areaHarvested: z.string().min(1, { message: "Area harvested is required." }).max(100),
   yieldQuantity: z.preprocess(safeParseFloat, z.number().min(0.01, "Yield quantity must be greater than 0.")),
   yieldUnit: z.enum(yieldUnits, { required_error: "Yield unit is required." }),
@@ -102,7 +105,7 @@ export default function HarvestingPage() {
   const form = useForm<HarvestRecordFormValues>({
     resolver: zodResolver(harvestRecordFormSchema),
     defaultValues: {
-      cropType: '', variety: '', dateHarvested: '', areaHarvested: '', yieldQuantity: undefined,
+      cropType: '', variety: '', areaHarvested: '', yieldQuantity: undefined,
       yieldUnit: undefined, qualityGrade: '', postHarvestActivities: '', storageLocation: '', notes: '', costItems: [], salesDetails: [],
     },
   });
@@ -162,16 +165,18 @@ export default function HarvestingPage() {
     if (recordToEdit) {
       setEditingRecord(recordToEdit);
       form.reset({
-        ...recordToEdit, notes: recordToEdit.notes || '', variety: recordToEdit.variety || '',
+        ...recordToEdit, 
+        dateHarvested: parseISO(recordToEdit.dateHarvested),
+        notes: recordToEdit.notes || '', variety: recordToEdit.variety || '',
         qualityGrade: recordToEdit.qualityGrade || '', postHarvestActivities: recordToEdit.postHarvestActivities || '',
         storageLocation: recordToEdit.storageLocation || '',
         costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || uuidv4()})) || [],
-        salesDetails: recordToEdit.salesDetails?.map(si => ({...si, id: si.id || uuidv4()})) || [],
+        salesDetails: recordToEdit.salesDetails?.map(si => ({...si, saleDate: parseISO(si.saleDate), id: si.id || uuidv4()})) || [],
       });
     } else {
       setEditingRecord(null);
       form.reset({
-        cropType: '', variety: '', dateHarvested: '', areaHarvested: '', yieldQuantity: undefined,
+        cropType: '', variety: '', areaHarvested: '', yieldQuantity: undefined,
         yieldUnit: undefined, qualityGrade: '', postHarvestActivities: '', storageLocation: '', notes: '', costItems: [], salesDetails: [],
       });
     }
@@ -187,12 +192,13 @@ export default function HarvestingPage() {
     const processedCostItems: CostItem[] = (data.costItems || []).map(ci => ({ ...ci, id: ci.id || uuidv4(), category: ci.category, paymentSource: ci.paymentSource, quantity: Number(ci.quantity), unitPrice: Number(ci.unitPrice), total: (Number(ci.quantity) || 0) * (Number(ci.unitPrice) || 0) }));
     const totalHarvestCost = processedCostItems.reduce((sum, item) => sum + item.total, 0);
 
-    const processedSaleItems: SaleItem[] = (data.salesDetails || []).map(si => ({ ...si, id: si.id || uuidv4(), quantitySold: Number(si.quantitySold), pricePerUnit: Number(si.pricePerUnit), totalSaleAmount: (Number(si.quantitySold) || 0) * (Number(si.pricePerUnit) || 0) }));
+    const processedSaleItems: SaleItem[] = (data.salesDetails || []).map(si => ({ ...si, saleDate: format(si.saleDate, 'yyyy-MM-dd'), id: si.id || uuidv4(), quantitySold: Number(si.quantitySold), pricePerUnit: Number(si.pricePerUnit), totalSaleAmount: (Number(si.quantitySold) || 0) * (Number(si.pricePerUnit) || 0) }));
     const totalSalesIncome = processedSaleItems.reduce((sum, item) => sum + item.totalSaleAmount, 0);
 
     const recordData = {
         farmId: userProfile.farmId,
         ...data,
+        dateHarvested: format(data.dateHarvested, 'yyyy-MM-dd'),
         costItems: processedCostItems,
         totalHarvestCost,
         salesDetails: processedSaleItems,
@@ -221,7 +227,7 @@ export default function HarvestingPage() {
 
       const newTransactions: Omit<OperationalTransaction, 'id'>[] = [
         ...processedCostItems.map(item => ({
-            farmId: userProfile.farmId, date: data.dateHarvested, description: item.description,
+            farmId: userProfile.farmId, date: recordData.dateHarvested, description: item.description,
             amount: item.total, type: 'Expense' as const, category: item.category, paymentSource: item.paymentSource,
             linkedModule: 'Harvesting' as const, linkedActivityId: activityId, linkedItemId: item.id,
         })),
@@ -351,7 +357,23 @@ export default function HarvestingPage() {
                    </div>
                   <FormField control={form.control} name="cropType" render={({ field }) => (<FormItem><FormLabel>Crop Type*</FormLabel><FormControl><Input placeholder="e.g., Maize, Tomato" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="variety" render={({ field }) => (<FormItem><FormLabel>Variety (Optional)</FormLabel><FormControl><Input placeholder="e.g., Obaatanpa" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="dateHarvested" render={({ field }) => (<FormItem><FormLabel>Date Harvested*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="dateHarvested" render={({ field }) => (
+                    <FormItem className="flex flex-col"><FormLabel>Date Harvested*</FormLabel>
+                      <Popover><PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>)}
+                  />
                   <FormField control={form.control} name="areaHarvested" render={({ field }) => (<FormItem><FormLabel>Area Harvested*</FormLabel><FormControl><Input placeholder="e.g., North Field - 2 acres, All 5 acres" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="yieldQuantity" render={({ field }) => (<FormItem><FormLabel>Yield Quantity*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="e.g., 1500" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -383,11 +405,27 @@ export default function HarvestingPage() {
                   <div className="flex justify-end items-center space-x-3"><Label className="text-md font-semibold">Total Harvest Cost:</Label><Input value={watchedCostItems.reduce((acc, item) => acc + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0).toFixed(2)} readOnly disabled className="w-32 font-bold text-lg text-right bg-input" /></div>
                 </section>
                 <section className="space-y-4 p-4 border rounded-lg">
-                  <div className="flex justify-between items-center"><h3 className="text-lg font-semibold text-primary">Sales Details</h3><Button type="button" size="sm" variant="outline" onClick={() => appendSale({ buyer: '', quantitySold: 1, unitOfSale: '', pricePerUnit: 0, saleDate: format(new Date(), 'yyyy-MM-dd'), paymentSource: 'Cash' })}><DollarSign className="mr-2 h-4 w-4" /> Add Sale</Button></div>
+                  <div className="flex justify-between items-center"><h3 className="text-lg font-semibold text-primary">Sales Details</h3><Button type="button" size="sm" variant="outline" onClick={() => appendSale({ buyer: '', quantitySold: 1, unitOfSale: '', pricePerUnit: 0, saleDate: new Date(), paymentSource: 'Cash' })}><DollarSign className="mr-2 h-4 w-4" /> Add Sale</Button></div>
                   {saleFields.map((field, index) => (<div key={field.id} className="p-3 border rounded-md space-y-3 bg-muted/20 relative">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <FormField control={form.control} name={`salesDetails.${index}.buyer`} render={({ field: f }) => (<FormItem><FormLabel>Buyer*</FormLabel><FormControl><Input placeholder="e.g., Market Trader A" {...f} /></FormControl><FormMessage /></FormItem>)} />
-                      <FormField control={form.control} name={`salesDetails.${index}.saleDate`} render={({ field: f }) => (<FormItem><FormLabel>Sale Date*</FormLabel><FormControl><Input type="date" {...f} /></FormControl><FormMessage /></FormItem>)} />
+                       <FormField control={form.control} name={`salesDetails.${index}.saleDate`} render={({ field: f }) => (
+                          <FormItem className="flex flex-col"><FormLabel>Sale Date*</FormLabel>
+                            <Popover><PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !f.value && "text-muted-foreground")}>
+                                    {f.value ? (format(f.value, "PPP")) : (<span>Pick a date</span>)}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={f.value} onSelect={f.onChange} initialFocus />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>)}
+                        />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
                       <FormField control={form.control} name={`salesDetails.${index}.quantitySold`} render={({ field: f }) => (<FormItem><FormLabel>Quantity Sold*</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...f} /></FormControl><FormMessage /></FormItem>)} />

@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Construction, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Construction, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -29,6 +31,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import type { FarmingYear } from '@/types/season';
 import { v4 as uuidv4 } from 'uuid';
+import { cn } from '@/lib/utils';
 
 const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 const safeParseInt = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseInt(String(val), 10);
@@ -55,9 +58,9 @@ const breedingRecordFormSchema = z.object({
   activityType: z.enum(breedingActivityTypes, { required_error: "Activity type is required." }),
   maleIdentifier: z.string().min(1, "Male ID/Tag is required.").max(50),
   femaleIdentifier: z.string().min(1, "Female ID/Tag is required.").max(50),
-  matingDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid mating date is required." }),
-  expectedDueDate: z.string().optional(),
-  actualDueDate: z.string().optional(),
+  matingDate: z.date({ required_error: "A date is required." }),
+  expectedDueDate: z.date().optional(),
+  actualDueDate: z.date().optional(),
   offspringCount: z.preprocess(safeParseInt, z.number().min(0, "Offspring count cannot be negative.").optional()),
   notes: z.string().max(1000).optional(),
   costItems: z.array(costItemSchema).optional(),
@@ -86,8 +89,8 @@ export default function BreedingPage() {
   const form = useForm<BreedingRecordFormValues>({
     resolver: zodResolver(breedingRecordFormSchema),
     defaultValues: {
-      activityType: undefined, maleIdentifier: '', femaleIdentifier: '', matingDate: '',
-      expectedDueDate: '', actualDueDate: '', offspringCount: undefined, notes: '', costItems: [],
+      activityType: undefined, maleIdentifier: '', femaleIdentifier: '',
+      expectedDueDate: undefined, actualDueDate: undefined, offspringCount: undefined, notes: '', costItems: [],
     },
   });
 
@@ -144,14 +147,17 @@ export default function BreedingPage() {
       setEditingRecord(recordToEdit);
       form.reset({
         ...recordToEdit,
+        matingDate: parseISO(recordToEdit.matingDate),
+        expectedDueDate: recordToEdit.expectedDueDate ? parseISO(recordToEdit.expectedDueDate) : undefined,
+        actualDueDate: recordToEdit.actualDueDate ? parseISO(recordToEdit.actualDueDate) : undefined,
         notes: recordToEdit.notes || '',
         costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || uuidv4()})) || [],
       });
     } else {
       setEditingRecord(null);
       form.reset({
-        activityType: undefined, maleIdentifier: '', femaleIdentifier: '', matingDate: '',
-        expectedDueDate: '', actualDueDate: '', offspringCount: undefined, notes: '', costItems: [],
+        activityType: undefined, maleIdentifier: '', femaleIdentifier: '',
+        expectedDueDate: undefined, actualDueDate: undefined, offspringCount: undefined, notes: '', costItems: [],
         farmingYearId: undefined, farmingSeasonId: undefined,
       });
     }
@@ -170,6 +176,9 @@ export default function BreedingPage() {
     const recordData: any = {
         farmId: userProfile.farmId,
         ...data,
+        matingDate: format(data.matingDate, 'yyyy-MM-dd'),
+        expectedDueDate: data.expectedDueDate ? format(data.expectedDueDate, 'yyyy-MM-dd') : undefined,
+        actualDueDate: data.actualDueDate ? format(data.actualDueDate, 'yyyy-MM-dd') : undefined,
         offspringCount: data.offspringCount ?? null,
         totalBreedingCost,
         costItems: processedCostItems,
@@ -198,7 +207,7 @@ export default function BreedingPage() {
         const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
         const newTransaction: Omit<OperationalTransaction, 'id'> = {
           farmId: userProfile.farmId,
-          date: data.matingDate,
+          date: recordData.matingDate,
           description: `Breeding: ${item.description}`,
           amount: item.total,
           type: 'Expense',
@@ -327,11 +336,59 @@ export default function BreedingPage() {
                     <FormField control={form.control} name="femaleIdentifier" render={({ field }) => (<FormItem><FormLabel>Female ID/Tag*</FormLabel><FormControl><Input placeholder="e.g., Cow-A24" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="matingDate" render={({ field }) => (<FormItem><FormLabel>Mating Date*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="expectedDueDate" render={({ field }) => (<FormItem><FormLabel>Expected Due Date (Optional)</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                     <FormField control={form.control} name="matingDate" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel>Mating Date*</FormLabel>
+                          <Popover><PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>)}
+                      />
+                     <FormField control={form.control} name="expectedDueDate" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel>Expected Due Date (Optional)</FormLabel>
+                          <Popover><PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>)}
+                      />
                   </div>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="actualDueDate" render={({ field }) => (<FormItem><FormLabel>Actual Delivery Date (Optional)</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="actualDueDate" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel>Actual Delivery Date (Optional)</FormLabel>
+                          <Popover><PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>)}
+                      />
                     <FormField control={form.control} name="offspringCount" render={({ field }) => (<FormItem><FormLabel>Offspring Count (Optional)</FormLabel><FormControl><Input type="number" step="1" placeholder="e.g., 1" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   </div>
                   <FormField control={form.control} name="notes" render={({ field }) => (<FormItem><FormLabel>General Notes (Optional)</FormLabel><FormControl><Textarea placeholder="Observations, health of mother/offspring, etc." {...field} /></FormControl><FormMessage /></FormItem>)} />

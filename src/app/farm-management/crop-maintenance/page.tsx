@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { ShieldAlert, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
+import { ShieldAlert, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle, Sparkles, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -28,6 +30,7 @@ import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, s
 import { v4 as uuidv4 } from 'uuid';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 
 const maintenanceActivityTypes = [
@@ -81,7 +84,7 @@ interface CropMaintenanceActivity {
 
 const activityFormSchema = z.object({
   activityType: z.enum(maintenanceActivityTypes, { required_error: "Activity type is required." }),
-  date: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid date is required." }),
+  date: z.date({ required_error: "A date is required." }),
   cropsAffected: z.string().min(1, {message: "Crops affected is required."}).max(150),
   areaAffected: z.string().min(1, { message: "Area affected is required." }).max(100),
   activityDetails: z.string().max(500).optional(),
@@ -112,7 +115,7 @@ export default function CropMaintenancePage() {
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
     defaultValues: {
-      activityType: undefined, date: '', cropsAffected: '', areaAffected: '',
+      activityType: undefined, cropsAffected: '', areaAffected: '',
       activityDetails: '', notes: '', costItems: [],
     },
   });
@@ -165,12 +168,13 @@ export default function CropMaintenancePage() {
       setEditingActivity(activityToEdit);
       form.reset({
         ...activityToEdit,
+        date: parseISO(activityToEdit.date),
         activityDetails: activityToEdit.activityDetails || '', notes: activityToEdit.notes || '',
         costItems: activityToEdit.costItems.map(ci => ({...ci, id: ci.id || uuidv4()})) || [],
       });
     } else {
       setEditingActivity(null);
-      form.reset({ activityType: undefined, date: '', cropsAffected: '', areaAffected: '', activityDetails: '', notes: '', costItems: [] });
+      form.reset({ activityType: undefined, cropsAffected: '', areaAffected: '', activityDetails: '', notes: '', costItems: [] });
     }
     setIsModalOpen(true);
   };
@@ -185,6 +189,7 @@ export default function CropMaintenancePage() {
     const activityData: any = {
       farmId: userProfile.farmId,
       ...data,
+      date: format(data.date, 'yyyy-MM-dd'),
       totalActivityCost,
       costItems: (data.costItems || []).map(ci => ({
         ...ci,
@@ -216,7 +221,7 @@ export default function CropMaintenancePage() {
         const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
         const newTransaction: Omit<OperationalTransaction, 'id'> = {
           farmId: userProfile.farmId,
-          date: data.date,
+          date: activityData.date,
           description: item.description,
           amount: item.total,
           type: 'Expense',
@@ -350,7 +355,23 @@ export default function CropMaintenancePage() {
                   <FormField control={form.control} name="activityType" render={({ field }) => (
                     <FormItem><FormLabel>Activity Type*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select activity type" /></SelectTrigger></FormControl><SelectContent>{maintenanceActivityTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}
                   />
-                  <FormField control={form.control} name="date" render={({ field }) => (<FormItem><FormLabel>Date*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="date" render={({ field }) => (
+                    <FormItem className="flex flex-col"><FormLabel>Date*</FormLabel>
+                      <Popover><PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>)}
+                  />
                   <FormField control={form.control} name="cropsAffected" render={({ field }) => (<FormItem><FormLabel>Crop(s) Affected*</FormLabel><FormControl><Input placeholder="e.g., Tomatoes, Maize Plot A" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="areaAffected" render={({ field }) => (<FormItem><FormLabel>Area Affected*</FormLabel><FormControl><Input placeholder="e.g., North Field - 5 acres, Row 1-5" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="activityDetails" render={({ field }) => (<FormItem><FormLabel>Specific Activity Details (Optional)</FormLabel><FormControl><Textarea placeholder="e.g., Applied 2 bags of NPK 15-15-15, Sprayed Neem oil solution for aphid control, Irrigated for 2 hours." {...field} /></FormControl><FormMessage /></FormItem>)} />

@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Home as HomeIcon, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Home as HomeIcon, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -29,6 +31,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import type { FarmingYear } from '@/types/season';
 import { v4 as uuidv4 } from 'uuid';
+import { cn } from '@/lib/utils';
 
 const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
@@ -56,7 +59,7 @@ const housingRecordFormSchema = z.object({
   housingType: z.enum(housingTypes, { required_error: "Housing type is required." }),
   capacity: z.preprocess(val => parseInt(String(val), 10), z.number().min(1, "Capacity must be at least 1.")),
   capacityUnit: z.string().min(1, "Capacity unit is required (e.g., birds, head)").max(50),
-  dateEstablished: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid date is required." }),
+  dateEstablished: z.date({ required_error: "A date is required." }),
   ventilationDetails: z.string().max(500).optional(),
   lightingDetails: z.string().max(500).optional(),
   shelterDetails: z.string().max(500).optional(),
@@ -89,7 +92,7 @@ export default function HousingInfrastructurePage() {
   const form = useForm<HousingRecordFormValues>({
     resolver: zodResolver(housingRecordFormSchema),
     defaultValues: {
-      name: '', housingType: undefined, capacity: 0, capacityUnit: 'birds', dateEstablished: '',
+      name: '', housingType: undefined, capacity: 0, capacityUnit: 'birds',
       ventilationDetails: '', lightingDetails: '', shelterDetails: '', biosecurityMeasures: '',
       predatorProtection: '', notes: '', costItems: [],
     },
@@ -148,6 +151,7 @@ export default function HousingInfrastructurePage() {
       setEditingRecord(recordToEdit);
       form.reset({
         ...recordToEdit,
+        dateEstablished: parseISO(recordToEdit.dateEstablished),
         ventilationDetails: recordToEdit.ventilationDetails || '',
         lightingDetails: recordToEdit.lightingDetails || '',
         shelterDetails: recordToEdit.shelterDetails || '',
@@ -159,7 +163,7 @@ export default function HousingInfrastructurePage() {
     } else {
       setEditingRecord(null);
       form.reset({
-        name: '', housingType: undefined, capacity: 0, capacityUnit: 'birds', dateEstablished: '',
+        name: '', housingType: undefined, capacity: 0, capacityUnit: 'birds',
         ventilationDetails: '', lightingDetails: '', shelterDetails: '', biosecurityMeasures: '',
         predatorProtection: '', notes: '', costItems: [],
         farmingYearId: undefined, farmingSeasonId: undefined,
@@ -180,6 +184,7 @@ export default function HousingInfrastructurePage() {
     const recordData: any = {
         farmId: userProfile.farmId,
         ...data,
+        dateEstablished: format(data.dateEstablished, 'yyyy-MM-dd'),
         totalHousingCost,
         costItems: processedCostItems,
         updatedAt: serverTimestamp(),
@@ -207,7 +212,7 @@ export default function HousingInfrastructurePage() {
         const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
         const newTransaction: Omit<OperationalTransaction, 'id'> = {
           farmId: userProfile.farmId,
-          date: data.dateEstablished,
+          date: recordData.dateEstablished,
           description: item.description,
           amount: item.total,
           type: 'Expense',
@@ -346,7 +351,21 @@ export default function HousingInfrastructurePage() {
                     />
                   </div>
                   <FormField control={form.control} name="dateEstablished" render={({ field }) => (
-                    <FormItem><FormLabel>Date Established/Updated*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)}
+                    <FormItem className="flex flex-col"><FormLabel>Date Established/Updated*</FormLabel>
+                      <Popover><PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>)}
                   />
                   <FormField control={form.control} name="ventilationDetails" render={({ field }) => (
                     <FormItem><FormLabel>Ventilation Details (Optional)</FormLabel><FormControl><Textarea placeholder="Describe ventilation system (e.g., Natural, Fans, Curtain-sided)" {...field} /></FormControl><FormMessage /></FormItem>)}

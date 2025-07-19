@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Banknote, PlusCircle, Edit2, Trash2, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
+import { Banknote, PlusCircle, Edit2, Trash2, ArrowLeft, Loader2, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import type { PayrollRecord, PaymentMethod } from '@/types/payroll';
@@ -26,13 +26,16 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch, orderBy } from 'firebase/firestore';
 import type { OperationalTransaction } from '@/types/finance';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
 const payrollFormSchema = z.object({
   userId: z.string().min(1, "Employee selection is required."),
   payPeriod: z.string().min(3, "Pay period is required (e.g., 'October 2024')."),
-  paymentDate: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid payment date is required." }),
+  paymentDate: z.date({ required_error: "A payment date is required." }),
   grossAmount: z.preprocess(safeParseFloat, z.number().min(0.01, "Gross amount must be greater than 0.")),
   deductions: z.preprocess(safeParseFloat, z.number().min(0, "Deductions cannot be negative.")),
   paymentMethod: z.enum(paymentMethods, { required_error: "Payment method is required." }),
@@ -66,7 +69,7 @@ export default function PayrollPage() {
 
   const form = useForm<PayrollFormValues>({
     resolver: zodResolver(payrollFormSchema),
-    defaultValues: { userId: '', payPeriod: '', paymentDate: '', grossAmount: undefined, deductions: undefined, paymentMethod: undefined, notes: '' },
+    defaultValues: { userId: '', payPeriod: '', grossAmount: undefined, deductions: undefined, paymentMethod: undefined, notes: '' },
   });
   
   const watchedGrossAmount = form.watch("grossAmount");
@@ -115,14 +118,14 @@ export default function PayrollPage() {
       form.reset({
         userId: recordToEdit.userId,
         payPeriod: recordToEdit.payPeriod,
-        paymentDate: recordToEdit.paymentDate,
+        paymentDate: parseISO(recordToEdit.paymentDate),
         grossAmount: recordToEdit.grossAmount,
         deductions: recordToEdit.deductions,
         paymentMethod: recordToEdit.paymentMethod,
         notes: recordToEdit.notes || '',
       });
     } else {
-      form.reset({ userId: '', payPeriod: '', paymentDate: '', grossAmount: undefined, deductions: undefined, paymentMethod: undefined, notes: '' });
+      form.reset({ userId: '', payPeriod: '', grossAmount: undefined, deductions: undefined, paymentMethod: undefined, notes: '' });
     }
     setIsModalOpen(true);
   };
@@ -146,6 +149,7 @@ export default function PayrollPage() {
     const recordData = {
       farmId: userProfile.farmId,
       ...data,
+      paymentDate: format(data.paymentDate, 'yyyy-MM-dd'),
       grossAmount,
       deductions,
       userName: employee.fullName,
@@ -176,7 +180,7 @@ export default function PayrollPage() {
       const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
       const newTransaction: Omit<OperationalTransaction, 'id'> = {
         farmId: userProfile.farmId,
-        date: data.paymentDate,
+        date: recordData.paymentDate,
         description: `Payroll for ${employee.fullName} - ${data.payPeriod}`,
         amount: grossAmount,
         type: 'Expense',
@@ -292,8 +296,24 @@ export default function PayrollPage() {
                 <FormField control={form.control} name="payPeriod" render={({ field }) => (
                   <FormItem><FormLabel>Pay Period*</FormLabel><FormControl><Input placeholder="e.g., October 2024" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="paymentDate" render={({ field }) => (
-                  <FormItem><FormLabel>Payment Date*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                 <FormField control={form.control} name="paymentDate" render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Payment Date*</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                            {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
                 )} />
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="grossAmount" render={({ field }) => (

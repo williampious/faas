@@ -6,7 +6,7 @@ import { useForm, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PageHeader } from '@/components/layout/page-header';
-import { Sprout, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
+import { Sprout, PlusCircle, Trash2, Edit2, ArrowLeft, Loader2, AlertTriangle, Sparkles, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -31,6 +33,7 @@ import type { FarmingYear } from '@/types/season';
 import { v4 as uuidv4 } from 'uuid';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 const safeParseFloat = (val: any) => (val === "" || val === null || val === undefined) ? undefined : parseFloat(String(val));
 
@@ -50,7 +53,7 @@ type CostItemFormValues = z.infer<typeof costItemSchema>;
 const plantingRecordFormSchema = z.object({
   cropType: z.string().min(1, { message: "Crop type is required." }).max(100),
   variety: z.string().max(100).optional(),
-  datePlanted: z.string().refine((val) => !!val && isValid(parseISO(val)), { message: "Valid date is required." }),
+  datePlanted: z.date({ required_error: "A date is required." }),
   areaPlanted: z.string().min(1, { message: "Area planted is required." }).max(100),
   seedSource: z.string().max(100).optional(),
   plantingMethod: z.enum(plantingMethods, { required_error: "Planting method is required." }),
@@ -86,7 +89,7 @@ export default function PlantingPage() {
 
   const form = useForm<PlantingRecordFormValues>({
     resolver: zodResolver(plantingRecordFormSchema),
-    defaultValues: { cropType: '', variety: '', datePlanted: '', areaPlanted: '', seedSource: '', plantingMethod: undefined, notes: '', costItems: [] },
+    defaultValues: { cropType: '', variety: '', areaPlanted: '', seedSource: '', plantingMethod: undefined, notes: '', costItems: [] },
   });
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "costItems" });
@@ -144,13 +147,16 @@ export default function PlantingPage() {
     if (recordToEdit) {
       setEditingRecord(recordToEdit);
       form.reset({
-        ...recordToEdit, notes: recordToEdit.notes || '', variety: recordToEdit.variety || '',
+        ...recordToEdit, 
+        datePlanted: parseISO(recordToEdit.datePlanted),
+        notes: recordToEdit.notes || '', 
+        variety: recordToEdit.variety || '',
         seedSource: recordToEdit.seedSource || '',
         costItems: recordToEdit.costItems.map(ci => ({...ci, id: ci.id || uuidv4()})) || [],
       });
     } else {
       setEditingRecord(null);
-      form.reset({ cropType: '', variety: '', datePlanted: '', areaPlanted: '', seedSource: '', plantingMethod: undefined, notes: '', costItems: [] });
+      form.reset({ cropType: '', variety: '', areaPlanted: '', seedSource: '', plantingMethod: undefined, notes: '', costItems: [] });
     }
     setIsModalOpen(true);
   };
@@ -165,6 +171,7 @@ export default function PlantingPage() {
     const recordData: any = {
       farmId: userProfile.farmId,
       ...data,
+      datePlanted: format(data.datePlanted, 'yyyy-MM-dd'),
       totalPlantingCost,
       costItems: (data.costItems || []).map(ci => ({
         ...ci,
@@ -200,7 +207,7 @@ export default function PlantingPage() {
         const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
         const newTransaction: Omit<OperationalTransaction, 'id'> = {
           farmId: userProfile.farmId,
-          date: data.datePlanted,
+          date: recordData.datePlanted,
           description: item.description,
           amount: item.total,
           type: 'Expense',
@@ -340,7 +347,23 @@ export default function PlantingPage() {
                    </div>
                   <FormField control={form.control} name="cropType" render={({ field }) => (<FormItem><FormLabel>Crop Type*</FormLabel><FormControl><Input placeholder="e.g., Maize, Tomato" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="variety" render={({ field }) => (<FormItem><FormLabel>Variety (Optional)</FormLabel><FormControl><Input placeholder="e.g., Obaatanpa, Pectomech" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="datePlanted" render={({ field }) => (<FormItem><FormLabel>Date Planted*</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="datePlanted" render={({ field }) => (
+                    <FormItem className="flex flex-col"><FormLabel>Date Planted*</FormLabel>
+                      <Popover><PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? (format(field.value, "PPP")) : (<span>Pick a date</span>)}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>)}
+                  />
                   <FormField control={form.control} name="areaPlanted" render={({ field }) => (<FormItem><FormLabel>Area Planted*</FormLabel><FormControl><Input placeholder="e.g., North Field - 2 acres" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="plantingMethod" render={({ field }) => (<FormItem><FormLabel>Planting Method*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger></FormControl><SelectContent>{plantingMethods.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="seedSource" render={({ field }) => (<FormItem><FormLabel>Seed Source (Optional)</FormLabel><FormControl><Input placeholder="e.g., MOFA, Local Market, Own Saved" {...field} /></FormControl><FormMessage /></FormItem>)} />
