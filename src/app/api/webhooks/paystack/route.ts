@@ -1,68 +1,62 @@
+
 // src/app/api/webhooks/paystack/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
+// This file is a standard Next.js API Route handler.
+// It should NOT use the 'use server' directive.
+
+import { NextResponse } from 'next/server';
 import { updateUserSubscription } from '@/app/settings/billing/actions';
+import crypto from 'crypto';
 
-// THIS IS AN API ROUTE HANDLER. IT DOES NOT USE THE 'use server' DIRECTIVE.
-// IT IS SERVER-SIDE BY DEFAULT IN NEXT.JS.
-
-export async function POST(request: NextRequest) {
-  const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
-  if (!PAYSTACK_SECRET_KEY) {
-    console.error('[Paystack Webhook] Paystack secret key is not configured.');
-    return NextResponse.json({ error: 'Server configuration error.' }, { status: 500 });
+export async function POST(request: Request) {
+  const secret = process.env.PAYSTACK_SECRET_KEY;
+  if (!secret) {
+    console.error("Paystack secret key is not configured.");
+    return new NextResponse("Configuration error: Paystack secret key not set", { status: 500 });
   }
 
   try {
-    const rawBody = await request.text();
-    const signature = request.headers.get('x-paystack-signature');
-
-    if (!signature) {
-      console.warn('[Paystack Webhook] Missing signature header.');
-      return NextResponse.json({ error: 'Missing webhook signature.' }, { status: 400 });
-    }
-
-    // IMPORTANT: Verify the webhook signature
+    const text = await request.text();
+    const signature = request.headers.get("x-paystack-signature");
+    
     const hash = crypto
-      .createHmac('sha512', PAYSTACK_SECRET_KEY)
-      .update(rawBody)
+      .createHmac('sha512', secret)
+      .update(text)
       .digest('hex');
 
     if (hash !== signature) {
-      console.warn('[Paystack Webhook] Invalid signature.');
-      return NextResponse.json({ error: 'Invalid signature.' }, { status: 401 });
+      console.warn("Paystack webhook signature verification failed.");
+      return new NextResponse("Signature verification failed", { status: 401 });
     }
 
-    const event = JSON.parse(rawBody);
-    console.log(`[Paystack Webhook] Received event: ${event.event}`);
+    const event = JSON.parse(text);
 
-    // Process the event
     if (event.event === 'charge.success') {
-      const { data } = event;
+      const { user_id, plan_id, billing_cycle } = event.data.metadata;
       
-      // Extract metadata
-      const { user_id, plan_id, billing_cycle } = data.metadata;
-      
-      // Check if essential metadata is present
       if (!user_id || !plan_id || !billing_cycle) {
-        console.error('[Paystack Webhook] Missing metadata in successful charge event.', data.metadata);
-        // Respond with 200 to Paystack so it doesn't retry, but log the error for investigation.
-        return NextResponse.json({ status: 'success', message: 'Webhook received, but metadata was missing.' }, { status: 200 });
+        console.error("Webhook received with missing metadata:", event.data.metadata);
+        return new NextResponse("Webhook Error: Missing required metadata", { status: 400 });
       }
 
-      console.log(`[Paystack Webhook] Processing charge.success for user ${user_id}, plan ${plan_id}`);
+      console.log(`Processing successful payment for user: ${user_id}, plan: ${plan_id}`);
       
-      // Update user's subscription in Firestore using the centralized server action
-      await updateUserSubscription(user_id, plan_id, billing_cycle);
-    }
-    
-    // Add handlers for other events like `subscription.not_renew`, etc., here in the future.
+      // Call the server action to update the user's subscription in Firestore
+      const updateResult = await updateUserSubscription(user_id, plan_id, billing_cycle);
 
-    // Acknowledge receipt of the event
-    return NextResponse.json({ status: 'success' }, { status: 200 });
+      if (!updateResult.success) {
+        console.error(`Failed to update subscription in Firestore for user ${user_id}:`, updateResult.message);
+        // Even if DB update fails, acknowledge receipt to Paystack to prevent retries
+        // The failure should be logged for manual intervention.
+        return new NextResponse("Webhook processed, but database update failed.", { status: 500 });
+      }
+
+      console.log(`Successfully updated subscription for user ${user_id}.`);
+    }
+
+    return new NextResponse("Webhook received successfully", { status: 200 });
 
   } catch (error: any) {
-    console.error('[Paystack Webhook] Error processing webhook:', error);
-    return NextResponse.json({ error: `Webhook Error: ${error.message}` }, { status: 400 });
+    console.error("Error processing Paystack webhook:", error);
+    return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 });
   }
 }
