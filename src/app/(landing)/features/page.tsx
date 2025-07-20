@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, LayoutList, CheckCircle, Construction, Cloud, Users, Beef, Tractor, Sparkles, Building2, Briefcase } from 'lucide-react';
 import { LandingPageHeader } from '@/components/layout/landing-page-header';
+import { cn } from '@/lib/utils';
 
 export default function FeaturesPage() {
   const featureCategories = [

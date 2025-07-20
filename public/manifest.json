@@ -1,23 +1,22 @@
+
 {
   "name": "AgriFAAS Connect",
   "short_name": "AgriFAAS",
-  "description": "Empowering Agriculture, Connecting Futures. Farm Management Simplified.",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#F5F5DC",
-  "theme_color": "#8CC63F",
+  "description": "Empowering Agriculture, Connecting Futures. Farm Management, Simplified.",
   "icons": [
     {
-      "src": "/agrifaas-logo.png",
+      "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "/agrifaas-logo.png",
+      "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
-  ]
+  ],
+  "theme_color": "#8CC63F",
+  "background_color": "#F5F5DC",
+  "start_url": "/",
+  "display": "standalone"
 }
