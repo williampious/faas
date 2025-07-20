@@ -153,9 +153,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
                 <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="destructive">Reset Local Settings</Button>
-                </AlertDialogTrigger>
+                <AlertDialogTrigger asChild><Button variant="destructive">Reset Local Settings</Button></AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
