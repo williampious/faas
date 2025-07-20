@@ -20,7 +20,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
-import type { PromotionalCode, PromoCodeType } from '@/types/promo-code';
+import type { PromotionalCode } from '@/types/promo-code';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
 import { collection, query, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
@@ -69,9 +69,21 @@ export default function PromoCodesPage() {
       try {
         const q = query(collection(db, PROMO_CODES_COLLECTION), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
-        setCodes(querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as PromotionalCode)));
+        const fetchedCodes = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            timesUsed: data.timesUsed || 0,
+          } as PromotionalCode;
+        });
+        setCodes(fetchedCodes);
       } catch (e: any) {
-        setError("Failed to load promo codes. This may be due to missing permissions or a required Firestore index.");
+        let message = `Failed to load promo codes. This may be due to missing permissions.`;
+        if (e.message?.toLowerCase().includes('requires an index')) {
+          message = "Failed to load promo codes because a Firestore index is missing. Please create the index for the 'promotionalCodes' collection (sorted by 'createdAt') as detailed in the README.md file.";
+        }
+        setError(message);
         console.error(e);
       } finally {
         setIsLoading(false);
@@ -82,7 +94,7 @@ export default function PromoCodesPage() {
 
   const handleOpenModal = (codeToEdit?: PromotionalCode) => {
     setEditingCode(codeToEdit || null);
-    form.reset(codeToEdit || { code: '', type: 'fixed', discountAmount: 0, usageLimit: 100, expiryDate: '', isActive: true });
+    form.reset(codeToEdit ? { ...codeToEdit } : { code: '', type: 'fixed', discountAmount: 0, usageLimit: 100, expiryDate: '', isActive: true });
     setIsModalOpen(true);
   };
   
@@ -100,7 +112,8 @@ export default function PromoCodesPage() {
       } else {
         const newCode = { ...codeData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
         const docRef = await addDoc(collection(db, PROMO_CODES_COLLECTION), newCode);
-        setCodes([{ ...newCode, id: docRef.id } as PromotionalCode, ...codes]);
+        const newCodeForState = { ...newCode, id: docRef.id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as PromotionalCode;
+        setCodes([newCodeForState, ...codes]);
         toast({ title: "Promo Code Created" });
       }
       setIsModalOpen(false);
