@@ -14,6 +14,12 @@ import { add, format } from 'date-fns';
  * @returns A promise that resolves when the update is complete.
  */
 export async function updateUserSubscription(userId: string, planId: 'starter' | 'grower' | 'business' | 'enterprise', billingCycle: 'monthly' | 'annually'): Promise<{success: boolean; message: string;}> {
+    if (!adminDb) {
+        const errorMessage = "Firebase Admin SDK is not initialized. This is a server-configuration issue. Please check your environment variables (FIREBASE_PRIVATE_KEY, etc.) as described in the README.md file.";
+        console.error('[updateUserSubscription]', errorMessage);
+        return { success: false, message: errorMessage };
+    }
+    
     if (!userId || !planId || !billingCycle) {
         const errorMessage = `Missing required data for subscription update: userId=${userId}, planId=${planId}, billingCycle=${billingCycle}`;
         console.error('[updateUserSubscription]', errorMessage);
