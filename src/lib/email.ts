@@ -1,6 +1,7 @@
 'use server';
 
 import nodemailer from 'nodemailer';
+import sendmail from 'sendmail';
 
 interface EmailOptions {
   to: string;
@@ -8,16 +9,41 @@ interface EmailOptions {
   html: string;
 }
 
+const sendmailPromise = sendmail({
+    // logger: {
+    //     debug: console.log,
+    //     info: console.info,
+    //     warn: console.warn,
+    //     error: console.error
+    // },
+    silent: false, // set to false for debugging
+});
+
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; message: string }> {
   const { to, subject, html } = options;
-  const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS } = process.env;
+  const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, EMAIL_SENDER } = process.env;
 
+  const fromAddress = EMAIL_SENDER || '"AgriFAAS Connect" <noreply@agrifaasconnect.com>';
+
+  // If SMTP variables are not set, use sendmail as a fallback
   if (!EMAIL_HOST || !EMAIL_PORT || !EMAIL_USER || !EMAIL_PASS) {
-      const errorMessage = "Email service is not configured. Please set EMAIL_HOST, EMAIL_PORT, EMAIL_USER, and EMAIL_PASS environment variables.";
-      console.error(errorMessage);
-      return { success: false, message: errorMessage };
+      console.warn("SMTP environment variables not set. Falling back to sendmail.");
+      try {
+        await sendmailPromise({
+            from: fromAddress,
+            to: to,
+            subject: subject,
+            html: html,
+        });
+        console.log(`Email sent successfully to ${to} via sendmail fallback.`);
+        return { success: true, message: 'Email sent successfully via fallback method.' };
+      } catch (error: any) {
+          console.error(`Failed to send email to ${to} via sendmail:`, error);
+          return { success: false, message: `Failed to send email via fallback: ${error.message}` };
+      }
   }
 
+  // Original nodemailer logic
   const transporter = nodemailer.createTransport({
     host: EMAIL_HOST,
     port: Number(EMAIL_PORT),
@@ -29,7 +55,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
   });
 
   const mailOptions = {
-    from: `"AgriFAAS Connect" <${EMAIL_USER}>`,
+    from: fromAddress,
     to,
     subject,
     html,
@@ -37,10 +63,10 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`Email sent successfully to ${to}`);
+    console.log(`Email sent successfully to ${to} via SMTP.`);
     return { success: true, message: 'Email sent successfully.' };
   } catch (error: any) {
-    console.error(`Failed to send email to ${to}:`, error);
-    return { success: false, message: `Failed to send email: ${error.message}` };
+    console.error(`Failed to send email to ${to} via SMTP:`, error);
+    return { success: false, message: `Failed to send email via SMTP: ${error.message}` };
   }
 }
