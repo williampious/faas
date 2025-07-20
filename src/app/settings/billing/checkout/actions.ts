@@ -1,7 +1,9 @@
 
 'use server';
 
-import type { AgriFAASUserProfile } from "@/types/user";
+import type { AgriFAASUserProfile, PromotionalCode } from "@/types/user";
+import { adminDb } from '@/lib/firebase-admin';
+import { parseISO, isAfter } from 'date-fns';
 
 interface InitializePaymentResult {
   success: boolean;
@@ -19,31 +21,54 @@ interface PromoCodeValidationResult {
     discountAmount?: number;
 }
 
-// Hardcoded promo codes for demonstration. In a real app, this would query Firestore.
-const validPromoCodes: Array<{ code: string, type: 'fixed' | 'percentage', value: number, active: boolean }> = [
-    { code: 'SAVE50', type: 'fixed', value: 50, active: true },
-    { code: 'AGRIFAAS100', type: 'fixed', value: 100, active: true },
-    { code: 'EXPIREDCODE', type: 'fixed', value: 20, active: false }, // Simulating an inactive code
-    { code: 'FREEBIZYEAR', type: 'fixed', value: 4499, active: true }, // 100% discount on annual business plan
-];
-
 export async function validatePromoCode(code: string): Promise<PromoCodeValidationResult> {
-    const promoCode = validPromoCodes.find(p => p.code.toUpperCase() === code.toUpperCase());
+    if (!adminDb) {
+      return { success: false, message: 'Database service is unavailable. Cannot validate code.' };
+    }
+    if (!code) {
+        return { success: false, message: 'Promotional code cannot be empty.' };
+    }
 
-    if (!promoCode) {
-        return { success: false, message: 'Invalid promotional code.' };
+    const promoCodeRef = adminDb.collection('promotionalCodes').where('code', '==', code.toUpperCase());
+
+    try {
+        const snapshot = await promoCodeRef.get();
+
+        if (snapshot.empty) {
+            return { success: false, message: 'Invalid promotional code.' };
+        }
+
+        const promoDoc = snapshot.docs[0];
+        const promoData = promoDoc.data() as PromotionalCode;
+
+        if (!promoData.isActive) {
+            return { success: false, message: 'This promotional code is no longer active.' };
+        }
+
+        const now = new Date();
+        const expiryDate = parseISO(promoData.expiryDate);
+        if (isAfter(now, expiryDate)) {
+            return { success: false, message: 'This promotional code has expired.' };
+        }
+
+        if (promoData.timesUsed >= promoData.usageLimit) {
+            return { success: false, message: 'This promotional code has reached its usage limit.' };
+        }
+
+        // In a real application, you might also check if this specific user has already used this code.
+        
+        const discountAmount = promoData.type === 'fixed' ? promoData.discountAmount : 0; // Assuming only fixed for now
+
+        return { 
+            success: true, 
+            message: `Success! A discount of GHS ${discountAmount.toFixed(2)} has been applied.`,
+            discountAmount: discountAmount
+        };
+
+    } catch (error: any) {
+        console.error("Error validating promo code:", error);
+        return { success: false, message: 'An error occurred while validating the code.' };
     }
-    if (!promoCode.active) {
-        return { success: false, message: 'This promotional code is no longer active.' };
-    }
-    
-    // Here you could add more complex logic like checking expiry dates, usage limits, or if the user has used it before.
-    
-    return { 
-        success: true, 
-        message: `Success! A discount of GHS ${promoCode.value.toFixed(2)} has been applied.`,
-        discountAmount: promoCode.value 
-    };
 }
 
 
