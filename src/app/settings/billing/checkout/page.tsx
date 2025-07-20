@@ -34,6 +34,7 @@ function CheckoutPageContent() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [promoCode, setPromoCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [isFullDiscount, setIsFullDiscount] = useState(false);
   const [promoMessage, setPromoMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [isApplyingCode, setIsApplyingCode] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'momo' | 'card' | 'paypal' | 'stripe'>('momo');
@@ -46,7 +47,7 @@ function CheckoutPageContent() {
 
   const selectedPlan = pricingTiers.find(p => p.id === planId) || pricingTiers[0];
   const price = cycle === 'annually' ? selectedPlan.price.annually : selectedPlan.price.monthly;
-  const finalPrice = Math.max(0, price - appliedDiscount);
+  const finalPrice = isFullDiscount ? 0 : Math.max(0, price - appliedDiscount);
   const billingCycleText = cycle === 'annually' ? 'Billed Annually' : 'Billed Monthly';
   const isFreeCheckout = finalPrice <= 0;
   
@@ -60,10 +61,12 @@ function CheckoutPageContent() {
       
       const result = await validatePromoCode(promoCode);
 
-      if (result.success && result.discountAmount) {
-          setAppliedDiscount(result.discountAmount);
+      if (result.success) {
+          setIsFullDiscount(result.isFullDiscount || false);
+          setAppliedDiscount(result.discountAmount || 0);
           setPromoMessage({ type: 'success', text: result.message });
       } else {
+          setIsFullDiscount(false);
           setAppliedDiscount(0);
           setPromoMessage({ type: 'error', text: result.message });
       }
@@ -80,7 +83,9 @@ function CheckoutPageContent() {
 
     if (isFreeCheckout) {
         // Handle free activation directly
-        const result = await updateUserSubscription(userProfile.userId, planId, cycle);
+        const newPlanId = isFullDiscount && planId !== 'business' ? 'business' : planId;
+        const newCycle = isFullDiscount ? 'annually' : cycle;
+        const result = await updateUserSubscription(userProfile.userId, newPlanId, newCycle);
         if (result.success) {
             toast({ title: "Plan Activated!", description: "Your new plan is now active." });
             router.push('/dashboard');
@@ -155,8 +160,8 @@ function CheckoutPageContent() {
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center p-4 border rounded-lg bg-muted/30">
                 <div>
-                  <p className="font-semibold text-lg capitalize">{selectedPlan.name} Plan</p>
-                  <p className="text-sm text-muted-foreground">{billingCycleText}</p>
+                  <p className="font-semibold text-lg capitalize">{isFullDiscount ? 'Business' : selectedPlan.name} Plan</p>
+                  <p className="text-sm text-muted-foreground">{isFullDiscount ? 'Billed Annually (Free Year)' : billingCycleText}</p>
                 </div>
                 <p className="font-bold text-2xl text-primary">{formatCurrency(price)}</p>
               </div>
@@ -177,10 +182,16 @@ function CheckoutPageContent() {
               
               <Separator />
 
-              {appliedDiscount > 0 && (
+              {appliedDiscount > 0 && !isFullDiscount && (
                 <div className="flex justify-between items-center text-sm">
                   <span>Discount</span>
                   <span className="font-medium text-green-600">-{formatCurrency(appliedDiscount)}</span>
+                </div>
+              )}
+               {isFullDiscount && (
+                <div className="flex justify-between items-center text-sm">
+                  <span>Promotional Discount</span>
+                  <span className="font-medium text-green-600">-{formatCurrency(price)}</span>
                 </div>
               )}
 

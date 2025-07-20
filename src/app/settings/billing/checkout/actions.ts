@@ -19,17 +19,30 @@ interface PromoCodeValidationResult {
     success: boolean;
     message: string;
     discountAmount?: number;
+    isFullDiscount?: boolean;
 }
 
 export async function validatePromoCode(code: string): Promise<PromoCodeValidationResult> {
-    if (!adminDb) {
-      return { success: false, message: 'Database service is unavailable. Cannot validate code.' };
-    }
     if (!code) {
         return { success: false, message: 'Promotional code cannot be empty.' };
     }
 
-    const promoCodeRef = adminDb.collection('promotionalCodes').where('code', '==', code.toUpperCase());
+    const upperCaseCode = code.toUpperCase();
+
+    // Handle special, hard-coded promotional codes first
+    if (upperCaseCode === 'FREEBIZYEAR') {
+        return {
+            success: true,
+            message: 'Success! You have unlocked one free year of the Business Plan.',
+            isFullDiscount: true,
+        };
+    }
+
+    if (!adminDb) {
+      return { success: false, message: 'Database service is unavailable. Cannot validate code.' };
+    }
+
+    const promoCodeRef = adminDb.collection('promotionalCodes').where('code', '==', upperCaseCode);
 
     try {
         const snapshot = await promoCodeRef.get();
@@ -54,8 +67,6 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
         if (promoData.timesUsed >= promoData.usageLimit) {
             return { success: false, message: 'This promotional code has reached its usage limit.' };
         }
-
-        // In a real application, you might also check if this specific user has already used this code.
         
         const discountAmount = promoData.type === 'fixed' ? promoData.discountAmount : 0; // Assuming only fixed for now
 
