@@ -35,6 +35,7 @@ function CheckoutPageContent() {
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [promoMessage, setPromoMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [isApplyingCode, setIsApplyingCode] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'momo' | 'card'>('momo');
 
   const planId = searchParams.get('plan') as 'starter' | 'grower' | 'business' | 'enterprise' || 'starter';
   const cycle = searchParams.get('cycle') as 'monthly' | 'annually' || 'annually';
@@ -79,11 +80,11 @@ function CheckoutPageContent() {
         if (result.success) {
             toast({ title: "Plan Activated!", description: "Your new plan is now active." });
             router.push('/dashboard');
-            return; // <-- CRITICAL FIX: Stop execution here
+            return; 
         } else {
             toast({ title: "Activation Failed", description: result.message, variant: "destructive" });
             setIsProcessing(false);
-            return; // Stop execution on failure as well
+            return;
         }
     }
     
@@ -169,7 +170,11 @@ function CheckoutPageContent() {
             </CardHeader>
             <CardContent>
               {!isFreeCheckout && (
-                <RadioGroup defaultValue="momo" className="space-y-3">
+                <RadioGroup 
+                  value={selectedPaymentMethod} 
+                  onValueChange={(value) => setSelectedPaymentMethod(value as 'momo' | 'card')} 
+                  className="space-y-3"
+                >
                   <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-primary/50">
                     <RadioGroupItem value="momo" id="momo" />
                     <CircleDollarSign className="h-6 w-6 text-yellow-500" />
@@ -192,7 +197,7 @@ function CheckoutPageContent() {
                <Button size="lg" className="w-full" onClick={handleProceedToPayment} disabled={isProcessing}>
                   {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {isFreeCheckout ? <CheckCircle className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
-                  {isProcessing ? 'Activating...' : isFreeCheckout ? 'Activate Your Plan' : `Pay ${formatCurrency(finalPrice)} via Paystack`}
+                  {isProcessing ? 'Processing...' : isFreeCheckout ? 'Activate Your Plan' : `Pay ${formatCurrency(finalPrice)} via Paystack`}
                </Button>
                {!isFreeCheckout && (
                  <p className="text-xs text-muted-foreground text-center w-full">
