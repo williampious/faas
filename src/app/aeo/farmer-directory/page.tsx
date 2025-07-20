@@ -110,8 +110,8 @@ export default function FarmerDirectoryPage() {
       } catch (err: any) {
         console.error("Error fetching farmers:", err);
         let message = `Failed to fetch farmers: ${err.message}`;
-        if (err.code === 'failed-precondition' || err.message?.includes('requires an index')) {
-          message = "Failed to load the farmer directory. This is likely because a required Firestore index is missing. Please check your browser's developer console for a link to create it automatically, or refer to the README file for instructions on creating the 'AEO Farmer Directory' index.";
+        if (err.code === 'failed-precondition' || err.message?.toLowerCase().includes('requires an index')) {
+          message = "Failed to load the farmer directory. A required Firestore index is missing. Please check your browser's developer console for a link to create it automatically, or refer to the README file for instructions.";
         }
         setError(message);
       } finally {

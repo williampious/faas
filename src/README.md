@@ -263,74 +263,15 @@ service firebase.storage {
 
 ## 3. Important Note on Firestore Indexes
 
-As the app's features grow, Firestore will require specific indexes for complex queries to work securely and efficiently. If you see an error in your browser console that says `The query requires an index...` followed by a long URL, you must create the specified index.
+As the app's features grow, Firestore will require specific indexes for complex queries (like sorting or filtering by multiple fields) to work efficiently.
 
-You can create these by following the link provided in the console error, or by going to your **Firebase Console -> Firestore Database -> Indexes** tab and creating them manually. The app will not function correctly without them.
+**How to Create Indexes:**
 
-### Comprehensive List of Required Indexes:
+The best way to create indexes is to **let Firebase tell you which ones you need**.
 
-#### For User and Directory Management:
+1.  **Run the App:** Use the application and navigate to pages that load lists of data (e.g., Financial Dashboard, Transaction Ledger, AEO Farmer Directory, Promo Codes page).
+2.  **Check for Errors:** If a query requires an index that doesn't exist, **an error will appear in your browser's developer console**.
+3.  **Click the Link:** This error message will contain a direct link to the Firebase Console. Click this link.
+4.  **Create the Index:** The link will pre-fill all the necessary information to create the index. Simply review the details and click the "Create Index" button.
 
-1.  **HR Employee Directory:**
-    *   Collection: `users`, Fields: `farmId` (Asc), `fullName` (Asc), Scope: Collection
-2.  **AEO Farmer Directory:**
-    *   Collection: `users`, Fields: `managedByAEO` (Asc), `fullName` (Asc), Scope: Collection
-    
-#### For Operational Modules:
-
-3.  **AI Planting Advice History:**
-    *   Collection: `plantingAdviceRecords`, Fields: `farmId` (Asc), `createdAt` (Desc), Scope: Collection
-4.  **Farm Events:**
-    *   Collection: `farmEvents`, Fields: `farmId` (Asc), `createdAt` (Desc), Scope: Collection
-5.  **Farm & Financial Years:**
-    *   Collection: `farmingYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
-    *   Collection: `financialYears`, Fields: `farmId` (Asc), `startDate` (Desc), Scope: Collection
-6.  **Animal Production (All modules):**
-    *   Collection: `animalHealthRecords`, Fields: `farmId` (Asc), `date` (Desc), Scope: Collection
-    *   Collection: `breedingRecords`, Fields: `farmId` (Asc), `matingDate` (Desc), Scope: Collection
-    *   Collection: `feedingRecords`, Fields: `farmId` (Asc), `date` (Desc), Scope: Collection
-7.  **Soil & Water Management:**
-    *   Collection: `soilTestRecords`, Fields: `farmId` (Asc), `testDate` (Desc), Scope: Collection
-
-#### For Office Management Modules:
-
-8.  **Technology Management:**
-    *   Collection: `technologyAssets`, Fields: `farmId` (Asc), `purchaseDate` (Desc), Scope: Collection
-9.  **Facility Management:**
-    *   Collection: `facilityManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
-10. **Records Management:**
-    *   Collection: `recordsManagementRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
-11. **Event Planning:**
-    *   Collection: `officeEvents`, Fields: `farmId` (Asc), `eventDate` (Desc), Scope: Collection
-12. **Safety & Security Management:**
-    *   Collection: `safetySecurityRecords`, Fields: `farmId` (Asc), `paymentDate` (Desc), Scope: Collection
-
-#### For AEO Tools:
-
-13. **AEO Knowledge Base:**
-    *   Collection: `knowledgeArticles`, Fields: `authorId` (Asc), `createdAt` (Desc), Scope: Collection
-14. **AEO Support Logs:**
-    *   Collection: `supportLogs`, Fields: `aeoId` (Asc), `interactionDate` (Desc), Scope: Collection
-
-#### For Financial Reports & Budgeting (Critical):
-
-15. **Transactions Ledger (multiple sort options):**
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `date` (Asc/Desc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `category` (Asc/Desc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `linkedModule` (Asc/Desc), Scope: Collection
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `amount` (Asc/Desc), Scope: Collection
-16. **Budgeting Module (date range queries):**
-    *   Collection: `transactions`, Fields: `farmId` (Asc), `type` (Asc), `date` (Asc/Desc), Scope: Collection
-
-#### For Profitability Report (Sorting):
-
-17. **Harvesting Records (multiple sort options):**
-    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `dateHarvested` (Asc/Desc), Scope: Collection
-    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `cropType` (Asc/Desc), Scope: Collection
-    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalSalesIncome` (Asc/Desc), Scope: Collection
-    *   Collection: `harvestingRecords`, Fields: `farmId` (Asc), `totalHarvestCost` (Asc/Desc), Scope: Collection
-    
-#### For Admin-only Features:
-
-18. **Promotional Codes:**
-    *   Collection: `promotionalCodes`, Fields: `createdAt` (Desc), Scope: Collection
+The index will take a few minutes to build. Once it's done, the feature that caused the error will work correctly. This method is more reliable than creating indexes manually.

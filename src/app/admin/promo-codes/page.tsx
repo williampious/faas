@@ -80,8 +80,8 @@ export default function PromoCodesPage() {
         setCodes(fetchedCodes);
       } catch (e: any) {
         let message = `Failed to load promo codes. This may be due to missing permissions.`;
-        if (e.message?.toLowerCase().includes('requires an index')) {
-          message = "Failed to load promo codes because a Firestore index is missing. Please create the index for the 'promotionalCodes' collection (sorted by 'createdAt') as detailed in the README.md file.";
+        if (e.message?.toLowerCase().includes('requires an index') || e.message?.toLowerCase().includes('permission-denied')) {
+          message = "Failed to load promo codes because a Firestore index is missing. Please check the developer console for a link to create it, or refer to the README file.";
         }
         setError(message);
         console.error(e);

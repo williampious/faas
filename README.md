@@ -292,10 +292,17 @@ Server-side features like the **User Subscription Migration Tool** or **Paystack
     *   `FIREBASE_PRIVATE_KEY`: Paste the entire `private_key` string, including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines.
 4.  **Redeploy your application** for the changes to take effect.
 
-### 4. Firestore Indexes
+### 4. Firestore Indexes (Important)
 
-As the app's features grow, Firestore will require specific indexes for complex queries to work securely and efficiently. If you see an error in your browser console that says `The query requires an index...` followed by a long URL, you must create the specified index by following the link.
+As the app's features grow, Firestore will require specific indexes for complex queries (like sorting or filtering by multiple fields) to work efficiently.
 
-You can create these by following the link provided in the console error, or by going to your **Firebase Console -> Firestore Database -> Indexes** tab and creating them manually. The app will not function correctly without them.
+**How to Create Indexes:**
 
-**For a comprehensive and up-to-date list of required indexes, please refer to `src/README.md`.**
+The best way to create indexes is to **let Firebase tell you which ones you need**.
+
+1.  **Run the App:** Use the application and navigate to pages that load lists of data (e.g., Financial Dashboard, Transaction Ledger, AEO Farmer Directory, Promo Codes page).
+2.  **Check for Errors:** If a query requires an index that doesn't exist, **an error will appear in your browser's developer console**.
+3.  **Click the Link:** This error message will contain a direct link to the Firebase Console. Click this link.
+4.  **Create the Index:** The link will pre-fill all the necessary information to create the index. Simply review the details and click the "Create Index" button.
+
+The index will take a few minutes to build. Once it's done, the feature that caused the error will work correctly. This method is more reliable than creating indexes manually.
