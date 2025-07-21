@@ -1,12 +1,13 @@
 
 'use client';
 
-import type { AgriFAASUserProfile } from '@/types/user';
+import type { AgriFAASUserProfile, SubscriptionDetails } from '@/types/user';
 import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { add } from 'date-fns';
 
 interface UserAccess {
   canAccessFarmOps: boolean;
@@ -35,6 +36,59 @@ const defaultAccess: UserAccess = {
 
 const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
 
+// This is the self-healing function to create a profile if one is missing for an authenticated user.
+async function createMissingProfile(user: User): Promise<AgriFAASUserProfile | null> {
+    if (!db) return null;
+    const userDocRef = doc(db, 'users', user.uid);
+    
+    const docSnap = await getDoc(userDocRef);
+    if (docSnap.exists()) {
+        // Should not happen if this function is called correctly, but as a safeguard.
+        return docSnap.data() as AgriFAASUserProfile;
+    }
+    
+    console.warn(`Attempting to self-heal profile for user: ${user.uid}`);
+
+    const trialEndDate = add(new Date(), { days: 14 });
+    const initialSubscription: SubscriptionDetails = {
+        planId: 'starter',
+        status: 'Active',
+        billingCycle: 'annually',
+        nextBillingDate: null,
+        trialEnds: null,
+    };
+
+    const newProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> = {
+        userId: user.uid,
+        firebaseUid: user.uid,
+        fullName: user.displayName || "New User",
+        emailAddress: user.email || '',
+        role: [],
+        accountStatus: 'Active',
+        registrationDate: new Date().toISOString(),
+        avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(user.displayName || "U").charAt(0)}`,
+        subscription: initialSubscription,
+    };
+
+    try {
+        await setDoc(userDocRef, {
+            ...newProfile,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+        // We need to return a complete profile object for the context state
+        return {
+            ...newProfile,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        } as AgriFAASUserProfile;
+    } catch (error) {
+        console.error("Self-healing profile creation failed:", error);
+        return null;
+    }
+}
+
+
 export function UserProfileProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<AgriFAASUserProfile | null>(null);
@@ -55,18 +109,17 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    let unsubscribeProfile = () => {}; // Initialize a no-op unsubscribe function
+    let unsubscribeProfile = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      unsubscribeProfile(); // Detach any existing profile listener on auth state change
+      unsubscribeProfile();
 
       setUser(currentUser);
       if (currentUser) {
         setIsLoading(true);
         const userDocRef = doc(db, 'users', currentUser.uid);
         
-        // Re-assign the unsubscribe function with the new listener
-        unsubscribeProfile = onSnapshot(userDocRef, (docSnap) => {
+        unsubscribeProfile = onSnapshot(userDocRef, async (docSnap) => {
           if (docSnap.exists()) {
             const profileData = docSnap.data() as AgriFAASUserProfile;
             setUserProfile(profileData);
@@ -77,14 +130,10 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             const plan = profileData.subscription?.planId || 'starter';
             const status = profileData.subscription?.status;
             
-            // Correctly determine if the plan has paid feature access
             const isGrowerOrHigher = plan === 'grower' || plan === 'business' || plan === 'enterprise';
             const isBusinessOrHigher = plan === 'business' || plan === 'enterprise';
-            
-            // Access is only granted if the subscription is active (paid) or in trial
             const hasPaidAccess = status === 'Active' || status === 'Trialing';
 
-            // Corrected Logic: Access is based on plan and status, NOT on being an admin.
             setAccess({
                 canAccessFarmOps: isGrowerOrHigher && hasPaidAccess,
                 canAccessAnimalOps: isGrowerOrHigher && hasPaidAccess,
@@ -92,15 +141,25 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
                 canAccessHrOps: isBusinessOrHigher && hasPaidAccess,
                 canAccessAeoTools: isBusinessOrHigher && hasPaidAccess,
             });
-            setError(null); 
+            setError(null);
+            setIsLoading(false);
           } else {
-            setUserProfile(null);
-            setIsAdmin(false);
-            setAccess(defaultAccess);
-            console.warn(`User profile not found in Firestore for UID: ${currentUser.uid}. This may occur if registration didn't complete, the profile was deleted, or if this is an old user account without a profile document.`);
-            setError(`User profile document not found in Firestore for your account (UID: ${currentUser.uid}). This likely means the profile creation during registration failed or the document was deleted. Please try registering again or contact support if you believe this is an error.`);
+            // Profile doesn't exist. Attempt to self-heal.
+            const healedProfile = await createMissingProfile(currentUser);
+            if(healedProfile) {
+                // If healing was successful, we essentially re-run the logic as if the profile existed.
+                setUserProfile(healedProfile);
+                setIsAdmin(healedProfile.role?.includes('Admin') || false);
+                setAccess(defaultAccess); // Reset to default, let next render cycle calculate access.
+                setError(null);
+            } else {
+                setUserProfile(null);
+                setIsAdmin(false);
+                setAccess(defaultAccess);
+                setError(`Your account exists, but we couldn't find or create your user profile. This could be a permission issue with your database rules. Please contact support.`);
+            }
+            setIsLoading(false);
           }
-          setIsLoading(false);
         }, (firestoreError: any) => { 
           console.error("Error fetching user profile from Firestore:", firestoreError);
           if (firestoreError.code === 'permission-denied' || firestoreError.message.toLowerCase().includes('permission denied')) {
@@ -114,7 +173,6 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
           setIsLoading(false);
         });
       } else {
-        // User is signed out, clear everything
         setUserProfile(null);
         setIsAdmin(false);
         setAccess(defaultAccess);
@@ -127,10 +185,9 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
     });
 
-    // Cleanup function for the main useEffect
     return () => {
       unsubscribeAuth();
-      unsubscribeProfile(); // Also clean up profile listener on component unmount
+      unsubscribeProfile();
     };
   }, []);
 
