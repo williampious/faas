@@ -325,3 +325,5 @@ AgriFAAS Connect is designed for a range of users within the agricultural ecosys
 *   **Agricultural Consultants:** Consultants can use the platform to manage multiple client farms, track recommendations, and monitor outcomes.
 
     
+
+    
