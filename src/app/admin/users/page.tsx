@@ -19,7 +19,7 @@ import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlu
 import { Badge } from '@/components/ui/badge';
 import type { AgriFAASUserProfile, UserRole, AccountStatus } from '@/types/user';
 import { db, isFirebaseClientConfigured } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, doc, updateDoc, serverTimestamp, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, doc, updateDoc, serverTimestamp, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { useToast } from '@/hooks/use-toast';
@@ -197,15 +197,24 @@ export default function AdminUsersPage() {
     setIsInvitingUser(true);
     setInviteUserError(null);
     setGeneratedInviteLink(null);
+    
+    const batch = writeBatch(db);
 
     const usersRef = collection(db, usersCollectionName);
     const q = query(usersRef, where("emailAddress", "==", data.email));
     const querySnapshot = await getDocs(q);
 
+    // If an invited (but not yet active) user exists, delete the old invitation document first.
     if (!querySnapshot.empty) {
-        setInviteUserError("This email address is already associated with an account or an existing invitation.");
-        setIsInvitingUser(false);
-        return;
+        const existingDoc = querySnapshot.docs[0];
+        const existingData = existingDoc.data() as AgriFAASUserProfile;
+        if (existingData.accountStatus === 'Invited') {
+            batch.delete(existingDoc.ref);
+        } else {
+             setInviteUserError("This email address is already associated with an active account.");
+             setIsInvitingUser(false);
+             return;
+        }
     }
 
     const invitationToken = uuidv4();
@@ -229,7 +238,9 @@ export default function AdminUsersPage() {
 
 
     try {
-        await setDoc(doc(db, usersCollectionName, temporaryUserId), newUserProfile);
+        const newDocRef = doc(db, usersCollectionName, temporaryUserId);
+        batch.set(newDocRef, newUserProfile);
+        await batch.commit();
 
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
         const inviteLink = `${baseUrl}/auth/complete-registration?token=${invitationToken}`;
@@ -270,7 +281,12 @@ export default function AdminUsersPage() {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         } as AgriFAASUserProfile;
-        setUsers(prevUsers => [...prevUsers, displayProfile].sort((a,b) => (a.fullName || '').localeCompare(b.fullName || '')));
+        // Remove old invite from state if it existed
+        setUsers(prevUsers => {
+            const oldInvite = prevUsers.find(u => u.emailAddress === data.email);
+            const filteredUsers = oldInvite ? prevUsers.filter(u => u.userId !== oldInvite.userId) : prevUsers;
+            return [...filteredUsers, displayProfile].sort((a,b) => (a.fullName || '').localeCompare(b.fullName || ''));
+        });
 
     } catch (err: any) {
         console.error("Error inviting new user:", err);
@@ -301,12 +317,14 @@ export default function AdminUsersPage() {
     }
     setIsDeletingUser(true);
     try {
+      // The `userToDelete.userId` for an invited user is the temporary UUID.
+      // For an active user, it's their Firebase Auth UID.
       await deleteDoc(doc(db, usersCollectionName, userToDelete.userId));
       setUsers(users.filter(u => u.userId !== userToDelete.userId));
-      toast({ title: "User Profile Deleted", description: `${userToDelete.fullName}'s profile has been removed from Firestore.` });
+      toast({ title: "Record Deleted", description: `The record for ${userToDelete.fullName} has been removed from Firestore.` });
     } catch (err: any) {
-      console.error("Error deleting user profile:", err);
-      toast({ title: "Deletion Failed", description: `Could not delete profile: ${err.message}`, variant: "destructive" });
+      console.error("Error deleting user record:", err);
+      toast({ title: "Deletion Failed", description: `Could not delete record: ${err.message}`, variant: "destructive" });
     } finally {
       setIsDeletingUser(false);
       setIsDeleteConfirmOpen(false);
@@ -540,7 +558,7 @@ export default function AdminUsersPage() {
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm User Profile Deletion</AlertDialogTitle>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
             <AlertDialogDescription>
               {userToDelete?.accountStatus === 'Invited' ? (
                 <>
@@ -553,10 +571,10 @@ export default function AdminUsersPage() {
                 </>
               ) : (
                 <>
-                  Are you sure you want to delete the Firestore profile for <strong>{userToDelete?.fullName}</strong> ({userToDelete?.emailAddress})?
+                  Are you sure you want to delete the app profile for <strong>{userToDelete?.fullName}</strong> ({userToDelete?.emailAddress})?
                   <br />
                   <span className="font-semibold text-destructive mt-2 block">
-                    Important: This action only removes the user's data from the application database (Firestore). It does NOT delete their authentication account from Firebase Auth. The user might still be able to log in if their auth account exists.
+                    Important: This action only removes the user's data from the application database (Firestore). It does NOT delete their authentication account.
                   </span>
                   This action cannot be undone.
                 </>
