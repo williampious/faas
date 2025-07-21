@@ -9,25 +9,36 @@ let app: admin.App | undefined;
 
 // A function to check if the required environment variables are present and look valid.
 const checkEnvVars = () => {
-  const requiredVars = [
-    'FIREBASE_PROJECT_ID',
-    'FIREBASE_CLIENT_EMAIL',
-    'FIREBASE_PRIVATE_KEY',
-  ];
-  const missingVars = requiredVars.filter(v => !process.env[v]);
+  const requiredVars = {
+    FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
+    FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
+    FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
+  };
+
+  console.log('[Firebase Admin] Checking for server-side environment variables...');
+
+  let allVarsPresent = true;
+  for (const [key, value] of Object.entries(requiredVars)) {
+    if (!value) {
+      console.error(`[Firebase Admin] ❌ MISSING: The '${key}' environment variable is not set.`);
+      allVarsPresent = false;
+    } else {
+      console.log(`[Firebase Admin] ✅ FOUND: The '${key}' environment variable is present.`);
+    }
+  }
+
+  if (requiredVars.FIREBASE_PRIVATE_KEY && !requiredVars.FIREBASE_PRIVATE_KEY.startsWith('-----BEGIN PRIVATE KEY-----')) {
+    console.error(
+      "[Firebase Admin] ❌ INVALID: The 'FIREBASE_PRIVATE_KEY' environment variable appears to be invalid. It should start with '-----BEGIN PRIVATE KEY-----'. Please ensure the entire key, including the header and footer lines, is copied correctly."
+    );
+    return false;
+  }
   
-  if (missingVars.length > 0) {
-    console.error(
-      `CRITICAL ERROR: [Firebase Admin] The following required server-side environment variables are missing: ${missingVars.join(', ')}. The Admin SDK will not be initialized.`
-    );
-    return false;
+  if (!allVarsPresent) {
+      console.error("[Firebase Admin] CRITICAL ERROR: One or more required server-side environment variables are missing. The Admin SDK will not be initialized. Please check your hosting provider's secret management settings.");
+      return false;
   }
-  if (!process.env.FIREBASE_PRIVATE_KEY!.startsWith('-----BEGIN PRIVATE KEY-----')) {
-    console.error(
-      "CRITICAL ERROR: [Firebase Admin] The 'FIREBASE_PRIVATE_KEY' environment variable appears to be invalid. It should start with '-----BEGIN PRIVATE KEY-----'. Please ensure the entire key, including the header and footer lines, is copied correctly."
-    );
-    return false;
-  }
+
   return true;
 };
 
@@ -36,8 +47,6 @@ const hasValidEnv = checkEnvVars();
 if (!admin.apps.length) {
   if (hasValidEnv) {
     try {
-      // For environments like Vercel or local dev with .env.local
-      // this relies on the env vars being set.
       // For App Hosting, these are injected from Secret Manager.
       app = admin.initializeApp({
         credential: admin.credential.cert({
@@ -47,16 +56,16 @@ if (!admin.apps.length) {
         }),
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       });
-      console.log('[Firebase Admin] SDK initialized successfully.');
+      console.log('[Firebase Admin] ✅ SDK initialized successfully.');
     } catch (error: any) {
       console.error(
-        "CRITICAL ERROR: [Firebase Admin] SDK initialization failed despite environment variables being present. Error: ", 
+        "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed despite environment variables being present. Error: ", 
         error.message,
         "This usually happens if the environment variables contain typos or are not properly formatted."
       );
     }
   } else {
-    console.error("[Firebase Admin] Skipping initialization due to missing or invalid environment variables.");
+    console.error("[Firebase Admin] ❌ SKIPPING INITIALIZATION: Due to missing or invalid environment variables.");
   }
 } else {
   app = admin.apps[0];

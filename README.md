@@ -37,7 +37,7 @@ Server-side features like **User Invitations**, **Subscription Activations**, or
 
 **Step 3: Deploy Your App**
 1.  The `apphosting.yaml` file in this project is already configured to look for these secrets by name.
-2.  When you deploy your application to Firebase App Hosting (e.g., via `firebase deploy`), Firebase will automatically and securely grant your app access to these secrets and make them available as environment variables.
+2.  **VERY IMPORTANT:** After you have created the secrets in Secret Manager, you **MUST redeploy your application** to Firebase App Hosting (e.g., via `firebase deploy` or by pushing a new commit). The new settings will only take effect on a new deployment.
 
 ### 2. Firestore Security Rules
 

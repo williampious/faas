@@ -6,6 +6,8 @@ runConfig:
   # more instances in response to increased traffic.
   maxInstances: 1
 # Defines secrets that are available as environment variables to the application.
+# These secrets are stored in Google Cloud Secret Manager. The 'secret' field
+# must match the name of the secret you create in Secret Manager.
 # Learn more at https://firebase.google.com/docs/app-hosting/configure#secrets
 secretEnvironmentVariables:
   - secret: FIREBASE_PROJECT_ID
