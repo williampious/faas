@@ -36,8 +36,9 @@ const hasValidEnv = checkEnvVars();
 if (!admin.apps.length) {
   if (hasValidEnv) {
     try {
-      // Use initializeApp without arguments when hosted on Google Cloud.
-      // For other environments (like Vercel), it relies on the env vars being set.
+      // For environments like Vercel or local dev with .env.local
+      // this relies on the env vars being set.
+      // For App Hosting, these are injected from Secret Manager.
       app = admin.initializeApp({
         credential: admin.credential.cert({
           projectId: process.env.FIREBASE_PROJECT_ID!,
@@ -72,5 +73,3 @@ const adminDb = app ? admin.firestore() : undefined;
 const adminAuth = app ? admin.auth() : undefined;
 
 export { adminDb, adminAuth };
-
-    

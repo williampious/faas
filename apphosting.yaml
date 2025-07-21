@@ -5,3 +5,30 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+# Defines secrets that are available as environment variables to the application.
+# Learn more at https://firebase.google.com/docs/app-hosting/configure#secrets
+secretEnvironmentVariables:
+  - secret: FIREBASE_PROJECT_ID
+    keyName: FIREBASE_PROJECT_ID
+  - secret: FIREBASE_CLIENT_EMAIL
+    keyName: FIREBASE_CLIENT_EMAIL
+  - secret: FIREBASE_PRIVATE_KEY
+    keyName: FIREBASE_PRIVATE_KEY
+  - secret: NEXT_PUBLIC_BASE_URL
+    keyName: NEXT_PUBLIC_BASE_URL
+  - secret: PAYSTACK_SECRET_KEY
+    keyName: PAYSTACK_SECRET_KEY
+  - secret: PAYPAL_CLIENT_ID
+    keyName: PAYPAL_CLIENT_ID
+  - secret: PAYPAL_CLIENT_SECRET
+    keyName: PAYPAL_CLIENT_SECRET
+  - secret: EMAIL_HOST
+    keyName: EMAIL_HOST
+  - secret: EMAIL_PORT
+    keyName: EMAIL_PORT
+  - secret: EMAIL_USER
+    keyName: EMAIL_USER
+  - secret: EMAIL_PASS
+    keyName: EMAIL_PASS
+  - secret: EMAIL_SENDER
+    keyName: EMAIL_SENDER

@@ -5,9 +5,9 @@ This is a Next.js starter project for a collaborative, cloud-based farm manageme
 
 ## **Important Setup Instructions**
 
-### 1. Server-Side Environment Variables (CRITICAL FOR ADMIN FEATURES)
+### 1. Setting Server Environment Variables for Firebase App Hosting (CRITICAL)
 
-Server-side features like **User Invitations**, **Subscription Activations**, or **Paystack Webhooks** require special administrative access to Firebase. To enable this, you must set up server-side environment variables in your hosting platform (e.g., Google Cloud Run, Vercel).
+Server-side features like **User Invitations**, **Subscription Activations**, or **Paystack Webhooks** require special administrative access to Firebase. Because you are using **Firebase App Hosting**, these secrets MUST be stored in **Google Cloud Secret Manager**.
 
 **This is the most common point of failure. If these variables are not set correctly, these features will fail.**
 
@@ -17,14 +17,27 @@ Server-side features like **User Invitations**, **Subscription Activations**, or
 3.  Go to the **Service accounts** tab.
 4.  Click **Generate new private key**. A JSON file will download. **Keep this file secure.**
 
-**Step 2: Add to Your Hosting Environment**
+**Step 2: Add Secrets to Google Cloud Secret Manager**
 1.  Open the downloaded JSON file. You will need three values from it: `project_id`, `client_email`, and `private_key`.
-2.  Go to your hosting provider's settings for your project (e.g., Vercel Dashboard -> Project -> Settings -> Environment Variables).
-3.  Add the following three environment variables:
-    *   `FIREBASE_PROJECT_ID`: Paste the `project_id` value from the JSON file.
-    *   `FIREBASE_CLIENT_EMAIL`: Paste the `client_email` value from the JSON file.
-    *   `FIREBASE_PRIVATE_KEY`: **Paste the entire `private_key` string**, including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines. Make sure it is pasted as a single line or that your hosting provider correctly handles multi-line variables.
-4.  **Redeploy your application** for the changes to take effect.
+2.  Go to the **[Google Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager)** for the same Google Cloud project that your Firebase project is in.
+3.  **Create a secret for each required variable.** Click **"+ CREATE SECRET"** at the top of the page.
+    *   **Create `FIREBASE_PRIVATE_KEY`:**
+        *   **Name:** `FIREBASE_PRIVATE_KEY`
+        *   **Secret value:** Paste the **entire** `private_key` string from your JSON file, including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines.
+        *   Leave other settings as default and click **Create secret**.
+    *   **Create `FIREBASE_PROJECT_ID`:**
+        *   **Name:** `FIREBASE_PROJECT_ID`
+        *   **Secret value:** Paste the `project_id` value from your JSON file.
+        *   Click **Create secret**.
+    *   **Create `FIREBASE_CLIENT_EMAIL`:**
+        *   **Name:** `FIREBASE_CLIENT_EMAIL`
+        *   **Secret value:** Paste the `client_email` value from your JSON file.
+        *   Click **Create secret**.
+4.  Repeat the process for any other necessary secrets like `PAYSTACK_SECRET_KEY` or `NEXT_PUBLIC_BASE_URL`.
+
+**Step 3: Deploy Your App**
+1.  The `apphosting.yaml` file in this project is already configured to look for these secrets by name.
+2.  When you deploy your application to Firebase App Hosting (e.g., via `firebase deploy`), Firebase will automatically and securely grant your app access to these secrets and make them available as environment variables.
 
 ### 2. Firestore Security Rules
 
