@@ -83,7 +83,7 @@ function CheckoutPageContent() {
 
     if (isFreeCheckout) {
         // Handle free activation directly
-        const newPlanId = isFullDiscount && planId !== 'business' ? 'business' : planId;
+        const newPlanId = isFullDiscount ? 'business' : planId;
         const newCycle = isFullDiscount ? 'annually' : cycle;
         const result = await updateUserSubscription(userProfile.userId, newPlanId, newCycle);
         if (result.success) {
