@@ -10,7 +10,8 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
   SidebarGroupLabel,
-  SidebarMenuSkeleton
+  SidebarMenuSkeleton,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/contexts/user-profile-context';
@@ -19,6 +20,7 @@ import { allNavItems, type NavItem } from '@/lib/nav-data'; // Import from the n
 export function MainNav() {
   const pathname = usePathname();
   const { userProfile, isLoading: isUserLoading } = useUserProfile();
+  const { setOpenMobile } = useSidebar();
 
   const userRoles = userProfile?.role || [];
   const isActualAdmin = userRoles.includes('Admin');
@@ -49,9 +51,12 @@ export function MainNav() {
   
   const groupOrder: Array<keyof typeof groupedItems> = ['Workspace', 'Operations', 'Planning & Reports', 'Specialized Tools', 'HR', 'AEO', 'System'];
 
+  const handleLinkClick = () => {
+    setOpenMobile(false);
+  };
 
   const renderNavItem = (item: NavItem) => (
-    <SidebarMenuItem key={item.href}>
+    <SidebarMenuItem key={item.href} onClick={handleLinkClick}>
       <Link href={item.href}>
         <SidebarMenuButton
           className={cn(
