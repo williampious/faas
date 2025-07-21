@@ -5,7 +5,7 @@ import * as admin from 'firebase-admin';
 // This file is marked with 'use server', so it will only ever run on the server.
 // This is the single, definitive initialization of the Firebase Admin SDK.
 
-let app;
+let app: admin.App | undefined;
 
 // A function to check if the required environment variables are present and look valid.
 const checkEnvVars = () => {
@@ -36,11 +36,14 @@ const hasValidEnv = checkEnvVars();
 if (!admin.apps.length) {
   if (hasValidEnv) {
     try {
+      // Use initializeApp without arguments when hosted on Google Cloud.
+      // It automatically detects service account credentials.
+      // For other environments (like Vercel), it relies on the env vars being set.
       app = admin.initializeApp({
         credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'), // Important for some environments that escape newlines
+          projectId: process.env.FIREBASE_PROJECT_ID!,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
         }),
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       });
@@ -48,7 +51,8 @@ if (!admin.apps.length) {
     } catch (error: any) {
       console.error(
         "CRITICAL ERROR: [Firebase Admin] SDK initialization failed despite environment variables being present. Error: ", 
-        error.message
+        error.message,
+        "This usually happens if the environment variables contain typos or are not properly formatted."
       );
     }
   } else {
