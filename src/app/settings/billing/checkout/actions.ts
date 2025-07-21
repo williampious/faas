@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import type { AgriFAASUserProfile, PromotionalCode } from "@/types/user";
@@ -92,7 +93,15 @@ export async function initializePaystackTransaction(
   
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
   const paystackUrl = 'https://api.paystack.co/transaction/initialize';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
+  if (!baseUrl) {
+     return {
+      success: false,
+      message: "The application's public URL (NEXT_PUBLIC_BASE_URL) is not configured. Cannot generate payment links.",
+    };
+  }
+  
   if (!secretKey || secretKey.includes("YOUR_SECRET_KEY")) {
     console.error("Paystack secret key is not configured in .env file.");
     return {
@@ -117,9 +126,9 @@ export async function initializePaystackTransaction(
       full_name: userProfile.fullName,
       plan_id: planId,
       billing_cycle: billingCycle,
-      cancel_action: `${process.env.NEXT_PUBLIC_BASE_URL}/settings/billing`, // URL to redirect to on cancel
+      cancel_action: `${baseUrl}/settings/billing`, // URL to redirect to on cancel
     },
-    callback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/settings/billing/verify?planId=${planId}&billingCycle=${billingCycle}`, // URL for verification after payment
+    callback_url: `${baseUrl}/settings/billing/verify?planId=${planId}&billingCycle=${billingCycle}`, // URL for verification after payment
   };
 
   try {

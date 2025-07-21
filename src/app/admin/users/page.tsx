@@ -231,7 +231,8 @@ export default function AdminUsersPage() {
     try {
         await setDoc(doc(db, usersCollectionName, temporaryUserId), newUserProfile);
 
-        const inviteLink = `${window.location.origin}/auth/complete-registration?token=${invitationToken}`;
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+        const inviteLink = `${baseUrl}/auth/complete-registration?token=${invitationToken}`;
         setGeneratedInviteLink(inviteLink);
         setInviteeName(data.fullName);
 
@@ -612,7 +613,8 @@ export default function AdminUsersPage() {
                     </Button>
                     {user.accountStatus === 'Invited' && user.invitationToken && (
                        <Button variant="link" size="sm" onClick={() => {
-                         const link = `${window.location.origin}/auth/complete-registration?token=${user.invitationToken}`;
+                         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+                         const link = `${baseUrl}/auth/complete-registration?token=${user.invitationToken}`;
                          copyToClipboard(link);
                        }} className="h-8 px-2">
                         <LinkIcon className="h-3.5 w-3.5 mr-1" /> Copy Invite
