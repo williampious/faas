@@ -20,6 +20,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import type { PromotionalCode } from '@/types/promo-code';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
@@ -172,21 +173,29 @@ export default function PromoCodesPage() {
           <CardContent>
             {codes.length > 0 ? (
               <Table>
-                <TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Discount</TableHead><TableHead>Usage</TableHead><TableHead>Expires</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Discount</TableHead><TableHead>Usage (Used/Limit)</TableHead><TableHead>Expires</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {codes.map(code => (
-                    <TableRow key={code.id}>
-                      <TableCell className="font-mono font-medium">{code.code}</TableCell>
-                      <TableCell>{code.type === 'fixed' ? `GHS ${code.discountAmount.toFixed(2)}` : `${code.discountAmount}%`}</TableCell>
-                      <TableCell>{code.timesUsed} / {code.usageLimit}</TableCell>
-                      <TableCell>{formatDate(code.expiryDate)}</TableCell>
-                      <TableCell><Badge variant={code.isActive ? 'default' : 'destructive'}>{code.isActive ? 'Active' : 'Inactive'}</Badge></TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => handleOpenModal(code)}><Edit2 className="h-3.5 w-3.5 mr-1"/>Edit</Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDelete(code.id!)}><Trash2 className="h-3.5 w-3.5 mr-1"/>Delete</Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {codes.map(code => {
+                    const usagePercentage = (code.timesUsed / code.usageLimit) * 100;
+                    return (
+                      <TableRow key={code.id}>
+                        <TableCell className="font-mono font-medium">{code.code}</TableCell>
+                        <TableCell>{code.type === 'fixed' ? `GHS ${code.discountAmount.toFixed(2)}` : `${code.discountAmount}%`}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span>{code.timesUsed} / {code.usageLimit}</span>
+                            <Progress value={usagePercentage} className="h-2 w-20" />
+                          </div>
+                        </TableCell>
+                        <TableCell>{formatDate(code.expiryDate)}</TableCell>
+                        <TableCell><Badge variant={code.isActive ? 'default' : 'destructive'}>{code.isActive ? 'Active' : 'Inactive'}</Badge></TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => handleOpenModal(code)}><Edit2 className="h-3.5 w-3.5 mr-1"/>Edit</Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleDelete(code.id!)}><Trash2 className="h-3.5 w-3.5 mr-1"/>Delete</Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             ) : (
