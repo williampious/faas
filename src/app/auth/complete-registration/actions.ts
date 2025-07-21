@@ -18,6 +18,7 @@ interface ValidationResult {
 
 export async function validateInvitationToken(token: string): Promise<ValidationResult> {
   if (!adminDb) {
+    console.error("[validateInvitationToken] Admin DB is not available. This is a server configuration error. Check FIREBASE_* env vars.");
     return {
       success: false,
       message: 'Server configuration error. The admin database is not available. Please contact support.',
@@ -64,3 +65,5 @@ export async function validateInvitationToken(token: string): Promise<Validation
     };
   }
 }
+
+    

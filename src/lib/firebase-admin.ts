@@ -37,7 +37,6 @@ if (!admin.apps.length) {
   if (hasValidEnv) {
     try {
       // Use initializeApp without arguments when hosted on Google Cloud.
-      // It automatically detects service account credentials.
       // For other environments (like Vercel), it relies on the env vars being set.
       app = admin.initializeApp({
         credential: admin.credential.cert({
@@ -60,7 +59,12 @@ if (!admin.apps.length) {
   }
 } else {
   app = admin.apps[0];
-  console.log('[Firebase Admin] SDK already initialized.');
+  if(app) {
+    console.log('[Firebase Admin] SDK already initialized.');
+  } else {
+    // This case should be rare, but handles if admin.apps has a null/undefined entry
+    console.error('[Firebase Admin] admin.apps has entries but the first one is not a valid App object. Re-initialization may be required.');
+  }
 }
 
 // Export the initialized services. They will be undefined if initialization failed.
@@ -68,3 +72,5 @@ const adminDb = app ? admin.firestore() : undefined;
 const adminAuth = app ? admin.auth() : undefined;
 
 export { adminDb, adminAuth };
+
+    
