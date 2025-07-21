@@ -18,7 +18,28 @@ AgriFAAS Connect is designed for a range of users within the agricultural ecosys
 
 ## **Important Setup Instructions**
 
-### 1. Firestore Security Rules
+### 1. Server-Side Environment Variables (CRITICAL FOR ADMIN FEATURES)
+
+Server-side features like **User Invitations**, **Subscription Activations**, or **Paystack Webhooks** require special administrative access to Firebase. To enable this, you must set up server-side environment variables in your hosting platform (e.g., Google Cloud Run, Vercel).
+
+**This is the most common point of failure. If these variables are not set correctly, these features will fail.**
+
+**Step 1: Get Your Service Account Private Key**
+1.  Go to your **Firebase Console**.
+2.  Click the gear icon next to "Project Overview" and select **Project settings**.
+3.  Go to the **Service accounts** tab.
+4.  Click **Generate new private key**. A JSON file will download. **Keep this file secure.**
+
+**Step 2: Add to Your Hosting Environment**
+1.  Open the downloaded JSON file. You will need three values from it: `project_id`, `client_email`, and `private_key`.
+2.  Go to your hosting provider's settings for your project (e.g., Vercel Dashboard -> Project -> Settings -> Environment Variables).
+3.  Add the following three environment variables:
+    *   `FIREBASE_PROJECT_ID`: Paste the `project_id` value from the JSON file.
+    *   `FIREBASE_CLIENT_EMAIL`: Paste the `client_email` value from the JSON file.
+    *   `FIREBASE_PRIVATE_KEY`: **Paste the entire `private_key` string**, including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines. Make sure it is pasted as a single line or that your hosting provider correctly handles multi-line variables.
+4.  **Redeploy your application** for the changes to take effect.
+
+### 2. Firestore Security Rules
 
 If you encounter permission errors, especially during **Farm Setup**, **User Management**, **Plot Management**, or when an **AEO manages farmers**, you MUST update your Firestore Security Rules. The default rules are too restrictive.
 
@@ -255,7 +276,7 @@ service cloud.firestore {
 }
 ```
 
-### 2. Firebase Storage Security Rules
+### 3. Firebase Storage Security Rules
 
 If you see a `storage/unauthorized` error in the browser console when trying to **upload a profile photo**, you must update your Firebase Storage Security Rules.
 
@@ -274,23 +295,6 @@ service firebase.storage {
   }
 }
 ```
-
-### 3. Server-Side Environment Variables (CRITICAL FOR ADMIN FEATURES)
-
-Server-side features like the **User Subscription Migration Tool** or **Paystack Webhooks** require special administrative access to Firebase. To enable this, you must set up server-side environment variables in your hosting platform (e.g., Google Cloud Run, Vercel).
-
-**Step 1: Get Your Credentials**
-1.  Go to your **Firebase Console -> Project settings -> Service accounts**.
-2.  Click **Generate new private key**. A JSON file will download.
-
-**Step 2: Add to Your Hosting Environment**
-1.  Open the downloaded JSON file. You will need the `project_id`, `client_email`, and `private_key` values from it.
-2.  Go to your hosting provider's settings for your project (e.g., Vercel Dashboard -> Project -> Settings -> Environment Variables).
-3.  Add the following three variables:
-    *   `FIREBASE_PROJECT_ID`: Paste the `project_id` value.
-    *   `FIREBASE_CLIENT_EMAIL`: Paste the `client_email` value.
-    *   `FIREBASE_PRIVATE_KEY`: Paste the entire `private_key` string, including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines.
-4.  **Redeploy your application** for the changes to take effect.
 
 ### 4. Firestore Indexes (Important)
 
