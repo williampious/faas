@@ -17,8 +17,10 @@ secretEnvironmentVariables:
     keyName: NEXT_PUBLIC_BASE_URL
   - secret: PAYSTACK_SECRET_KEY
     keyName: PAYSTACK_SECRET_KEY
-  - secret: PAYPAL_CLIENT_ID
-    keyName: NEXT_PUBLIC_PAYPAL_CLIENT_ID # Switched to NEXT_PUBLIC_ for client-side SDK
+  # The secret name here now matches the environment variable name for consistency.
+  # Ensure the secret in Google Cloud Secret Manager is named NEXT_PUBLIC_PAYPAL_CLIENT_ID.
+  - secret: NEXT_PUBLIC_PAYPAL_CLIENT_ID
+    keyName: NEXT_PUBLIC_PAYPAL_CLIENT_ID
   - secret: PAYPAL_CLIENT_SECRET
     keyName: PAYPAL_CLIENT_SECRET
   - secret: EMAIL_HOST
