@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Suspense, useState, useRef } from 'react';
+import { Suspense, useState, useRef, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -16,6 +16,8 @@ import { initializePaystackTransaction, validatePromoCode } from './actions';
 import { createPayPalOrder } from './paypal_actions';
 import { updateUserSubscription } from '../actions';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+
 
 // Data can be moved to a shared file later
 const pricingTiers = [
@@ -111,17 +113,10 @@ function CheckoutPageContent() {
           setIsProcessing(false);
       }
     } else if (selectedPaymentMethod === 'paypal') {
-        // NOTE: PayPal doesn't support GHS, so we'd need to convert the price.
-        // For this demo, we will use a fixed USD amount. A real app would have currency conversion.
         const amountInUSD = (finalPrice / 15).toFixed(2); // Example conversion
-        const result = await createPayPalOrder(amountInUSD);
+        const result = await createPayPalOrder(amountInUSD, planId, cycle);
         if(result.success && result.orderId) {
-            // Here you would redirect to PayPal's approval URL, which isn't directly provided.
-            // A full implementation uses the PayPal JS SDK to render a button.
-            // For now, we'll simulate a redirect.
             toast({ title: "Redirecting to PayPal...", description: "Please complete your payment." });
-            // This is a placeholder for where the PayPal redirect would happen.
-            // router.push(`https://www.sandbox.paypal.com/checkoutnow?token=${result.orderId}`);
             alert(`Redirecting to PayPal for Order ID: ${result.orderId}. This is a simulated redirect.`);
             setIsProcessing(false);
         } else {
@@ -215,26 +210,28 @@ function CheckoutPageContent() {
                   onValueChange={(value) => setSelectedPaymentMethod(value as 'momo' | 'card' | 'paypal' | 'stripe')} 
                   className="space-y-3"
                 >
-                  <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-primary/50">
+                  <Label className={cn("flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors", selectedPaymentMethod === 'momo' ? "border-primary ring-2 ring-primary/50" : "hover:border-primary/50")}>
                     <RadioGroupItem value="momo" id="momo" />
                     <CircleDollarSign className="h-6 w-6 text-yellow-500" />
                     <span className="font-medium">Mobile Money</span>
                   </Label>
-                  <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-primary/50">
+                  <Label className={cn("flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors", selectedPaymentMethod === 'card' ? "border-primary ring-2 ring-primary/50" : "hover:border-primary/50")}>
                     <RadioGroupItem value="card" id="card" />
                     <CreditCard className="h-6 w-6 text-blue-500" />
                     <span className="font-medium">Credit/Debit Card</span>
                   </Label>
-                  <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-primary/50">
+                  <Label className={cn("flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors", selectedPaymentMethod === 'paypal' ? "border-primary ring-2 ring-primary/50" : "hover:border-primary/50")}>
                     <RadioGroupItem value="paypal" id="paypal" />
                      <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 fill-[#00457C]"><path d="M7.722 17.584c.323.018.631-.077.893-.243.633-.399 1.011-1.11 1.229-1.933.05-.192.083-.392.11-.598.159-1.229.096-2.5-.203-3.718-.219-.877-.577-1.693-1.045-2.422-.448-.693-.99-1.28-1.6-1.745-.631-.482-1.341-.796-2.09-.92-.097-.015-.195-.022-.293-.022H2.213C1.293 6 1 6.33 1 6.837c0 .416.03.627.09.832.062.208.156.463.273.75.295.72.675 1.402 1.132 2.015.488.653 1.056 1.22 1.688 1.68.706.517 1.488.89 2.321 1.096.313.076.633.127.954.153l-.001.001zm8.384-11.233c-.15-.002-.303.01-.453.036-.883.155-1.637.6-2.222 1.228-.582.625-.97 1.41-1.144 2.292-.128.65-.16 1.32-.1 1.98.05.57.215 1.12.474 1.63.264.52.628.97 1.065 1.32.44.35.952.59 1.499.7.545.11 1.104.1 1.65-.01.55-.11 1.08-.34 1.54-.66.45-.32.84-.73 1.14-1.2.3-.47.51-.99.62-1.54.11-.55.12-1.11.02-1.67-.1-.56-.3-1.1-.6-1.58-.3-.48-.69-.88-1.14-1.2-.45-.31-.96-.54-1.5-.66-.18-.04-.36-.06-.54-.06h-.01zm2.34 9.453c-.312.3-.68.53-1.085.68-.4.15-.82.21-1.24.18-.42-.03-.83-.15-1.21-.35-.38-.2-.72-.48-1-.83-.28-.34-.5-.73-.66-1.16-.16-.43-.25-.88-.26-1.34 0-.46.07-.91.22-1.34.15-.43.37-.84.66-1.2.29-.36.64-.67.04-.98l.6-.01c.32-.23.68-.4 1.06-.5.4-.1.8-.13 1.2-.08.4.05.78.18 1.14.38.36.2.68.46.95.78.27.32.48.69.62 1.08.14.4.22.8.23 1.21.01.4-.05.8-.18 1.18-.13.38-.33.74-.58 1.05z"/></svg>
                     <span className="font-medium">PayPal</span>
                   </Label>
-                  <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:ring-2 has-[[data-state=checked]]:ring-primary/50">
-                    <RadioGroupItem value="stripe" id="stripe" />
+                  <Label className={cn("flex items-center space-x-3 p-4 border rounded-lg cursor-not-allowed opacity-50", selectedPaymentMethod === 'stripe' ? "border-primary ring-2 ring-primary/50" : "")}>
+                    <RadioGroupItem value="stripe" id="stripe" disabled />
                      <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 fill-[#635BFF]"><path d="M19.34.463c.427.26.68.746.643 1.252l-.337 2.13L15.352 12l4.294 8.155c.322.61.275 1.336-.125 1.895-.4.558-1.076.84-1.745.72l-15.37-2.69C1.134 20.02.136 18.96 0 17.72L.336 1.85C.373 1.343.627.858 1.054.598c.427-.26 1.01-.26 1.437 0l16.85 10.326L4.256 2.763c-.427-.26-1.01-.26-1.437 0C2.392 3.024 2.14 3.51 2.176 4.016l.247 1.564L17.447 12 2.423 18.42c-.322.61-.275 1.336.125 1.895.4.558 1.076.84 1.745.72l15.097-2.643L4.364 4.583z"/></svg>
-                    <span className="font-medium">Stripe</span>
+                    <span className="font-medium">Stripe (Coming Soon)</span>
                   </Label>
+                  {/* Container for PayPal buttons */}
+                  <div ref={paypalButtonsContainer}></div>
                 </RadioGroup>
               )}
               {isFreeCheckout && (

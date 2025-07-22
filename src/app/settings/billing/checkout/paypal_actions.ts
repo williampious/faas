@@ -38,7 +38,11 @@ async function getPayPalAccessToken(): Promise<string> {
  * Creates a PayPal order.
  * @see https://developer.paypal.com/docs/api/orders/v2/#orders_create
  */
-export async function createPayPalOrder(amount: string): Promise<PayPalOrderResult> {
+export async function createPayPalOrder(
+    amount: string, 
+    planId: string, 
+    billingCycle: string
+): Promise<PayPalOrderResult> {
   try {
     const accessToken = await getPayPalAccessToken();
     const url = `${base}/v2/checkout/orders`;
@@ -51,6 +55,9 @@ export async function createPayPalOrder(amount: string): Promise<PayPalOrderResu
             currency_code: "USD", // PayPal requires specific currencies like USD
             value: amount,
           },
+          // Add metadata to the purchase unit
+          custom_id: `${planId}__${billingCycle}`, // A way to pass metadata
+          description: `AgriFAAS Connect Subscription: ${planId} (${billingCycle})`,
         },
       ],
     };
