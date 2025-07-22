@@ -1,8 +1,11 @@
 
 'use server';
 
+import type { AgriFAASUserProfile, PromotionalCode } from "@/types/user";
+import { adminDb } from '@/lib/firebase-admin';
+
 // Base URL for PayPal API
-const base = process.env.PAYPAL_API_BASE || "https://api-m.sandbox.paypal.com";
+const base = "https://api-m.sandbox.paypal.com"; // Using Sandbox for development
 
 interface PayPalOrderResult {
   success: boolean;
@@ -10,11 +13,18 @@ interface PayPalOrderResult {
   message: string;
 }
 
+interface PayPalCaptureResult {
+    success: boolean;
+    message: string;
+    data?: any;
+}
+
+
 /**
  * Generates an access token from PayPal.
  */
 async function getPayPalAccessToken(): Promise<string> {
-  const clientId = process.env.PAYPAL_CLIENT_ID;
+  const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID; // SDK uses public ID
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
@@ -31,6 +41,10 @@ async function getPayPalAccessToken(): Promise<string> {
   });
 
   const data = await response.json();
+  if (!response.ok) {
+    console.error("PayPal Auth Error:", data);
+    throw new Error("Failed to get PayPal access token.");
+  }
   return data.access_token;
 }
 
@@ -90,18 +104,30 @@ export async function createPayPalOrder(
  * Captures a payment for an order.
  * @see https://developer.paypal.com/docs/api/orders/v2/#orders_capture
  */
-export async function capturePayPalOrder(orderID: string) {
-  // This function will be needed for the PayPal verification page later.
-  const accessToken = await getPayPalAccessToken();
-  const url = `${base}/v2/checkout/orders/${orderID}/capture`;
-  
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-  
-  return await response.json();
+export async function capturePayPalOrder(orderID: string): Promise<PayPalCaptureResult> {
+  try {
+    const accessToken = await getPayPalAccessToken();
+    const url = `${base}/v2/checkout/orders/${orderID}/capture`;
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    
+    const data = await response.json();
+
+    if (response.ok && data.status === 'COMPLETED') {
+        return { success: true, message: "Payment captured successfully.", data };
+    } else {
+        console.error("PayPal Capture Error:", data);
+        return { success: false, message: data.message || "Failed to capture payment.", data };
+    }
+
+  } catch(error: any) {
+      console.error("Error capturing PayPal order:", error);
+      return { success: false, message: `Server error during capture: ${error.message}` };
+  }
 }

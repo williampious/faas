@@ -18,7 +18,7 @@ secretEnvironmentVariables:
   - secret: PAYSTACK_SECRET_KEY
     keyName: PAYSTACK_SECRET_KEY
   - secret: PAYPAL_CLIENT_ID
-    keyName: PAYPAL_CLIENT_ID
+    keyName: NEXT_PUBLIC_PAYPAL_CLIENT_ID # Switched to NEXT_PUBLIC_ for client-side SDK
   - secret: PAYPAL_CLIENT_SECRET
     keyName: PAYPAL_CLIENT_SECRET
   - secret: EMAIL_HOST
