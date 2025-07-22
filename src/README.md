@@ -276,5 +276,5 @@ The best way to create indexes is to **let Firebase tell you which ones you need
 4.  **Create the Index:** The link will pre-fill all the necessary information to create the index. Simply review the details and click the "Create Index" button.
 
 The index will take a few minutes to build. Once it's done, the feature that caused the error will work correctly. This method is more reliable than creating indexes manually.
-
+ 
     
