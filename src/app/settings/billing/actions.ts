@@ -1,7 +1,7 @@
 
 'use server';
 
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb, isFirebaseAdminConfigured } from '@/lib/firebase-admin';
 import type { SubscriptionDetails } from '@/types/user';
 import { add, format } from 'date-fns';
 
@@ -14,8 +14,8 @@ import { add, format } from 'date-fns';
  * @returns A promise that resolves when the update is complete.
  */
 export async function updateUserSubscription(userId: string, planId: 'starter' | 'grower' | 'business' | 'enterprise', billingCycle: 'monthly' | 'annually'): Promise<{success: boolean; message: string;}> {
-    if (!adminDb) {
-        const errorMessage = "Firebase Admin SDK is not initialized. This is a server-configuration issue. Please check your environment variables (FIREBASE_PRIVATE_KEY, etc.) as described in the README.md file.";
+    if (!isFirebaseAdminConfigured) {
+        const errorMessage = "Firebase Admin SDK is not initialized. This is a server-configuration issue. Please check your environment variables (FIREBASE_PRIVATE_KEY, etc.) and ensure the app has been redeployed as described in the README.md file.";
         console.error('[updateUserSubscription]', errorMessage);
         return { success: false, message: errorMessage };
     }

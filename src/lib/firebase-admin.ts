@@ -1,4 +1,5 @@
 // src/lib/firebase-admin.ts
+'use server';
 
 import * as admin from 'firebase-admin';
 
@@ -35,7 +36,7 @@ const checkEnvVars = () => {
   }
   
   if (!allVarsPresent) {
-      console.error("[Firebase Admin] CRITICAL ERROR: One or more required server-side environment variables are missing. The Admin SDK will not be initialized. Please check your hosting provider's secret management settings.");
+      console.error("[Firebase Admin] CRITICAL ERROR: One or more required server-side environment variables are missing. The Admin SDK will not be initialized. Please check your hosting provider's secret management settings. You may need to redeploy your application after setting these secrets.");
       return false;
   }
 
@@ -65,7 +66,17 @@ if (!admin.apps.length) {
       );
     }
   } else {
-    console.error("[Firebase Admin] ❌ SKIPPING INITIALIZATION: Due to missing or invalid environment variables.");
+    console.error(`
+      ===============================================================
+      [Firebase Admin] ❌ SKIPPING INITIALIZATION
+      REASON: Due to missing or invalid server-side environment variables.
+      
+      ACTION REQUIRED:
+      1. Ensure 'FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', and 'FIREBASE_PRIVATE_KEY' are set in your hosting environment's secret manager.
+      2. IMPORTANT: After setting the secrets, you MUST redeploy your application for the changes to take effect.
+      3. Refer to the README.md file for detailed, step-by-step instructions.
+      ===============================================================
+    `);
   }
 } else {
   app = admin.apps[0];
@@ -80,5 +91,6 @@ if (!admin.apps.length) {
 // Export the initialized services. They will be undefined if initialization failed.
 const adminDb = app ? admin.firestore() : undefined;
 const adminAuth = app ? admin.auth() : undefined;
+const isFirebaseAdminConfigured = !!app;
 
-export { adminDb, adminAuth };
+export { adminDb, adminAuth, isFirebaseAdminConfigured };
