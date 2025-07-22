@@ -8,38 +8,47 @@ import * as admin from 'firebase-admin';
 
 let app: admin.App | undefined;
 
-// A function to check if the required environment variables are present and look valid.
+// This function now checks for a single, unified secret variable.
 const checkEnvVars = () => {
-  const requiredVars = {
-    FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
-    FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
-    FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
-  };
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-  console.log('[Firebase Admin] Checking for server-side environment variables...');
+  console.log('[Firebase Admin] Checking for server-side environment variable: FIREBASE_SERVICE_ACCOUNT_JSON...');
 
-  let allVarsPresent = true;
-  for (const [key, value] of Object.entries(requiredVars)) {
-    if (!value) {
-      console.error(`[Firebase Admin] ❌ MISSING: The '${key}' environment variable is not set.`);
-      allVarsPresent = false;
-    } else {
-      console.log(`[Firebase Admin] ✅ FOUND: The '${key}' environment variable is present.`);
-    }
-  }
+  if (!serviceAccountJson) {
+    console.error(`
+      ===============================================================
+      [Firebase Admin] ❌ CRITICAL: The 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING.
+      
+      This is the most common and critical configuration error. The Admin SDK cannot
+      initialize without it, and server-side features like user invitations and
+      subscription activations will fail.
 
-  if (requiredVars.FIREBASE_PRIVATE_KEY && !requiredVars.FIREBASE_PRIVATE_KEY.startsWith('-----BEGIN PRIVATE KEY-----')) {
-    console.error(
-      "[Firebase Admin] ❌ INVALID: The 'FIREBASE_PRIVATE_KEY' environment variable appears to be invalid. It should start with '-----BEGIN PRIVATE KEY-----'. Please ensure the entire key, including the header and footer lines, is copied correctly."
-    );
+      ACTION REQUIRED:
+      1. Go to your Firebase Project Settings -> Service accounts -> Generate new private key.
+      2. A JSON file will be downloaded. Open it and copy the ENTIRE content.
+      3. Go to your hosting provider's secret manager (e.g., Google Cloud Secret Manager).
+      4. Create a new secret with the EXACT name 'FIREBASE_SERVICE_ACCOUNT_JSON'.
+      5. Paste the entire content of the JSON file as the secret's value.
+      6. IMPORTANT: You MUST redeploy your application for the new secret to be loaded.
+      7. Refer to the README.md file for a detailed, step-by-step guide.
+      ===============================================================
+    `);
     return false;
   }
   
-  if (!allVarsPresent) {
-      console.error("[Firebase Admin] CRITICAL ERROR: One or more required server-side environment variables are missing. The Admin SDK will not be initialized. Please check your hosting provider's secret management settings. You may need to redeploy your application after setting these secrets.");
+  try {
+    const parsed = JSON.parse(serviceAccountJson);
+    if (!parsed.project_id || !parsed.client_email || !parsed.private_key) {
+        console.error('[Firebase Admin] ❌ INVALID: The FIREBASE_SERVICE_ACCOUNT_JSON value is not a valid service account JSON.');
+        return false;
+    }
+  } catch(e) {
+      console.error('[Firebase Admin] ❌ INVALID: Could not parse the FIREBASE_SERVICE_ACCOUNT_JSON value. Ensure it is a valid JSON string.');
       return false;
   }
 
+
+  console.log(`[Firebase Admin] ✅ FOUND: The 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is present and appears valid.`);
   return true;
 };
 
@@ -48,49 +57,35 @@ const hasValidEnv = checkEnvVars();
 if (!admin.apps.length) {
   if (hasValidEnv) {
     try {
-      // For App Hosting, these are injected from Secret Manager.
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON!);
+      
       app = admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID!,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-        }),
+        credential: admin.credential.cert(serviceAccount),
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       });
       console.log('[Firebase Admin] ✅ SDK initialized successfully.');
     } catch (error: any) {
       console.error(
-        "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed despite environment variables being present. Error: ", 
-        error.message,
-        "This usually happens if the environment variables contain typos or are not properly formatted."
+        "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed despite the secret being present. Error: ", 
+        error.message
       );
     }
   } else {
-    console.error(`
-      ===============================================================
-      [Firebase Admin] ❌ SKIPPING INITIALIZATION
-      REASON: Due to missing or invalid server-side environment variables.
-      
-      ACTION REQUIRED:
-      1. Ensure 'FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', and 'FIREBASE_PRIVATE_KEY' are set in your hosting environment's secret manager.
-      2. IMPORTANT: After setting the secrets, you MUST redeploy your application for the changes to take effect.
-      3. Refer to the README.md file for detailed, step-by-step instructions.
-      ===============================================================
-    `);
+    // Logging for when env vars are missing is handled inside checkEnvVars()
+    console.error("[Firebase Admin] ❌ SKIPPING INITIALIZATION due to missing or invalid secrets.");
   }
 } else {
   app = admin.apps[0];
   if(app) {
     console.log('[Firebase Admin] SDK already initialized.');
   } else {
-    // This case should be rare, but handles if admin.apps has a null/undefined entry
-    console.error('[Firebase Admin] admin.apps has entries but the first one is not a valid App object. Re-initialization may be required.');
+    console.error('[Firebase Admin] admin.apps has entries but the first one is not a valid App object.');
   }
 }
 
 // Export the initialized services. They will be undefined if initialization failed.
 const adminDb = app ? admin.firestore() : undefined;
 const adminAuth = app ? admin.auth() : undefined;
-const isFirebaseAdminConfigured = !!app;
+export const isFirebaseAdminConfigured = !!app;
 
-export { adminDb, adminAuth, isFirebaseAdminConfigured };
+export { adminDb, adminAuth };

@@ -18,10 +18,10 @@ interface ValidationResult {
 
 export async function validateInvitationToken(token: string): Promise<ValidationResult> {
   if (!isFirebaseAdminConfigured) {
-    console.error("[validateInvitationToken] Admin DB is not available. This is a server configuration error. Check FIREBASE_* env vars and ensure app has been redeployed after setting them.");
+    console.error("[validateInvitationToken] Admin DB is not available. This is a server configuration error. Check FIREBASE_SERVICE_ACCOUNT_JSON secret and ensure app has been redeployed after setting it, as per the README file.");
     return {
       success: false,
-      message: 'Server configuration error. The admin database is not available. Please ensure secrets are set and the app is redeployed, as per the README file.',
+      message: 'Server configuration error. The admin database is not available. This is the most common setup issue and is likely due to missing server-side secrets. Please contact the administrator and refer them to the README file.',
     };
   }
   if (!token) {

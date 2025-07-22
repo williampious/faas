@@ -8,14 +8,11 @@ runConfig:
 # Defines secrets that are available as environment variables to the application.
 # These secrets are stored in Google Cloud Secret Manager. The 'secret' field
 # must match the name of the secret you create in Secret Manager.
+# This has been updated to use a single, unified JSON secret to reduce setup errors.
 # Learn more at https://firebase.google.com/docs/app-hosting/configure#secrets
 secretEnvironmentVariables:
-  - secret: FIREBASE_PROJECT_ID
-    keyName: FIREBASE_PROJECT_ID
-  - secret: FIREBASE_CLIENT_EMAIL
-    keyName: FIREBASE_CLIENT_EMAIL
-  - secret: FIREBASE_PRIVATE_KEY
-    keyName: FIREBASE_PRIVATE_KEY
+  - secret: FIREBASE_SERVICE_ACCOUNT_JSON
+    keyName: FIREBASE_SERVICE_ACCOUNT_JSON
   - secret: NEXT_PUBLIC_BASE_URL
     keyName: NEXT_PUBLIC_BASE_URL
   - secret: PAYSTACK_SECRET_KEY

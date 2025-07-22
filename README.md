@@ -7,37 +7,31 @@ This is a Next.js starter project for a collaborative, cloud-based farm manageme
 
 ### 1. Setting Server Environment Variables for Firebase App Hosting (CRITICAL)
 
-Server-side features like **User Invitations**, **Subscription Activations**, or **Paystack Webhooks** require special administrative access to Firebase. Because you are using **Firebase App Hosting**, these secrets MUST be stored in **Google Cloud Secret Manager**.
+Server-side features like **User Invitations**, **Subscription Activations**, or **Paystack Webhooks** require special administrative access to Firebase. This is the **most common point of failure** in setting up the application.
 
-**This is the most common point of failure. If these variables are not set correctly, these features will fail.**
+Because you are using **Firebase App Hosting**, these secrets MUST be stored in **Google Cloud Secret Manager**.
 
-**Step 1: Get Your Service Account Private Key**
-1.  Go to your **Firebase Console**.
+**Step 1: Get Your Service Account JSON File**
+1.  Go to your **[Firebase Console](https://console.firebase.google.com/)**.
 2.  Click the gear icon next to "Project Overview" and select **Project settings**.
 3.  Go to the **Service accounts** tab.
 4.  Click **Generate new private key**. A JSON file will download. **Keep this file secure.**
 
-**Step 2: Add Secrets to Google Cloud Secret Manager**
-1.  Open the downloaded JSON file. You will need three values from it: `project_id`, `client_email`, and `private_key`.
-2.  Go to the **[Google Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager)** for the same Google Cloud project that your Firebase project is in.
-3.  **Create a secret for each required variable.** Click **"+ CREATE SECRET"** at the top of the page.
-    *   **Create `FIREBASE_PRIVATE_KEY`:**
-        *   **Name:** `FIREBASE_PRIVATE_KEY`
-        *   **Secret value:** Paste the **entire** `private_key` string from your JSON file, including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines.
-        *   Leave other settings as default and click **Create secret**.
-    *   **Create `FIREBASE_PROJECT_ID`:**
-        *   **Name:** `FIREBASE_PROJECT_ID`
-        *   **Secret value:** Paste the `project_id` value from your JSON file.
-        *   Click **Create secret**.
-    *   **Create `FIREBASE_CLIENT_EMAIL`:**
-        *   **Name:** `FIREBASE_CLIENT_EMAIL`
-        *   **Secret value:** Paste the `client_email` value from your JSON file.
-        *   Click **Create secret**.
-4.  Repeat the process for any other necessary secrets like `PAYSTACK_SECRET_KEY` or `NEXT_PUBLIC_BASE_URL`.
+**Step 2: Add the JSON as a Single Secret in Google Cloud Secret Manager**
+1.  Open the downloaded JSON file in a text editor.
+2.  **Select and copy the ENTIRE content** of the file, including the opening `{` and closing `}`.
+3.  Go to the **[Google Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager)** for the same Google Cloud project that your Firebase project is in.
+4.  Click **"+ CREATE SECRET"** at the top of the page.
+    *   **Name:** `FIREBASE_SERVICE_ACCOUNT_JSON` (This must match exactly).
+    *   **Secret value:** Paste the **entire JSON content** you copied.
+    *   Leave other settings as default and click **Create secret**.
+5.  If you use other services like Paystack, repeat this process for their secret keys (e.g., `PAYSTACK_SECRET_KEY`).
 
-**Step 3: Deploy Your App**
-1.  The `apphosting.yaml` file in this project is already configured to look for these secrets by name.
-2.  **VERY IMPORTANT:** After you have created the secrets in Secret Manager, you **MUST redeploy your application** to Firebase App Hosting (e.g., via `firebase deploy` or by pushing a new commit). The new settings will only take effect on a new deployment.
+**Step 3: Deploy Your App (VERY IMPORTANT)**
+1.  The `apphosting.yaml` file in this project is already configured to look for the `FIREBASE_SERVICE_ACCOUNT_JSON` secret.
+2.  After you have created the secret in Secret Manager, you **MUST redeploy your application** to Firebase App Hosting (e.g., via `firebase deploy` or by pushing a new commit). The new settings will only take effect on a new deployment.
+
+---
 
 ### 2. Firestore Security Rules
 

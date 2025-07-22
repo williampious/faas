@@ -15,7 +15,7 @@ import { add, format } from 'date-fns';
  */
 export async function updateUserSubscription(userId: string, planId: 'starter' | 'grower' | 'business' | 'enterprise', billingCycle: 'monthly' | 'annually'): Promise<{success: boolean; message: string;}> {
     if (!isFirebaseAdminConfigured) {
-        const errorMessage = "Firebase Admin SDK is not initialized. This is a server-configuration issue. Please check your environment variables (FIREBASE_PRIVATE_KEY, etc.) and ensure the app has been redeployed as described in the README.md file.";
+        const errorMessage = "Firebase Admin SDK is not initialized. This is a server-configuration issue. Please check your FIREBASE_SERVICE_ACCOUNT_JSON secret and ensure the app has been redeployed as described in the README.md file.";
         console.error('[updateUserSubscription]', errorMessage);
         return { success: false, message: errorMessage };
     }
