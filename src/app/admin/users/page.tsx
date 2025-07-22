@@ -204,7 +204,6 @@ export default function AdminUsersPage() {
     const q = query(usersRef, where("emailAddress", "==", data.email));
     const querySnapshot = await getDocs(q);
 
-    // If an invited (but not yet active) user exists, delete the old invitation document first.
     if (!querySnapshot.empty) {
         const existingDoc = querySnapshot.docs[0];
         const existingData = existingDoc.data() as AgriFAASUserProfile;
@@ -228,7 +227,7 @@ export default function AdminUsersPage() {
         emailAddress: data.email,
         role: selectedRoles,
         accountStatus: 'Invited',
-        registrationDate: new Date().toISOString(),
+        registrationDate: serverTimestamp(),
         invitationToken: invitationToken,
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
         createdAt: serverTimestamp(),
@@ -247,7 +246,6 @@ export default function AdminUsersPage() {
         setGeneratedInviteLink(inviteLink);
         setInviteeName(data.fullName);
 
-        // Send email notification by calling the server action
         const emailResult = await sendInvitationEmail({
             to: data.email,
             subject: `You're invited to join ${userProfile.fullName}'s farm on AgriFAAS Connect!`,
@@ -281,7 +279,6 @@ export default function AdminUsersPage() {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         } as AgriFAASUserProfile;
-        // Remove old invite from state if it existed
         setUsers(prevUsers => {
             const oldInvite = prevUsers.find(u => u.emailAddress === data.email);
             const filteredUsers = oldInvite ? prevUsers.filter(u => u.userId !== oldInvite.userId) : prevUsers;
@@ -317,8 +314,6 @@ export default function AdminUsersPage() {
     }
     setIsDeletingUser(true);
     try {
-      // The `userToDelete.userId` for an invited user is the temporary UUID.
-      // For an active user, it's their Firebase Auth UID.
       await deleteDoc(doc(db, usersCollectionName, userToDelete.userId));
       setUsers(users.filter(u => u.userId !== userToDelete.userId));
       toast({ title: "Record Deleted", description: `The record for ${userToDelete.fullName} has been removed from Firestore.` });
