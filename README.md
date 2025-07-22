@@ -317,4 +317,3 @@ AgriFAAS Connect is designed for a range of users within the agricultural ecosys
 *   **Individual Tech-Savvy Farmers:** Smaller, modern farms can benefit from the detailed record-keeping for crops, livestock, and finances, helping them make data-driven decisions.
 *   **Farm Investors & Financial Institutions:** The robust financial reporting and dashboard features provide the transparency and oversight needed for investment and lending decisions.
 *   **Agricultural Consultants:** Consultants can use the platform to manage multiple client farms, track recommendations, and monitor outcomes.
-**//commit command**
