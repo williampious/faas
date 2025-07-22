@@ -117,21 +117,19 @@ export default function CompleteRegistrationPage() {
       const oldUserDocRef = doc(db, usersCollectionName, invitedUserData.userId);
 
       // Prepare the final user profile data, merging invitation data with registration form data
-      const finalUserProfileData = {
-          ...invitedUserData,
-          userId: firebaseUser.uid,
-          firebaseUid: firebaseUser.uid,
-          fullName: data.fullName,
-          accountStatus: 'Active' as const, // Set status to Active
-          updatedAt: serverTimestamp(),
-          registrationDate: new Date().toISOString(), // Set final registration date
-      };
-      
-      // The invitationToken and createdAt fields from the temporary document should not be copied.
-      const { createdAt, invitationToken, ...profileToWrite } = finalUserProfileData;
+      // This is the FIX: We destructure to remove the old temporary userId and token before writing the new doc.
+      const { userId: tempUserId, createdAt, invitationToken, ...profileToWrite } = invitedUserData;
 
-      // Create the new document with the Firebase Auth UID as its ID
-      batch.set(newUserDocRef, { ...profileToWrite, createdAt: serverTimestamp() });
+      batch.set(newUserDocRef, { 
+        ...profileToWrite,
+        userId: firebaseUser.uid, // Explicitly set the correct final userId
+        firebaseUid: firebaseUser.uid,
+        fullName: data.fullName,
+        accountStatus: 'Active' as const,
+        registrationDate: new Date().toISOString(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
       
       // Delete the original temporary invitation document
       batch.delete(oldUserDocRef);
