@@ -292,9 +292,9 @@ service firebase.storage {
 
 ### 4. Firestore Indexes (Important)
 
-As the app's features grow, Firestore will require specific indexes for complex queries (like sorting or filtering by multiple fields) to work efficiently.
+As the app's features grow, Firestore will require specific indexes for complex queries (like sorting or filtering by multiple fields) to work efficiently. If you see long loading times or errors in the browser console about missing indexes, you must create them.
 
-**How to Create Indexes:**
+**Method 1: Automatic (Recommended)**
 
 The best way to create indexes is to **let Firebase tell you which ones you need**.
 
@@ -303,7 +303,24 @@ The best way to create indexes is to **let Firebase tell you which ones you need
 3.  **Click the Link:** This error message will contain a direct link to the Firebase Console. Click this link.
 4.  **Create the Index:** The link will pre-fill all the necessary information to create the index. Simply review the details and click the "Create Index" button.
 
-The index will take a few minutes to build. Once it's done, the feature that caused the error will work correctly. This method is more reliable than creating indexes manually.
+The index will take a few minutes to build. Once it's done, the feature that caused the error will work correctly.
+
+**Method 2: Manual Creation**
+
+If you prefer to create indexes manually, here are the details for the ones required by the app:
+
+**User Invitation Link Validation**
+*   **Collection ID:** `users`
+*   **Fields to index:**
+    1.  `invitationToken` - **Ascending**
+    2.  `accountStatus` - **Ascending**
+*   **Query scope:** Collection
+
+**Promotional Code Validation**
+*   **Collection ID:** `promotionalCodes`
+*   **Fields to index:**
+    1.  `code` - **Ascending**
+*   **Query scope:** Collection
 
 ---
 
@@ -317,3 +334,5 @@ AgriFAAS Connect is designed for a range of users within the agricultural ecosys
 *   **Individual Tech-Savvy Farmers:** Smaller, modern farms can benefit from the detailed record-keeping for crops, livestock, and finances, helping them make data-driven decisions.
 *   **Farm Investors & Financial Institutions:** The robust financial reporting and dashboard features provide the transparency and oversight needed for investment and lending decisions.
 *   **Agricultural Consultants:** Consultants can use the platform to manage multiple client farms, track recommendations, and monitor outcomes.
+
+```

@@ -5,7 +5,35 @@ This is a Next.js starter project for a collaborative, cloud-based farm manageme
 
 To get started, review the setup instructions below and then run the application.
 
-## 1. Important Note on Firestore Security Rules
+### 1. Setting Server Environment Variables for Firebase App Hosting (CRITICAL)
+
+Server-side features like **User Invitations**, **Subscription Activations**, or **Paystack Webhooks** require special administrative access to Firebase. This is the **most common point of failure** in setting up the application.
+
+Because you are using **Firebase App Hosting**, these secrets MUST be stored in **Google Cloud Secret Manager**.
+
+**Step 1: Get Your Service Account JSON File**
+1.  Go to your **[Firebase Console](https://console.firebase.google.com/)**.
+2.  Click the gear icon next to "Project Overview" and select **Project settings**.
+3.  Go to the **Service accounts** tab.
+4.  Click **Generate new private key**. A JSON file will download. **Keep this file secure.**
+
+**Step 2: Add the JSON as a Single Secret in Google Cloud Secret Manager**
+1.  Open the downloaded JSON file in a text editor.
+2.  **Select and copy the ENTIRE content** of the file, including the opening `{` and closing `}`.
+3.  Go to the **[Google Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager)** for the same Google Cloud project that your Firebase project is in.
+4.  Click **"+ CREATE SECRET"** at the top of the page.
+    *   **Name:** `FIREBASE_SERVICE_ACCOUNT_JSON` (This must match exactly).
+    *   **Secret value:** Paste the **entire JSON content** you copied.
+    *   Leave other settings as default and click **Create secret**.
+5.  If you use other services like Paystack, repeat this process for their secret keys (e.g., `PAYSTACK_SECRET_KEY`).
+
+**Step 3: Deploy Your App (VERY IMPORTANT)**
+1.  The `apphosting.yaml` file in this project is already configured to look for the `FIREBASE_SERVICE_ACCOUNT_JSON` secret.
+2.  After you have created the secret in Secret Manager, you **MUST redeploy your application** to Firebase App Hosting (e.g., via `firebase deploy` or by pushing a new commit). The new settings will only take effect on a new deployment.
+
+---
+
+### 2. Firestore Security Rules
 
 If you encounter permission errors, especially during **Farm Setup**, **User Management**, **Plot Management**, or when an **AEO manages farmers**, you MUST update your Firestore Security Rules. The default rules are too restrictive.
 
@@ -242,7 +270,7 @@ service cloud.firestore {
 }
 ```
 
-## 2. Important Note on Firebase Storage Security Rules
+### 3. Firebase Storage Security Rules
 
 If you see a `storage/unauthorized` error in the browser console when trying to **upload a profile photo**, you must update your Firebase Storage Security Rules.
 
@@ -262,11 +290,11 @@ service firebase.storage {
 }
 ```
 
-## 3. Important Note on Firestore Indexes
+### 4. Firestore Indexes (Important)
 
-As the app's features grow, Firestore will require specific indexes for complex queries (like sorting or filtering by multiple fields) to work efficiently.
+As the app's features grow, Firestore will require specific indexes for complex queries (like sorting or filtering by multiple fields) to work efficiently. If you see long loading times or errors in the browser console about missing indexes, you must create them.
 
-**How to Create Indexes:**
+**Method 1: Automatic (Recommended)**
 
 The best way to create indexes is to **let Firebase tell you which ones you need**.
 
@@ -275,6 +303,24 @@ The best way to create indexes is to **let Firebase tell you which ones you need
 3.  **Click the Link:** This error message will contain a direct link to the Firebase Console. Click this link.
 4.  **Create the Index:** The link will pre-fill all the necessary information to create the index. Simply review the details and click the "Create Index" button.
 
-The index will take a few minutes to build. Once it's done, the feature that caused the error will work correctly. This method is more reliable than creating indexes manually.
+The index will take a few minutes to build. Once it's done, the feature that caused the error will work correctly.
+
+**Method 2: Manual Creation**
+
+If you prefer to create indexes manually, here are the details for the ones required by the app:
+
+**User Invitation Link Validation**
+*   **Collection ID:** `users`
+*   **Fields to index:**
+    1.  `invitationToken` - **Ascending**
+    2.  `accountStatus` - **Ascending**
+*   **Query scope:** Collection
+
+**Promotional Code Validation**
+*   **Collection ID:** `promotionalCodes`
+*   **Fields to index:**
+    1.  `code` - **Ascending**
+*   **Query scope:** Collection
  
     
+```
