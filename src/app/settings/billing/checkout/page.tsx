@@ -18,7 +18,7 @@ import { createPayPalOrder, capturePayPalOrder } from './paypal_actions';
 import { updateUserSubscription } from '../actions';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { PayPalScriptProvider, PayPalButtons, type OnApproveData, type OnApproveActions } from '@paypal/react-paypal-js';
+import { PayPalScriptProvider, PayPalButtons, usePayPalScriptReducer, type OnApproveData, type OnApproveActions } from '@paypal/react-paypal-js';
 
 
 // Data can be moved to a shared file later
@@ -28,6 +28,60 @@ const pricingTiers = [
   { id: 'business', name: 'Business', price: { monthly: 449, annually: 4499 } },
   { id: 'enterprise', name: 'Enterprise', price: { monthly: 0, annually: 0 } },
 ];
+
+function PayPalButtonWrapper({ finalPrice, planId, cycle }: { finalPrice: number, planId: string, cycle: string }) {
+    const [{ isPending }] = usePayPalScriptReducer();
+    const { toast } = useToast();
+    const { userProfile } = useUserProfile();
+    const router = useRouter();
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    if (isPending) {
+        return <div className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
+
+    return (
+        <PayPalButtons
+            style={{ layout: "vertical", color: 'blue', shape: 'rect', label: 'pay' }}
+            disabled={isProcessing}
+            createOrder={async (data, actions) => {
+                setIsProcessing(true);
+                const amountInUSD = (finalPrice / 15).toFixed(2); // Example conversion
+                const res = await createPayPalOrder(amountInUSD, planId, cycle);
+                if (res.success && res.orderId) {
+                    return res.orderId;
+                } else {
+                    toast({ title: "PayPal Error", description: res.message, variant: "destructive" });
+                    setIsProcessing(false);
+                    return '';
+                }
+            }}
+            onApprove={async (data: OnApproveData, actions: OnApproveActions) => {
+               if (!userProfile) return;
+               const captureResult = await capturePayPalOrder(data.orderID);
+               if (captureResult.success) {
+                   const subResult = await updateUserSubscription(userProfile.userId, planId as any, cycle as any);
+                   if (subResult.success) {
+                       toast({ title: "Payment Successful!", description: "Your plan has been upgraded."});
+                       router.push('/dashboard');
+                   } else {
+                       toast({ title: "Subscription Update Failed", description: subResult.message, variant: 'destructive'});
+                   }
+               } else {
+                   toast({ title: "Payment Capture Failed", description: captureResult.message, variant: 'destructive'});
+               }
+               setIsProcessing(false);
+            }}
+            onError={(err) => {
+                toast({ title: "PayPal Error", description: `An unexpected error occurred: ${err}`, variant: 'destructive' });
+                setIsProcessing(false);
+            }}
+            onCancel={() => {
+                setIsProcessing(false);
+            }}
+        />
+    );
+}
 
 function CheckoutPageContent() {
   const router = useRouter();
@@ -134,7 +188,6 @@ function CheckoutPageContent() {
     if (selectedPaymentMethod === 'momo' || selectedPaymentMethod === 'card') {
       await handlePaystackPayment();
     } else {
-        // PayPal logic is handled by its own button component, so this else block is for future payment methods
         toast({
             title: "Coming Soon",
             description: `Payment with ${selectedPaymentMethod.charAt(0).toUpperCase() + selectedPaymentMethod.slice(1)} is not yet available.`,
@@ -144,8 +197,7 @@ function CheckoutPageContent() {
   };
   
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
-  const formatUSDCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-
+  
   return (
     <div>
       <PageHeader
@@ -259,46 +311,7 @@ function CheckoutPageContent() {
             </CardContent>
             <CardFooter className="flex-col items-start gap-4">
                {selectedPaymentMethod === 'paypal' && !isFreeCheckout ? (
-                    <div className="w-full">
-                      <PayPalButtons
-                          style={{ layout: "vertical", color: 'blue', shape: 'rect', label: 'pay' }}
-                          createOrder={async (data, actions) => {
-                              setIsProcessing(true);
-                              const amountInUSD = (finalPrice / 15).toFixed(2); // Example conversion
-                              const res = await createPayPalOrder(amountInUSD, planId, cycle);
-                              if (res.success && res.orderId) {
-                                  return res.orderId;
-                              } else {
-                                  toast({ title: "PayPal Error", description: res.message, variant: "destructive" });
-                                  setIsProcessing(false);
-                                  return '';
-                              }
-                          }}
-                          onApprove={async (data: OnApproveData, actions: OnApproveActions) => {
-                             if (!userProfile) return;
-                             const captureResult = await capturePayPalOrder(data.orderID);
-                             if (captureResult.success) {
-                                 const subResult = await updateUserSubscription(userProfile.userId, planId, cycle);
-                                 if (subResult.success) {
-                                     toast({ title: "Payment Successful!", description: "Your plan has been upgraded."});
-                                     router.push('/dashboard');
-                                 } else {
-                                     toast({ title: "Subscription Update Failed", description: subResult.message, variant: 'destructive'});
-                                 }
-                             } else {
-                                 toast({ title: "Payment Capture Failed", description: captureResult.message, variant: 'destructive'});
-                             }
-                             setIsProcessing(false);
-                          }}
-                          onError={(err) => {
-                              toast({ title: "PayPal Error", description: `An unexpected error occurred: ${err}`, variant: 'destructive' });
-                              setIsProcessing(false);
-                          }}
-                          onCancel={() => {
-                              setIsProcessing(false);
-                          }}
-                      />
-                    </div>
+                    <PayPalButtonWrapper finalPrice={finalPrice} planId={planId} cycle={cycle} />
                ) : (
                     <Button size="lg" className="w-full" onClick={handleProceedToPayment} disabled={isProcessing}>
                         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -324,7 +337,6 @@ function CheckoutPageContent() {
 export default function CheckoutPage() {
   const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
-  // Gracefully disable PayPal if the client ID is not configured
   if (!PAYPAL_CLIENT_ID) {
     console.warn("PayPal Client ID not found. Disabling PayPal payment option.");
   }
