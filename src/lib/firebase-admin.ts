@@ -86,6 +86,5 @@ if (!admin.apps.length) {
 // Export the initialized services. They will be undefined if initialization failed.
 const adminDb = app ? admin.firestore() : undefined;
 const adminAuth = app ? admin.auth() : undefined;
-export const isFirebaseAdminConfigured = !!app;
 
 export { adminDb, adminAuth };

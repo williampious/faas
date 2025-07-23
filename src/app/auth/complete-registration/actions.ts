@@ -1,7 +1,7 @@
 
 'use server';
 
-import { adminDb, isFirebaseAdminConfigured } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 import type { AgriFAASUserProfile } from '@/types/user';
 
 interface ValidationResult {
@@ -17,7 +17,7 @@ interface ValidationResult {
 }
 
 export async function validateInvitationToken(token: string): Promise<ValidationResult> {
-  if (!isFirebaseAdminConfigured) {
+  if (!adminDb) {
     console.error("[validateInvitationToken] Admin DB is not available. This is a server configuration error. Check FIREBASE_SERVICE_ACCOUNT_JSON secret and ensure app has been redeployed after setting it, as per the README file.");
     return {
       success: false,
