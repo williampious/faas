@@ -7,29 +7,34 @@ To get started, review the setup instructions below and then run the application
 
 ### 1. Setting Server Environment Variables for Firebase App Hosting (CRITICAL)
 
-Server-side features like **User Invitations**, **Subscription Activations**, or **Paystack Webhooks** require special administrative access to Firebase. This is the **most common point of failure** in setting up the application.
+Server-side features like **User Invitations**, **Subscription Activations**, or **Payment Gateways** require special administrative access to Firebase and other services. This is the **most common point of failure** in setting up the application.
 
 Because you are using **Firebase App Hosting**, these secrets MUST be stored in **Google Cloud Secret Manager**.
 
-**Step 1: Get Your Service Account JSON File**
+**Step 1: Get Your Firebase Service Account JSON File**
 1.  Go to your **[Firebase Console](https://console.firebase.google.com/)**.
 2.  Click the gear icon next to "Project Overview" and select **Project settings**.
 3.  Go to the **Service accounts** tab.
 4.  Click **Generate new private key**. A JSON file will download. **Keep this file secure.**
 
-**Step 2: Add the JSON as a Single Secret in Google Cloud Secret Manager**
-1.  Open the downloaded JSON file in a text editor.
-2.  **Select and copy the ENTIRE content** of the file, including the opening `{` and closing `}`.
-3.  Go to the **[Google Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager)** for the same Google Cloud project that your Firebase project is in.
-4.  Click **"+ CREATE SECRET"** at the top of the page.
-    *   **Name:** `FIREBASE_SERVICE_ACCOUNT_JSON` (This must match exactly).
-    *   **Secret value:** Paste the **entire JSON content** you copied.
-    *   Leave other settings as default and click **Create secret**.
-5.  If you use other services like Paystack, repeat this process for their secret keys (e.g., `PAYSTACK_SECRET_KEY`).
+**Step 2: Add Secrets in Google Cloud Secret Manager**
+
+You will need to create a few secrets in Google Cloud Secret Manager for the application to function correctly. Go to the **[Google Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager)** for your project and create the following secrets:
+
+*   **Firebase Service Account (Required)**
+    *   **Secret Name:** `FIREBASE_SERVICE_ACCOUNT_JSON` (This must match exactly).
+    *   **Secret Value:** Open the JSON file you downloaded in Step 1, select and copy the **ENTIRE content**, and paste it here.
+
+*   **Application URL (Required for Payments)**
+    *   **Secret Name:** `NEXT_PUBLIC_BASE_URL` (This must match exactly).
+    *   **Secret Value:** Enter the full public URL of your deployed application (e.g., `https://your-app-name.web.app`).
+
+*   **Payment Gateway Keys (Optional, for paid features)**
+    *   Create secrets for `PAYSTACK_SECRET_KEY`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, and `PAYPAL_CLIENT_SECRET` using the API keys from their respective developer dashboards.
 
 **Step 3: Deploy Your App (VERY IMPORTANT)**
-1.  The `apphosting.yaml` file in this project is already configured to look for the `FIREBASE_SERVICE_ACCOUNT_JSON` secret.
-2.  After you have created the secret in Secret Manager, you **MUST redeploy your application** to Firebase App Hosting (e.g., via `firebase deploy` or by pushing a new commit). The new settings will only take effect on a new deployment.
+1.  The `apphosting.yaml` file in this project is already configured to look for these secrets.
+2.  After you have created the secrets in Secret Manager, you **MUST redeploy your application** to Firebase App Hosting (e.g., via `firebase deploy` or by pushing a new commit). The new settings will only take effect on a new deployment.
 
 ---
 
@@ -323,4 +328,4 @@ If you prefer to create indexes manually, here are the details for the ones requ
 *   **Query scope:** Collection
  
     
-```
+
