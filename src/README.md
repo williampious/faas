@@ -257,7 +257,7 @@ service cloud.firestore {
     
     match /supportLogs/{logId} {
         allow create: if isUserAEO() && request.auth.uid == request.resource.data.aeoId;
-        allow read, update, delete: if isUserAEO() && request.auth.uid == resource.data.aeoId
+        allow read, update, delete: if isUserAEO() && request.auth.uid == resource.data.aeoId;
     }
 
     match /transactions/{transactionId} {
@@ -328,4 +328,3 @@ If you prefer to create indexes manually, here are the details for the ones requ
 *   **Query scope:** Collection
  
     
-
