@@ -327,15 +327,11 @@ export default function CheckoutPage() {
   // Gracefully disable PayPal if the client ID is not configured
   if (!PAYPAL_CLIENT_ID) {
     console.warn("PayPal Client ID not found. Disabling PayPal payment option.");
-    // Render the page without the PayPal provider, which will cause the button to be disabled.
-    // A better approach would be to hide the PayPal option entirely. For now, this prevents a crash.
-    // The UI logic should be updated to hide the PayPal radio button if PAYPAL_CLIENT_ID is null.
-    // For this pass, we will let it render but the button creation will fail in a controlled way inside the component.
   }
 
   return (
     <Suspense fallback={<div>Loading checkout...</div>}>
-      <PayPalScriptProvider options={{ clientId: PAYPAL_CLIENT_ID || "sb", currency: 'USD' }}>
+      <PayPalScriptProvider options={{ clientId: PAYPAL_CLIENT_ID || "sb", components: "buttons", currency: 'USD' }}>
         <CheckoutPageContent />
       </PayPalScriptProvider>
     </Suspense>
