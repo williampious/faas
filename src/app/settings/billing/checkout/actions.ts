@@ -2,9 +2,10 @@
 
 'use server';
 
-import type { AgriFAASUserProfile, PromotionalCode } from "@/types/user";
 import { adminDb } from '@/lib/firebase-admin';
 import { parseISO, isAfter } from 'date-fns';
+import type { PromotionalCode } from '@/types/promo-code';
+
 
 interface PromoCodeValidationResult {
     success: boolean;
@@ -82,9 +83,14 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
     }
 }
 
+interface UserInfoForPayment {
+    userId: string;
+    email: string;
+    fullName: string;
+}
 
 export async function initializePaystackTransaction(
-  userProfile: AgriFAASUserProfile, 
+  userInfo: UserInfoForPayment, 
   amountInKobo: number, // Paystack requires amount in the lowest currency unit (kobo for GHS)
   planId: string,
   billingCycle: string
@@ -109,7 +115,7 @@ export async function initializePaystackTransaction(
     };
   }
   
-  if (!userProfile.emailAddress) {
+  if (!userInfo.email) {
      return {
       success: false,
       message: "User email address is missing. Cannot initiate payment.",
@@ -117,12 +123,12 @@ export async function initializePaystackTransaction(
   }
 
   const payload = {
-    email: userProfile.emailAddress,
+    email: userInfo.email,
     amount: amountInKobo,
     currency: "GHS",
     metadata: {
-      user_id: userProfile.userId,
-      full_name: userProfile.fullName,
+      user_id: userInfo.userId,
+      full_name: userInfo.fullName,
       plan_id: planId,
       billing_cycle: billingCycle,
       cancel_action: `${baseUrl}/settings/billing`, // URL to redirect to on cancel

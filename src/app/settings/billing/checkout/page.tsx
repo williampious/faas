@@ -84,7 +84,14 @@ function CheckoutPageContent() {
   const handlePaystackPayment = async () => {
       if (!userProfile) return;
       const amountInKobo = finalPrice * 100;
-      const result = await initializePaystackTransaction(userProfile, amountInKobo, planId, cycle);
+
+      const userInfo = {
+        userId: userProfile.userId,
+        email: userProfile.emailAddress || '',
+        fullName: userProfile.fullName,
+      };
+
+      const result = await initializePaystackTransaction(userInfo, amountInKobo, planId, cycle);
       if (result.success && result.data?.authorization_url) {
           router.push(result.data.authorization_url);
       } else {
