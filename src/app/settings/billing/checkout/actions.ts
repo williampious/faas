@@ -6,20 +6,11 @@ import type { AgriFAASUserProfile, PromotionalCode } from "@/types/user";
 import { adminDb } from '@/lib/firebase-admin';
 import { parseISO, isAfter } from 'date-fns';
 
-interface InitializePaymentResult {
-  success: boolean;
-  message: string;
-  data?: {
-    authorization_url: string;
-    access_code: string;
-    reference: string;
-  };
-}
-
 interface PromoCodeValidationResult {
     success: boolean;
     message: string;
-    discountAmount?: number;
+    discountAmount?: number; // For fixed discounts
+    discountPercentage?: number; // For percentage discounts
     isFullDiscount?: boolean;
 }
 
@@ -36,6 +27,14 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
             success: true,
             message: 'Success! You have unlocked one free year of the Business Plan.',
             isFullDiscount: true,
+        };
+    }
+    
+    if (upperCaseCode === 'BIZ97') {
+        return {
+            success: true,
+            message: 'Success! You have unlocked a 97% discount on the annual Business Plan.',
+            discountPercentage: 97, // 97% discount
         };
     }
 
@@ -161,4 +160,14 @@ export async function initializePaystackTransaction(
       message: "A network error occurred. Please try again.",
     };
   }
+}
+
+interface InitializePaymentResult {
+  success: boolean;
+  message: string;
+  data?: {
+    authorization_url: string;
+    access_code: string;
+    reference: string;
+  };
 }
