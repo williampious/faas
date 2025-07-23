@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import type { AgriFAASUserProfile, PromotionalCode } from "@/types/user";
@@ -53,7 +54,7 @@ async function getPayPalAccessToken(): Promise<string> {
  * @see https://developer.paypal.com/docs/api/orders/v2/#orders_create
  */
 export async function createPayPalOrder(
-    amount: string, 
+    amountInGHS: number, 
     planId: string, 
     billingCycle: string
 ): Promise<PayPalOrderResult> {
@@ -61,16 +62,19 @@ export async function createPayPalOrder(
     const accessToken = await getPayPalAccessToken();
     const url = `${base}/v2/checkout/orders`;
 
+    // TODO: Replace this with a real-time exchange rate API call.
+    const GHS_TO_USD_RATE = 15.0; 
+    const amountInUSD = (amountInGHS / GHS_TO_USD_RATE).toFixed(2);
+
     const payload = {
       intent: "CAPTURE",
       purchase_units: [
         {
           amount: {
-            currency_code: "USD", // PayPal requires specific currencies like USD
-            value: amount,
+            currency_code: "USD",
+            value: amountInUSD,
           },
-          // Add metadata to the purchase unit
-          custom_id: `${planId}__${billingCycle}`, // A way to pass metadata
+          custom_id: `${planId}__${billingCycle}`,
           description: `AgriFAAS Connect Subscription: ${planId} (${billingCycle})`,
         },
       ],

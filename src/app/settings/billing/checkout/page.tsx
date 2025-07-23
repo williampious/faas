@@ -27,9 +27,19 @@ const pricingTiers = [
   { id: 'grower', name: 'Grower', price: { monthly: 209, annually: 2099 } },
   { id: 'business', name: 'Business', price: { monthly: 449, annually: 4499 } },
   { id: 'enterprise', name: 'Enterprise', price: { monthly: 0, annually: 0 } },
-];
+] as const;
 
-function PayPalButtonWrapper({ finalPrice, planId, cycle }: { finalPrice: number, planId: string, cycle: string }) {
+type PlanId = typeof pricingTiers[number]['id'];
+type BillingCycle = 'monthly' | 'annually';
+
+interface PayPalButtonWrapperProps {
+  finalPrice: number;
+  planId: PlanId;
+  cycle: BillingCycle;
+}
+
+
+function PayPalButtonWrapper({ finalPrice, planId, cycle }: PayPalButtonWrapperProps) {
     const [{ isPending }] = usePayPalScriptReducer();
     const { toast } = useToast();
     const { userProfile } = useUserProfile();
@@ -46,8 +56,8 @@ function PayPalButtonWrapper({ finalPrice, planId, cycle }: { finalPrice: number
             disabled={isProcessing}
             createOrder={async (data, actions) => {
                 setIsProcessing(true);
-                const amountInUSD = (finalPrice / 15).toFixed(2); // Example conversion
-                const res = await createPayPalOrder(amountInUSD, planId, cycle);
+                const amountInGHS = finalPrice;
+                const res = await createPayPalOrder(amountInGHS, planId, cycle);
                 if (res.success && res.orderId) {
                     return res.orderId;
                 } else {
@@ -60,7 +70,7 @@ function PayPalButtonWrapper({ finalPrice, planId, cycle }: { finalPrice: number
                if (!userProfile) return;
                const captureResult = await capturePayPalOrder(data.orderID);
                if (captureResult.success) {
-                   const subResult = await updateUserSubscription(userProfile.userId, planId as any, cycle as any);
+                   const subResult = await updateUserSubscription(userProfile.userId, planId, cycle);
                    if (subResult.success) {
                        toast({ title: "Payment Successful!", description: "Your plan has been upgraded."});
                        router.push('/dashboard');
@@ -98,8 +108,8 @@ function CheckoutPageContent() {
   const [isApplyingCode, setIsApplyingCode] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'momo' | 'card' | 'paypal' | 'stripe'>('momo');
 
-  const planId = searchParams.get('plan') as 'starter' | 'grower' | 'business' | 'enterprise' || 'starter';
-  const cycle = searchParams.get('cycle') as 'monthly' | 'annually' || 'annually';
+  const planId = searchParams.get('plan') as PlanId || 'starter';
+  const cycle = searchParams.get('cycle') as BillingCycle || 'annually';
 
   const selectedPlan = pricingTiers.find(p => p.id === planId) || pricingTiers[0];
   const price = cycle === 'annually' ? selectedPlan.price.annually : selectedPlan.price.monthly;
@@ -187,7 +197,11 @@ function CheckoutPageContent() {
     
     if (selectedPaymentMethod === 'momo' || selectedPaymentMethod === 'card') {
       await handlePaystackPayment();
-    } else {
+    } else if (selectedPaymentMethod === 'paypal') {
+        // PayPal logic is handled by its own button component, nothing to do here
+        setIsProcessing(false); // Let PayPal button handle its own processing state
+    }
+     else {
         toast({
             title: "Coming Soon",
             description: `Payment with ${selectedPaymentMethod.charAt(0).toUpperCase() + selectedPaymentMethod.slice(1)} is not yet available.`,
