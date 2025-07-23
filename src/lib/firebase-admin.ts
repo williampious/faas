@@ -1,14 +1,13 @@
-// src/lib/firebase-admin.ts
-'use server';
 
+// src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
-// This file is marked with 'use server', so it will only ever run on the server.
-// This is the single, definitive initialization of the Firebase Admin SDK.
+// This file is a standard server-side module. It should NOT have 'use server'.
+// It initializes the Firebase Admin SDK once and exports the services for use
+// in other server-side logic, such as Server Actions.
 
 let app: admin.App | undefined;
 
-// This function now checks for a single, unified secret variable.
 const checkEnvVars = () => {
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
@@ -47,7 +46,6 @@ const checkEnvVars = () => {
       return false;
   }
 
-
   console.log(`[Firebase Admin] ✅ FOUND: The 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is present and appears valid.`);
   return true;
 };
@@ -71,7 +69,6 @@ if (!admin.apps.length) {
       );
     }
   } else {
-    // Logging for when env vars are missing is handled inside checkEnvVars()
     console.error("[Firebase Admin] ❌ SKIPPING INITIALIZATION due to missing or invalid secrets.");
   }
 } else {
