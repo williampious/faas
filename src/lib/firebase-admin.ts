@@ -6,13 +6,10 @@ import * as admin from 'firebase-admin';
 // It initializes the Firebase Admin SDK once and exports the services for use
 // in other server-side logic, such as Server Actions.
 
-let app: admin.App | undefined;
+let app: admin.App;
 
-const checkEnvVars = () => {
+if (!admin.apps.length) {
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-
-  console.log('[Firebase Admin] Checking for server-side environment variable: FIREBASE_SERVICE_ACCOUNT_JSON...');
-
   if (!serviceAccountJson) {
     console.error(`
       ===============================================================
@@ -32,31 +29,9 @@ const checkEnvVars = () => {
       7. Refer to the README.md file for a detailed, step-by-step guide.
       ===============================================================
     `);
-    return false;
-  }
-  
-  try {
-    const parsed = JSON.parse(serviceAccountJson);
-    if (!parsed.project_id || !parsed.client_email || !parsed.private_key) {
-        console.error('[Firebase Admin] ❌ INVALID: The FIREBASE_SERVICE_ACCOUNT_JSON value is not a valid service account JSON.');
-        return false;
-    }
-  } catch(e) {
-      console.error('[Firebase Admin] ❌ INVALID: Could not parse the FIREBASE_SERVICE_ACCOUNT_JSON value. Ensure it is a valid JSON string.');
-      return false;
-  }
-
-  console.log(`[Firebase Admin] ✅ FOUND: The 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is present and appears valid.`);
-  return true;
-};
-
-const hasValidEnv = checkEnvVars();
-
-if (!admin.apps.length) {
-  if (hasValidEnv) {
+  } else {
     try {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON!);
-      
+      const serviceAccount = JSON.parse(serviceAccountJson);
       app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
@@ -68,20 +43,15 @@ if (!admin.apps.length) {
         error.message
       );
     }
-  } else {
-    console.error("[Firebase Admin] ❌ SKIPPING INITIALIZATION due to missing or invalid secrets.");
   }
 } else {
-  app = admin.apps[0];
-  if(app) {
-    console.log('[Firebase Admin] SDK already initialized.');
-  } else {
-    console.error('[Firebase Admin] admin.apps has entries but the first one is not a valid App object.');
-  }
+  app = admin.apps[0]!;
+  console.log('[Firebase Admin] SDK already initialized.');
 }
 
-// Export the initialized services. They will be undefined if initialization failed.
+// @ts-ignore - app might not be assigned if initialization fails, which is handled.
 const adminDb = app ? admin.firestore() : undefined;
+// @ts-ignore
 const adminAuth = app ? admin.auth() : undefined;
 
 export { adminDb, adminAuth };

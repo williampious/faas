@@ -2,7 +2,7 @@
 'use server';
 
 import { adminDb } from '@/lib/firebase-admin';
-import type { AgriFAASUserProfile, PromotionalCode, UserRole } from '@/types/user';
+import type { PromotionalCode } from '@/types/user';
 import { parseISO, isAfter } from 'date-fns';
 
 interface PromoCodeValidationResult {
@@ -23,7 +23,7 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
   if (upperCaseCode === 'FREEBIZYEAR') {
     return { success: true, message: 'Success! You have unlocked one free year of the Business Plan.', isFullDiscount: true };
   }
-
+  
   if (upperCaseCode === 'BIZ97') {
     return { success: true, message: 'Success! You have unlocked a 97% discount on the annual Business Plan.', discountPercentage: 97 };
   }
