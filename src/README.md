@@ -217,7 +217,7 @@ service cloud.firestore {
     match /budgets/{budgetId} {
         // Only Admins or HRManagers (or Managers) can manage budgets
       allow create: if isFarmManager(request.resource.data.farmId);
-      allow read, update, delete: if isFarmManager(resource.data.farmId);
+      allow read, update, delete: if isFarmManager(request.resource.data.farmId);
     }
     
     match /farmingYears/{yearId} {
@@ -346,4 +346,6 @@ If you prefer to create indexes manually, here are the details for the ones requ
     1.  `code` - **Ascending**
 *   **Query scope:** Collection
  
+    
+
     

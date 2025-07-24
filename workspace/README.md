@@ -217,7 +217,7 @@ service cloud.firestore {
     match /budgets/{budgetId} {
         // Only Admins or HRManagers (or Managers) can manage budgets
       allow create: if isFarmManager(request.resource.data.farmId);
-      allow read, update, delete: if isFarmManager(resource.data.farmId);
+      allow read, update, delete: if isFarmManager(request.resource.data.farmId);
     }
     
     match /farmingYears/{yearId} {
@@ -359,4 +359,5 @@ AgriFAAS Connect is designed for a range of users within the agricultural ecosys
 *   **Farm Investors & Financial Institutions:** The robust financial reporting and dashboard features provide the transparency and oversight needed for investment and lending decisions.
 *   **Agricultural Consultants:** Consultants can use the platform to manage multiple client farms, track recommendations, and monitor outcomes.
 
-```
+
+    
