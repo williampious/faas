@@ -1,0 +1,41 @@
+
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  # Increase this value if you'd like to automatically spin up
+  # more instances in response to increased traffic.
+  maxInstances: 1
+# Defines secrets that are available as server-side environment variables to the application.
+# These secrets are stored in Google Cloud Secret Manager.
+# Learn more at https://firebase.google.com/docs/app-hosting/configure#secrets
+secretEnvironmentVariables:
+  # Server-side Firebase Admin SDK config (CRITICAL FOR BACKEND)
+  - secret: FIREBASE_SERVICE_ACCOUNT_JSON
+    keyName: FIREBASE_SERVICE_ACCOUNT_JSON
+  
+  # Application and Payment Gateway config (SERVER-SIDE)
+  - secret: NEXT_PUBLIC_BASE_URL # Used by server actions for payment callbacks
+    keyName: NEXT_PUBLIC_BASE_URL
+  - secret: PAYSTACK_SECRET_KEY
+    keyName: PAYSTACK_SECRET_KEY
+  - secret: NEXT_PUBLIC_PAYPAL_CLIENT_ID # Public key also needed by server actions
+    keyName: NEXT_PUBLIC_PAYPAL_CLIENT_ID
+  - secret: PAYPAL_CLIENT_SECRET
+    keyName: PAYPAL_CLIENT_SECRET
+    
+  # Email sending config (SERVER-SIDE)
+  - secret: EMAIL_HOST
+    keyName: EMAIL_HOST
+  - secret: EMAIL_PORT
+    keyName: EMAIL_PORT
+  - secret: EMAIL_USER
+    keyName: EMAIL_USER
+  - secret: EMAIL_PASS
+    keyName: EMAIL_PASS
+  - secret: EMAIL_SENDER
+    keyName: EMAIL_SENDER
+
+  # The storage bucket name is needed by both client and server, so we provide it to both.
+  - secret: FIREBASE_STORAGE_BUCKET
+    keyName: FIREBASE_STORAGE_BUCKET
