@@ -15,7 +15,7 @@ import { Loader2, UserCheck, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, serverTimestamp, collection, writeBatch } from 'firebase/firestore';
+import { doc, serverTimestamp, writeBatch, getDoc, deleteDoc } from 'firebase/firestore';
 import type { AgriFAASUserProfile } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
@@ -110,29 +110,20 @@ export default function CompleteRegistrationPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const firebaseUser = userCredential.user;
 
-      // 2. Use a batch write to atomically create the new user doc and delete the old invitation doc.
+      // 2. Use a batch write to atomically update the existing user doc.
       const batch = writeBatch(db);
       
-      const newUserDocRef = doc(db, usersCollectionName, firebaseUser.uid);
-      const oldUserDocRef = doc(db, usersCollectionName, invitedUserData.userId);
-
-      // Prepare the final user profile data, merging invitation data with registration form data
-      // This is the FIX: We destructure to remove the old temporary userId and token before writing the new doc.
-      const { userId: tempUserId, createdAt, invitationToken, ...profileToWrite } = invitedUserData;
-
-      batch.set(newUserDocRef, { 
-        ...profileToWrite,
-        userId: firebaseUser.uid, // Explicitly set the correct final userId
-        firebaseUid: firebaseUser.uid,
-        fullName: data.fullName,
-        accountStatus: 'Active' as const,
-        registrationDate: new Date().toISOString(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      const userDocRef = doc(db, usersCollectionName, invitedUserData.userId);
       
-      // Delete the original temporary invitation document
-      batch.delete(oldUserDocRef);
+      // Update the existing document with the new Firebase UID and set status to Active
+      batch.update(userDocRef, {
+        firebaseUid: firebaseUser.uid,
+        fullName: data.fullName, // Allow user to confirm/correct their name
+        accountStatus: 'Active',
+        updatedAt: serverTimestamp(),
+        // We no longer need the invitation token
+        invitationToken: null, 
+      });
 
       // Commit the atomic operations
       await batch.commit();

@@ -33,8 +33,12 @@ export function MainNav() {
 
   const canViewItem = (item: NavItem): boolean => {
     if (isUserLoading) return false;
-    if (item.adminOnly) return isActualAdmin;
-    if (!item.roles) return true;
+    // Admins see everything except AEO specific tools unless they also have the AEO role
+    if (isActualAdmin) {
+      if(item.label === 'AEO Toolkit') return userRoles.includes('Agric Extension Officer');
+      return true;
+    }
+    if (!item.roles) return true; // Items with no role restrictions are visible to all (should be rare)
     return item.roles.some(role => userRoles.includes(role));
   };
   

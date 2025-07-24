@@ -114,7 +114,7 @@ export default function PlantingPage() {
       try {
         if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
         
-        const recordsQuery = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const recordsQuery = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("createdAt", "desc"));
         const recordsSnapshot = await getDocs(recordsQuery);
         const fetchedRecords = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PlantingRecord[];
         setRecords(fetchedRecords);
@@ -404,7 +404,7 @@ export default function PlantingPage() {
             <Table>
               <TableHeader><TableRow><TableHead>Crop Type</TableHead><TableHead>Date Planted</TableHead><TableHead>Area Planted</TableHead><TableHead>Method</TableHead><TableHead className="text-right">Total Cost</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {records.sort((a,b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime()).map((record) => (
+                {records.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">{record.cropType}</TableCell>
                     <TableCell>{isValid(parseISO(record.datePlanted)) ? format(parseISO(record.datePlanted), 'PP') : 'Invalid Date'}</TableCell>

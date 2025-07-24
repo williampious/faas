@@ -7,7 +7,7 @@ import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from 'firebase/fires
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { add } from 'date-fns';
+import { add, isAfter } from 'date-fns';
 
 interface UserAccess {
   canAccessFarmOps: boolean;
@@ -43,19 +43,18 @@ async function createMissingProfile(user: User): Promise<AgriFAASUserProfile | n
     
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
-        // Should not happen if this function is called correctly, but as a safeguard.
         return docSnap.data() as AgriFAASUserProfile;
     }
     
     console.warn(`Attempting to self-heal profile for user: ${user.uid}`);
 
-    const trialEndDate = add(new Date(), { days: 14 });
+    const trialEndDate = add(new Date(), { days: 20 });
     const initialSubscription: SubscriptionDetails = {
-        planId: 'starter',
-        status: 'Active',
+        planId: 'business',
+        status: 'Trialing',
         billingCycle: 'annually',
         nextBillingDate: null,
-        trialEnds: null,
+        trialEnds: trialEndDate.toISOString(),
     };
 
     const newProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> = {
@@ -76,7 +75,6 @@ async function createMissingProfile(user: User): Promise<AgriFAASUserProfile | n
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
-        // We need to return a complete profile object for the context state
         return {
             ...newProfile,
             createdAt: new Date().toISOString(),
@@ -129,10 +127,13 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
             const plan = profileData.subscription?.planId || 'starter';
             const status = profileData.subscription?.status;
+            const trialEnds = profileData.subscription?.trialEnds;
+            
+            const isTrialActive = status === 'Trialing' && trialEnds && isAfter(new Date(trialEnds), new Date());
             
             const isGrowerOrHigher = plan === 'grower' || plan === 'business' || plan === 'enterprise';
             const isBusinessOrHigher = plan === 'business' || plan === 'enterprise';
-            const hasPaidAccess = status === 'Active' || status === 'Trialing';
+            const hasPaidAccess = status === 'Active' || isTrialActive;
 
             setAccess({
                 canAccessFarmOps: isGrowerOrHigher && hasPaidAccess,
@@ -144,13 +145,11 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             setError(null);
             setIsLoading(false);
           } else {
-            // Profile doesn't exist. Attempt to self-heal.
             const healedProfile = await createMissingProfile(currentUser);
             if(healedProfile) {
-                // If healing was successful, we essentially re-run the logic as if the profile existed.
                 setUserProfile(healedProfile);
                 setIsAdmin(healedProfile.role?.includes('Admin') || false);
-                setAccess(defaultAccess); // Reset to default, let next render cycle calculate access.
+                // Access rights will be recalculated on the next effect run with the new profile.
                 setError(null);
             } else {
                 setUserProfile(null);

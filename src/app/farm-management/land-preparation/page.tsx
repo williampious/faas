@@ -131,7 +131,7 @@ export default function LandPreparationPage() {
       try {
         if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
         
-        const activitiesQuery = query(collection(db, ACTIVITIES_COLLECTION), where("farmId", "==", userProfile.farmId));
+        const activitiesQuery = query(collection(db, ACTIVITIES_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("createdAt", "desc"));
         const activitiesSnapshot = await getDocs(activitiesQuery);
         const fetchedActivities = activitiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as LandPreparationActivity[];
         setActivities(fetchedActivities);
@@ -280,22 +280,6 @@ export default function LandPreparationPage() {
     }
   };
   
-  const getSortableDate = (timestamp: any): Date => {
-    if (!timestamp) return new Date(0);
-    if (typeof timestamp.toDate === 'function') { // Firestore Timestamp
-      return timestamp.toDate();
-    }
-    if (typeof timestamp === 'string') { // ISO string
-      const d = parseISO(timestamp);
-      if(isValid(d)) return d;
-    }
-    if (timestamp instanceof Date) {
-        if(isValid(timestamp)) return timestamp;
-    }
-    return new Date(0);
-  };
-
-
   if (isProfileLoading || (isLoading && !error)) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-12rem)]">
@@ -496,7 +480,7 @@ export default function LandPreparationPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {activities.sort((a,b) => getSortableDate(b.createdAt).getTime() - getSortableDate(a.createdAt).getTime()).map((activity) => (
+                {activities.map((activity) => (
                   <TableRow key={activity.id}>
                     <TableCell className="font-medium">{activity.activityType}</TableCell>
                     <TableCell>{isValid(parseISO(activity.date)) ? format(parseISO(activity.date), 'MMMM d, yyyy') : 'Invalid Date'}</TableCell>
