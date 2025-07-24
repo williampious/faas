@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { updateUserSubscription } from '@/app/settings/billing/actions';
 import { adminDb } from '@/lib/firebase-admin';
+import type { FieldValue } from 'firebase-admin/firestore';
 
 /**
  * Handles Paystack webhook events.
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     console.log(`Processing successful payment for user ${user_id}, plan ${plan_id}, reference ${reference}`);
 
     try {
-      // 1. Update user subscription
+      // 1. Update user subscription (This action is self-contained and can be run first)
       const subResult = await updateUserSubscription(user_id, plan_id, billing_cycle);
       if (!subResult.success) {
         // Log critical error if subscription update fails after payment
@@ -44,15 +45,40 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: 'success', message: 'Webhook received, but subscription update failed server-side.' });
       }
 
-      // 2. Increment promo code usage if one was used
+      // 2. Increment promo code usage idempotently if one was used
       if (promo_code && adminDb) {
           const promoQuery = adminDb.collection('promotionalCodes').where('code', '==', promo_code.toUpperCase()).limit(1);
           const promoSnapshot = await promoQuery.get();
+
           if (!promoSnapshot.empty) {
-              const promoDoc = promoSnapshot.docs[0];
-              const currentUses = promoDoc.data().timesUsed || 0;
-              await promoDoc.ref.update({ timesUsed: currentUses + 1 });
-              console.log(`Promo code ${promo_code} usage incremented.`);
+              const promoDocRef = promoSnapshot.docs[0].ref;
+              const paystackReference = reference;
+
+              await adminDb.runTransaction(async (transaction) => {
+                  const promoDoc = await transaction.get(promoDocRef);
+                  if (!promoDoc.exists) {
+                      console.error(`Promo code document not found during transaction for code: ${promo_code}`);
+                      return;
+                  }
+
+                  const usageRecordRef = promoDocRef.collection('recordedUsages').doc(paystackReference);
+                  const usageRecord = await transaction.get(usageRecordRef);
+
+                  if (!usageRecord.exists) {
+                      // This is a new, unrecorded usage.
+                      const currentUses = promoDoc.data()?.timesUsed || 0;
+                      transaction.update(promoDocRef, { timesUsed: currentUses + 1 });
+                      transaction.set(usageRecordRef, {
+                          timestamp: adminDb.FieldValue.serverTimestamp() as FieldValue,
+                          paymentReference: paystackReference,
+                          userId: user_id,
+                      });
+                      console.log(`Promo code ${promo_code} usage incremented and recorded for reference ${paystackReference}.`);
+                  } else {
+                      // This usage has already been recorded (webhook retry).
+                      console.log(`Promo code ${promo_code} usage for reference ${paystackReference} already recorded. Skipping increment.`);
+                  }
+              });
           }
       }
 
