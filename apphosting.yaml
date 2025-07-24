@@ -53,4 +53,3 @@ secretEnvironmentVariables:
     keyName: EMAIL_PASS
   - secret: EMAIL_SENDER
     keyName: EMAIL_SENDER
-

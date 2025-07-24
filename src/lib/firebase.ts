@@ -34,31 +34,36 @@ let authInstance: ReturnType<typeof getAuth> | null = null;
 let storageInstance: ReturnType<typeof getStorage> | null = null;
 
 if (!isFirebaseClientConfigured) {
-  console.warn(
-    "🛑 Firebase Client Initialization Error: Your Firebase client-side configuration appears to be missing, incomplete, or uses placeholder values. " +
-    "Firebase client features (like Authentication and Firestore) will NOT be initialized. \n\n" +
-    "👉 PLEASE CHECK THE FOLLOWING: 👈\n" +
-    "1. For DEPLOYED environments (Firebase App Hosting, Vercel, etc.): Ensure ALL `NEXT_PUBLIC_FIREBASE_...` variables are correctly set in your hosting platform's environment variable secrets, AND you have redeployed the app after changes.\n" +
-    "2. For LOCAL development: Your `.env.local` file (in the project root) has ALL `NEXT_PUBLIC_FIREBASE_...` variables correctly set with actual values from your Firebase project, AND you have restarted your Next.js development server.\n\n" +
-    "Potentially problematic configuration keys based on our checks: " + (missingOrPlaceholderKeys.join(', ') || 'None (check for empty strings, typos, or other placeholder patterns).')
-  );
+  const errorMessage = "CRITICAL: Firebase client configuration is missing or incomplete. This app cannot connect to Firebase services."
+  // Differentiate error message for developers.
+  if (process.env.NODE_ENV === 'development') {
+      console.error(
+        errorMessage + "\n\n" +
+        "👉 FOR LOCAL DEVELOPMENT: 👈\n" +
+        "1. Ensure you have a `.env.local` file in the project root.\n" +
+        "2. Make sure ALL `NEXT_PUBLIC_FIREBASE_...` variables in that file are set with actual values from your Firebase project.\n" +
+        "3. Restart your Next.js development server after making changes.\n\n" +
+        "Potentially missing or invalid keys: " + (missingOrPlaceholderKeys.join(', ') || 'N/A')
+      );
+  } else {
+      console.error(
+        errorMessage + "\n\n" +
+        "👉 FOR DEPLOYED ENVIRONMENTS (Firebase App Hosting, Vercel, etc.): 👈\n" +
+        "1. Ensure you have created secrets in your hosting provider's dashboard for ALL `NEXT_PUBLIC_FIREBASE_...` variables.\n" +
+        "2. Verify that the secrets are correctly linked to the environment variables in your deployment configuration (e.g., `apphosting.yaml`).\n" +
+        "3. Redeploy the application to apply the secret changes.\n\n" +
+        "Potentially missing or invalid keys: " + (missingOrPlaceholderKeys.join(', ') || 'N/A')
+      );
+  }
 } else {
   if (!getApps().length) {
     try {
-      console.log("Attempting to initialize Firebase app with config:", firebaseConfigValuesFromEnv);
       appInstance = initializeApp(firebaseConfigValuesFromEnv as FirebaseOptions);
-      console.log("Firebase app initialized successfully (client-side).");
     } catch (e: any) {
-      console.error(
-        "CRITICAL Firebase Error: Failed to initialize Firebase app (client-side). " +
-        "This is very likely due to invalid or incomplete Firebase configuration values. " +
-        "Please verify all NEXT_PUBLIC_FIREBASE_... variables.",
-        "Error Details:", e.message
-      );
+      console.error("CRITICAL Firebase Error: Failed to initialize Firebase app (client-side). Check configuration values.", e);
     }
   } else {
     appInstance = getApp();
-    console.log("Firebase app already initialized, getting existing instance (client-side).");
   }
 
   if (appInstance) {
@@ -66,19 +71,9 @@ if (!isFirebaseClientConfigured) {
       firestoreInstance = getFirestore(appInstance);
       authInstance = getAuth(appInstance);
       storageInstance = getStorage(appInstance);
-      console.log("Firestore, Auth, and Storage instances obtained (client-side).");
     } catch (e: any) {
-        console.error(
-            "CRITICAL Firebase Error: Failed to get Firestore/Auth/Storage instances from the initialized app (client-side).",
-            "Error Details:", e.message
-        );
+        console.error("CRITICAL Firebase Error: Failed to get Firestore/Auth/Storage instances.", e);
     }
-  } else if (isFirebaseClientConfigured) {
-     console.error(
-        "CRITICAL Firebase Error: appInstance is null after attempting initialization (client-side), " +
-        "even though configuration seemed to pass initial checks. " +
-        "This strongly indicates that initializeApp failed. Please review previous console errors for details from the 'catch' block."
-     );
   }
 }
 
