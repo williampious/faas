@@ -1,3 +1,4 @@
+
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
@@ -37,27 +38,22 @@ if (!isFirebaseClientConfigured) {
     "🛑 Firebase Client Initialization Error: Your Firebase client-side configuration appears to be missing, incomplete, or uses placeholder values. " +
     "Firebase client features (like Authentication and Firestore) will NOT be initialized. \n\n" +
     "👉 PLEASE CHECK THE FOLLOWING: 👈\n" +
-    "1. For local development: Your `.env.local` file (in the project root) has ALL `NEXT_PUBLIC_FIREBASE_...` variables correctly set with actual values from your Firebase project's web app settings (NOT placeholders), AND you have RESTARTED your Next.js development server after changes.\n" +
-    "2. For deployed environments (like Vercel, Cloud Run, etc.): Ensure ALL `NEXT_PUBLIC_FIREBASE_...` variables are correctly set in your hosting platform's environment variable settings.\n\n" +
-    "Potentially problematic configuration keys based on our checks: " + (missingOrPlaceholderKeys.join(', ') || 'None (check for empty strings, typos, or other placeholder patterns).') + "\n\n" +
-    "🔍 Values currently being read by the application for Firebase config keys (VERIFY THESE AGAINST YOUR FIREBASE CONSOLE OR HOSTING PLATFORM SETTINGS): \n" + JSON.stringify(firebaseConfigValuesFromEnv, null, 2)
+    "1. For DEPLOYED environments (Firebase App Hosting, Vercel, etc.): Ensure ALL `NEXT_PUBLIC_FIREBASE_...` variables are correctly set in your hosting platform's environment variable secrets, AND you have redeployed the app after changes.\n" +
+    "2. For LOCAL development: Your `.env.local` file (in the project root) has ALL `NEXT_PUBLIC_FIREBASE_...` variables correctly set with actual values from your Firebase project, AND you have restarted your Next.js development server.\n\n" +
+    "Potentially problematic configuration keys based on our checks: " + (missingOrPlaceholderKeys.join(', ') || 'None (check for empty strings, typos, or other placeholder patterns).')
   );
 } else {
   if (!getApps().length) {
     try {
       console.log("Attempting to initialize Firebase app with config:", firebaseConfigValuesFromEnv);
-      // Removed the unnecessary databaseURL property from the config.
-      // The modern SDKs infer this correctly from the projectId.
       appInstance = initializeApp(firebaseConfigValuesFromEnv as FirebaseOptions);
       console.log("Firebase app initialized successfully (client-side).");
     } catch (e: any) {
       console.error(
         "CRITICAL Firebase Error: Failed to initialize Firebase app (client-side). " +
         "This is very likely due to invalid or incomplete Firebase configuration values. " +
-        "Ensure all NEXT_PUBLIC_FIREBASE_... variables in .env.local (for local dev) or your hosting environment (for deployment) are correct and the server/service was restarted/redeployed after changes.",
-        "Error Details:", e.message,
-        "Stack:", e.stack,
-        "Configuration used (verify these values):", firebaseConfigValuesFromEnv
+        "Please verify all NEXT_PUBLIC_FIREBASE_... variables.",
+        "Error Details:", e.message
       );
     }
   } else {
@@ -74,13 +70,10 @@ if (!isFirebaseClientConfigured) {
     } catch (e: any) {
         console.error(
             "CRITICAL Firebase Error: Failed to get Firestore/Auth/Storage instances from the initialized app (client-side).",
-            "Error Details:", e.message,
-            "Stack:", e.stack
+            "Error Details:", e.message
         );
     }
   } else if (isFirebaseClientConfigured) {
-     // This case means isFirebaseClientConfigured was true, but appInstance is still null.
-     // This implies initializeApp likely failed and the error was caught above.
      console.error(
         "CRITICAL Firebase Error: appInstance is null after attempting initialization (client-side), " +
         "even though configuration seemed to pass initial checks. " +
