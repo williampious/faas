@@ -24,6 +24,9 @@ You will need to create several secrets in Google Cloud Secret Manager for the a
 *   **`FIREBASE_SERVICE_ACCOUNT_JSON` (Required)**
     *   **Secret Value:** Open the JSON file you downloaded in Step 1, select and copy the **ENTIRE content**, and paste it here.
 
+*   **`FIREBASE_STORAGE_BUCKET` (Required)**
+    *   **Secret Value:** Go to your **[Firebase Console](https://console.firebase.google.com/) -> Storage**. Your bucket name is at the top, typically something like `your-project-id.appspot.com`.
+
 *   **`NEXT_PUBLIC_BASE_URL` (Required for Payments)**
     *   **Secret Value:** Enter the full public URL of your deployed application (e.g., `https://your-app-name.web.app`).
 

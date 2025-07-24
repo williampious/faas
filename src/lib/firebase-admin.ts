@@ -26,7 +26,7 @@ function initializeAdminApp() {
       const serviceAccount = JSON.parse(serviceAccountJson);
       app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET, // Use server-side variable
       });
       console.log('[Firebase Admin] ✅ SDK initialized successfully.');
     } catch (error: any) {

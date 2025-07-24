@@ -1,3 +1,4 @@
+
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
 
@@ -13,6 +14,9 @@ runConfig:
 secretEnvironmentVariables:
   - secret: FIREBASE_SERVICE_ACCOUNT_JSON
     keyName: FIREBASE_SERVICE_ACCOUNT_JSON
+  # Added FIREBASE_STORAGE_BUCKET for the Admin SDK
+  - secret: FIREBASE_STORAGE_BUCKET
+    keyName: FIREBASE_STORAGE_BUCKET
   - secret: NEXT_PUBLIC_BASE_URL
     keyName: NEXT_PUBLIC_BASE_URL
   - secret: PAYSTACK_SECRET_KEY
