@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -62,28 +62,41 @@ export default function SetupPage() {
       if (!user) {
         router.replace('/auth/signin');
       }
+      // Redirect if setup is already complete
       if (user && userProfile && (userProfile.farmId || userProfile.role?.includes('Agric Extension Officer'))) {
-        router.replace('/dashboard');
+        const dashboardPath = userProfile.role?.includes('Agric Extension Officer') ? '/aeo/dashboard' : '/dashboard';
+        router.replace(dashboardPath);
       }
     }
   }, [user, userProfile, isProfileLoading, router]);
 
   const handleFarmerSubmit: SubmitHandler<FarmSetupFormValues> = async (data) => {
-    if (!user) return;
+    if (!user || !userProfile) { // Ensure userProfile is loaded
+        toast({ title: "Error", description: "User profile not available. Please try again.", variant: "destructive"});
+        return;
+    }
     setIsSubmitting(true);
     
     const farmRef = doc(collection(db, 'farms'));
     const userRef = doc(db, 'users', user.uid);
 
-    const newFarm: Omit<Farm, 'createdAt'|'updatedAt'> = {
-      id: farmRef.id, name: data.name, country: data.country, region: data.region,
+    const newFarm: Omit<Farm, 'id' | 'createdAt'|'updatedAt'> = {
+      name: data.name, country: data.country, region: data.region,
       description: data.description || '', ownerId: user.uid,
     };
 
     try {
       const batch = writeBatch(db);
-      batch.set(farmRef, { ...newFarm, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-      batch.update(userRef, { farmId: farmRef.id, role: ['Admin'] as UserRole[] });
+      batch.set(farmRef, { ...newFarm, id: farmRef.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      
+      // Update the existing user profile, do not overwrite it.
+      // Add Admin role and farmId. Keep existing subscription info.
+      batch.update(userRef, { 
+          farmId: farmRef.id, 
+          role: ['Admin'] as UserRole[],
+          updatedAt: serverTimestamp()
+      });
+      
       await batch.commit();
       
       toast({ title: "Farm Created!", description: `Welcome to ${data.name}.` });
@@ -120,14 +133,25 @@ export default function SetupPage() {
       }
   };
 
-  if (isProfileLoading || !user || (userProfile && (userProfile.farmId || userProfile.role?.includes('Agric Extension Officer')))) {
+  if (isProfileLoading || !userProfile) { // Wait for userProfile to be loaded
     return (
         <div className="flex flex-col items-center justify-center p-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Verifying account...</p>
+            <p className="text-muted-foreground">Finalizing account setup...</p>
         </div>
     );
   }
+
+  if (userProfile && (userProfile.farmId || userProfile.role?.includes('Agric Extension Officer'))) {
+    // This case should be handled by useEffect redirect, but as a fallback:
+    return (
+      <div className="flex flex-col items-center justify-center p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Setup complete. Redirecting...</p>
+      </div>
+    );
+  }
+
 
   if (!setupType) {
       return (

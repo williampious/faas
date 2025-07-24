@@ -121,7 +121,7 @@ export default function CompleteRegistrationPage() {
         fullName: data.fullName, // Allow user to confirm/correct their name
         accountStatus: 'Active',
         updatedAt: serverTimestamp(),
-        // We no longer need the invitation token
+        // We no longer need the invitation token, so remove it
         invitationToken: null, 
       });
 
@@ -133,6 +133,8 @@ export default function CompleteRegistrationPage() {
         description: "Your account has been successfully created. You are now being logged in.",
       });
       // Firebase Auth automatically signs in the user. The UserProfileProvider will now find the correct document.
+      // Redirect to dashboard where layout will handle profile loading
+      router.push('/dashboard');
       
     } catch (registrationError: any) {
       console.error('Registration Completion Error:', registrationError);

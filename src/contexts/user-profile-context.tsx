@@ -75,11 +75,8 @@ async function createMissingProfile(user: User): Promise<AgriFAASUserProfile | n
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
-        return {
-            ...newProfile,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        } as AgriFAASUserProfile;
+        const createdDocSnap = await getDoc(userDocRef);
+        return createdDocSnap.data() as AgriFAASUserProfile;
     } catch (error) {
         console.error("Self-healing profile creation failed:", error);
         return null;
@@ -131,16 +128,17 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             
             const isTrialActive = status === 'Trialing' && trialEnds && isAfter(new Date(trialEnds), new Date());
             
-            const isGrowerOrHigher = plan === 'grower' || plan === 'business' || plan === 'enterprise';
-            const isBusinessOrHigher = plan === 'business' || plan === 'enterprise';
             const hasPaidAccess = status === 'Active' || isTrialActive;
 
+            const canAccessGrowerFeatures = (plan === 'grower' || plan === 'business' || plan === 'enterprise') && hasPaidAccess;
+            const canAccessBusinessFeatures = (plan === 'business' || plan === 'enterprise') && hasPaidAccess;
+
             setAccess({
-                canAccessFarmOps: isGrowerOrHigher && hasPaidAccess,
-                canAccessAnimalOps: isGrowerOrHigher && hasPaidAccess,
-                canAccessOfficeOps: isBusinessOrHigher && hasPaidAccess,
-                canAccessHrOps: isBusinessOrHigher && hasPaidAccess,
-                canAccessAeoTools: isBusinessOrHigher && hasPaidAccess,
+                canAccessFarmOps: canAccessGrowerFeatures,
+                canAccessAnimalOps: canAccessGrowerFeatures,
+                canAccessOfficeOps: canAccessBusinessFeatures,
+                canAccessHrOps: canAccessBusinessFeatures,
+                canAccessAeoTools: canAccessBusinessFeatures,
             });
             setError(null);
             setIsLoading(false);
@@ -148,16 +146,14 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             const healedProfile = await createMissingProfile(currentUser);
             if(healedProfile) {
                 setUserProfile(healedProfile);
-                setIsAdmin(healedProfile.role?.includes('Admin') || false);
-                // Access rights will be recalculated on the next effect run with the new profile.
-                setError(null);
+                 // No need to set anything else, the onSnapshot will re-trigger with the new data
             } else {
                 setUserProfile(null);
                 setIsAdmin(false);
                 setAccess(defaultAccess);
                 setError(`Your account exists, but we couldn't find or create your user profile. This could be a permission issue with your database rules. Please contact support.`);
+                setIsLoading(false);
             }
-            setIsLoading(false);
           }
         }, (firestoreError: any) => { 
           console.error("Error fetching user profile from Firestore:", firestoreError);

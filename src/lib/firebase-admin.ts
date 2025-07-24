@@ -1,4 +1,3 @@
-
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
@@ -6,25 +5,24 @@ import * as admin from 'firebase-admin';
 // It initializes the Firebase Admin SDK once and exports the services for use
 // in other server-side logic, such as Server Actions.
 
-let app: admin.App | undefined = undefined;
-let db: admin.firestore.Firestore | undefined = undefined;
-let auth: admin.auth.Auth | undefined = undefined;
+let app: admin.App | undefined;
+let db: admin.firestore.Firestore | undefined;
+let auth: admin.auth.Auth | undefined;
 
-function initializeAdminApp(): boolean {
+function initializeAdminApp() {
   if (admin.apps.length > 0) {
-    app = admin.app();
-    db = admin.firestore(app);
-    auth = admin.auth(app);
-    return true;
+    if (!app) { // Ensure app instance is assigned if already initialized
+        app = admin.apps[0];
+        db = admin.firestore(app);
+        auth = admin.auth(app);
+    }
+    return;
   }
 
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!serviceAccountJson) {
-    console.error(
-      "[Firebase Admin] CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
-      "The Admin SDK cannot be initialized. Please refer to the README.md for setup instructions."
-    );
-    return false; // Fail gracefully
+    // This will be caught by getAdminDb/getAdminAuth and returned as a user-friendly error
+    return;
   }
 
   try {
@@ -36,18 +34,31 @@ function initializeAdminApp(): boolean {
     console.log('[Firebase Admin] ✅ SDK initialized successfully.');
     db = admin.firestore(app);
     auth = admin.auth(app);
-    return true;
   } catch (error: any) {
     console.error(
       "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed. This is likely due to a malformed service account JSON.",
       error.message
     );
-    return false; // Fail gracefully
+    // Let app remain undefined
   }
 }
 
-// Ensure initialization is attempted only once
-const isInitialized = initializeAdminApp();
+// Call initialization on module load
+initializeAdminApp();
 
-export const adminDb = isInitialized ? db : undefined;
-export const adminAuth = isInitialized ? auth : undefined;
+function getAdminDb() {
+    if (!db) {
+        throw new Error("[Firebase Admin] CRITICAL: Firestore is not available. The Admin SDK may have failed to initialize due to missing secrets (FIREBASE_SERVICE_ACCOUNT_JSON). Check server logs.");
+    }
+    return db;
+}
+
+function getAdminAuth() {
+    if (!auth) {
+        throw new Error("[Firebase Admin] CRITICAL: Auth is not available. The Admin SDK may have failed to initialize due to missing secrets (FIREBASE_SERVICE_ACCOUNT_JSON). Check server logs.");
+    }
+    return auth;
+}
+
+export const adminDb = getAdminDb();
+export const adminAuth = getAdminAuth();

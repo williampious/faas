@@ -52,14 +52,15 @@ export async function updateUserSubscription(userId: string, planId: PlanId, bil
 
         // Add 'Farmer' role if they are upgrading from a non-role state,
         // and are not an AEO. This ensures they can access basic farm features.
-        if (planId !== 'starter' && !newRoles.includes('Farmer') && !newRoles.includes('Agric Extension Officer')) {
+        const isAEO = newRoles.includes('Agric Extension Officer');
+        if (planId !== 'starter' && !isAEO && newRoles.length === 0) {
             newRoles.push('Farmer');
         }
 
         await userDocRef.update({
           subscription: newSubscription,
           role: newRoles,
-          updatedAt: new Date().toISOString(),
+          updatedAt: serverTimestamp(),
         });
 
         const successMessage = `Successfully updated subscription for user ${userId} to ${planId} (${billingCycle}).`;

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Suspense, useState, useRef, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -157,7 +157,7 @@ function CheckoutPageContent() {
         fullName: userProfile.fullName,
       };
 
-      const result = await initializePaystackTransaction(userInfo, amountInKobo, planId, cycle);
+      const result = await initializePaystackTransaction(userInfo, amountInKobo, planId, cycle, promoCode);
       if (result.success && result.data?.authorization_url) {
           router.push(result.data.authorization_url);
       } else {
@@ -244,7 +244,8 @@ function CheckoutPageContent() {
                 <div className="flex gap-2">
                     <Input id="promo-code" placeholder="Enter code" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} disabled={isApplyingCode}/>
                     <Button onClick={handleApplyPromoCode} disabled={isApplyingCode}>
-                        {isApplyingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Apply
+                        {isApplyingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Apply
                     </Button>
                 </div>
                 {promoMessage && (
@@ -352,10 +353,14 @@ export default function CheckoutPage() {
   const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
   return (
-    <Suspense fallback={<div>Loading checkout...</div>}>
-      <PayPalScriptProvider options={{ clientId: PAYPAL_CLIENT_ID || "sb", components: "buttons", currency: 'USD' }}>
+    <Suspense fallback={<div className="flex justify-center items-center h-screen"><Loader2 className="h-12 w-12 animate-spin text-primary"/></div>}>
+      {PAYPAL_CLIENT_ID ? (
+        <PayPalScriptProvider options={{ clientId: PAYPAL_CLIENT_ID, components: "buttons", currency: 'USD' }}>
+          <CheckoutPageContent />
+        </PayPalScriptProvider>
+      ) : (
         <CheckoutPageContent />
-      </PayPalScriptProvider>
+      )}
     </Suspense>
   )
 }
