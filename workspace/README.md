@@ -25,7 +25,7 @@ You will need to create several secrets in Google Cloud Secret Manager for the a
     *   **Secret Value:** Open the JSON file you downloaded in Step 1, select and copy the **ENTIRE content**, and paste it here.
 
 *   **`NEXT_PUBLIC_BASE_URL` (Required for Payments)**
-    *   **Secret Value:** Enter the full public URL of your deployed application (e.g., `https://your-app-name.web.app`). This is essential for payment gateway redirects to work correctly.
+    *   **Secret Value:** Enter the full public URL of your deployed application (e.g., `https://your-app-name.web.app`).
 
 *   **`PAYSTACK_SECRET_KEY` (Required for Paystack payments)**
     *   **Secret Value:** Your Paystack Secret Key from the developer dashboard.
@@ -228,7 +228,7 @@ service cloud.firestore {
     match /financialYears/{yearId} {
       // Only users with office roles can manage financial years
       allow create: if isOfficeManager(request.resource.data.farmId);
-      allow read, update, delete: if isOfficeManager(resource.data.farmId);
+      allow read, update, delete: if isOfficeManager(request.resource.data.farmId);
     }
 
     match /tasks/{taskId} {

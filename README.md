@@ -228,7 +228,7 @@ service cloud.firestore {
     match /financialYears/{yearId} {
       // Only users with office roles can manage financial years
       allow create: if isOfficeManager(request.resource.data.farmId);
-      allow read, update, delete: if isOfficeManager(resource.data.farmId);
+      allow read, update, delete: if isOfficeManager(request.resource.data.farmId);
     }
 
     match /tasks/{taskId} {

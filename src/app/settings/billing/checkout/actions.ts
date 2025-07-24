@@ -54,7 +54,6 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
       return { success: false, message: 'This promotional code has expired.' };
     }
 
-    // CRITICAL FIX: Check if usage limit has been reached
     if (promoData.timesUsed >= promoData.usageLimit) {
       return { success: false, message: 'This promotional code has reached its usage limit.' };
     }
