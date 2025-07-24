@@ -2,7 +2,7 @@
 'use server';
 
 import { adminDb } from '@/lib/firebase-admin';
-import type { PromotionalCode } from '@/types/user';
+import type { PromotionalCode } from '@/types/promo-code';
 import { parseISO, isAfter } from 'date-fns';
 
 interface PromoCodeValidationResult {
@@ -20,6 +20,7 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
 
   const upperCaseCode = code.toUpperCase();
 
+  // Handle special, hardcoded codes
   if (upperCaseCode === 'FREEBIZYEAR') {
     return { success: true, message: 'Success! You have unlocked one free year of the Business Plan.', isFullDiscount: true };
   }
@@ -53,12 +54,23 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
       return { success: false, message: 'This promotional code has expired.' };
     }
 
+    // CRITICAL FIX: Check if usage limit has been reached
     if (promoData.timesUsed >= promoData.usageLimit) {
       return { success: false, message: 'This promotional code has reached its usage limit.' };
     }
 
     const discountAmount = promoData.type === 'fixed' ? promoData.discountAmount : 0;
-    return { success: true, message: `Success! A discount of GHS ${discountAmount.toFixed(2)} has been applied.`, discountAmount };
+    const discountPercentage = promoData.type === 'percentage' ? promoData.discountAmount : 0;
+    
+    let message = 'Promotional code applied successfully!';
+    if (discountAmount > 0) {
+      message = `Success! A discount of GHS ${discountAmount.toFixed(2)} has been applied.`;
+    } else if (discountPercentage > 0) {
+      message = `Success! A discount of ${discountPercentage}% has been applied.`;
+    }
+    
+    return { success: true, message, discountAmount, discountPercentage };
+
   } catch (error: any) {
     console.error("Error validating promo code:", error);
     return { success: false, message: 'An error occurred while validating the code.' };
@@ -85,7 +97,8 @@ export async function initializePaystackTransaction(
   userInfo: UserInfoForPayment,
   amountInKobo: number,
   planId: string,
-  billingCycle: string
+  billingCycle: string,
+  promoCode?: string,
 ): Promise<InitializePaymentResult> {
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
   const paystackUrl = 'https://api.paystack.co/transaction/initialize';
@@ -99,7 +112,7 @@ export async function initializePaystackTransaction(
   }
 
   if (!secretKey || secretKey.includes("YOUR_SECRET_KEY")) {
-    console.error("Paystack secret key is not configured in .env file.");
+    console.error("Paystack secret key is not configured.");
     return { success: false, message: "Payment gateway is not configured correctly. Please contact support." };
   }
 
@@ -107,7 +120,7 @@ export async function initializePaystackTransaction(
     return { success: false, message: "User email address is missing. Cannot initiate payment." };
   }
 
-  const payload = {
+  const payload: any = {
     email: userInfo.email,
     amount: amountInKobo,
     currency: "GHS",
@@ -116,9 +129,10 @@ export async function initializePaystackTransaction(
       full_name: userInfo.fullName,
       plan_id: planId,
       billing_cycle: billingCycle,
+      promo_code: promoCode || null,
       cancel_action: `${baseUrl}/settings/billing`,
     },
-    callback_url: `${baseUrl}/settings/billing/verify?planId=${planId}&billingCycle=${billingCycle}`,
+    callback_url: `${baseUrl}/settings/billing/verify`,
   };
 
   try {

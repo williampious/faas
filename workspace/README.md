@@ -27,13 +27,13 @@ You will need to create several secrets in Google Cloud Secret Manager for the a
 *   **`NEXT_PUBLIC_BASE_URL` (Required for Payments)**
     *   **Secret Value:** Enter the full public URL of your deployed application (e.g., `https://your-app-name.web.app`). This is essential for payment gateway redirects to work correctly.
 
-*   **`PAYSTACK_SECRET_KEY` (Optional, for Paystack payments)**
+*   **`PAYSTACK_SECRET_KEY` (Required for Paystack payments)**
     *   **Secret Value:** Your Paystack Secret Key from the developer dashboard.
 
-*   **`NEXT_PUBLIC_PAYPAL_CLIENT_ID` (Optional, for PayPal payments)**
+*   **`NEXT_PUBLIC_PAYPAL_CLIENT_ID` (Required for PayPal payments)**
     *   **Secret Value:** Your PayPal application's Client ID.
 
-*   **`PAYPAL_CLIENT_SECRET` (Optional, for PayPal payments)**
+*   **`PAYPAL_CLIENT_SECRET` (Required for PayPal payments)**
     *   **Secret Value:** Your PayPal application's Client Secret.
 
 *   **`EMAIL_HOST` (Optional, for sending invitation emails)**
@@ -358,6 +358,3 @@ AgriFAAS Connect is designed for a range of users within the agricultural ecosys
 *   **Individual Tech-Savvy Farmers:** Smaller, modern farms can benefit from the detailed record-keeping for crops, livestock, and finances, helping them make data-driven decisions.
 *   **Farm Investors & Financial Institutions:** The robust financial reporting and dashboard features provide the transparency and oversight needed for investment and lending decisions.
 *   **Agricultural Consultants:** Consultants can use the platform to manage multiple client farms, track recommendations, and monitor outcomes.
-
-
-    
