@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { adminDb } from '@/lib/firebase-admin';
@@ -17,6 +18,13 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
   if (!code) {
     return { success: false, message: 'Promotional code cannot be empty.' };
   }
+  
+  if (!adminDb) {
+    return { 
+        success: false, 
+        message: "Server configuration error. The admin database is not available. This is the most common setup issue and is likely due to missing server-side secrets. Please contact the administrator and refer them to the README file." 
+    };
+  }
 
   const upperCaseCode = code.toUpperCase();
 
@@ -27,10 +35,6 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
   
   if (upperCaseCode === 'BIZ97') {
     return { success: true, message: 'Success! You have unlocked a 97% discount on the annual Business Plan.', discountPercentage: 97 };
-  }
-
-  if (!adminDb) {
-    return { success: false, message: 'Database service is unavailable. Cannot validate code.' };
   }
 
   const promoCodeRef = adminDb.collection('promotionalCodes').where('code', '==', upperCaseCode);
