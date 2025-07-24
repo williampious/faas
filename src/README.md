@@ -19,18 +19,37 @@ Because you are using **Firebase App Hosting**, these secrets MUST be stored in 
 
 **Step 2: Add Secrets in Google Cloud Secret Manager**
 
-You will need to create a few secrets in Google Cloud Secret Manager for the application to function correctly. Go to the **[Google Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager)** for your project and create the following secrets:
+You will need to create several secrets in Google Cloud Secret Manager for the application to function correctly. Go to the **[Google Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager)** for your project and create the following secrets. The secret names must match exactly.
 
-*   **Firebase Service Account (Required)**
-    *   **Secret Name:** `FIREBASE_SERVICE_ACCOUNT_JSON` (This must match exactly).
+*   **`FIREBASE_SERVICE_ACCOUNT_JSON` (Required)**
     *   **Secret Value:** Open the JSON file you downloaded in Step 1, select and copy the **ENTIRE content**, and paste it here.
 
-*   **Application URL (Required for Payments)**
-    *   **Secret Name:** `NEXT_PUBLIC_BASE_URL` (This must match exactly).
+*   **`NEXT_PUBLIC_BASE_URL` (Required for Payments)**
     *   **Secret Value:** Enter the full public URL of your deployed application (e.g., `https://your-app-name.web.app`).
 
-*   **Payment Gateway Keys (Optional, for paid features)**
-    *   Create secrets for `PAYSTACK_SECRET_KEY`, `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, and `PAYPAL_CLIENT_SECRET` using the API keys from their respective developer dashboards.
+*   **`PAYSTACK_SECRET_KEY` (Optional, for Paystack payments)**
+    *   **Secret Value:** Your Paystack Secret Key from the developer dashboard.
+
+*   **`NEXT_PUBLIC_PAYPAL_CLIENT_ID` (Optional, for PayPal payments)**
+    *   **Secret Value:** Your PayPal application's Client ID.
+
+*   **`PAYPAL_CLIENT_SECRET` (Optional, for PayPal payments)**
+    *   **Secret Value:** Your PayPal application's Client Secret.
+
+*   **`EMAIL_HOST` (Optional, for sending invitation emails)**
+    *   **Secret Value:** Your SMTP server host (e.g., `smtp.gmail.com`).
+
+*   **`EMAIL_PORT` (Optional, for sending emails)**
+    *   **Secret Value:** Your SMTP port (e.g., `587` or `465`).
+
+*   **`EMAIL_USER` (Optional, for sending emails)**
+    *   **Secret Value:** Your SMTP username.
+
+*   **`EMAIL_PASS` (Optional, for sending emails)**
+    *   **Secret Value:** Your SMTP password or an app-specific password.
+
+*   **`EMAIL_SENDER` (Optional, for sending emails)**
+    *   **Secret Value:** The "From" address for emails, e.g., `"Your App Name" <noreply@yourdomain.com>`.
 
 **Step 3: Deploy Your App (VERY IMPORTANT)**
 1.  The `apphosting.yaml` file in this project is already configured to look for these secrets.
