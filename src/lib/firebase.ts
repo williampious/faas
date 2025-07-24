@@ -35,7 +35,7 @@ let storageInstance: ReturnType<typeof getStorage> | null = null;
 
 if (!isFirebaseClientConfigured) {
   const errorMessage = "CRITICAL: Firebase client configuration is missing or incomplete. This app cannot connect to Firebase services."
-  // Differentiate error message for developers.
+  // Differentiate error message for developers vs production.
   if (process.env.NODE_ENV === 'development') {
       console.error(
         errorMessage + "\n\n" +
@@ -48,10 +48,10 @@ if (!isFirebaseClientConfigured) {
   } else {
       console.error(
         errorMessage + "\n\n" +
-        "👉 FOR DEPLOYED ENVIRONMENTS (Firebase App Hosting, Vercel, etc.): 👈\n" +
-        "1. Ensure you have created secrets in your hosting provider's dashboard for ALL `NEXT_PUBLIC_FIREBASE_...` variables.\n" +
-        "2. Verify that the secrets are correctly linked to the environment variables in your deployment configuration (e.g., `apphosting.yaml`).\n" +
-        "3. Redeploy the application to apply the secret changes.\n\n" +
+        "👉 FOR DEPLOYED ENVIRONMENTS (Firebase App Hosting):\n" +
+        "1. Open the `src/.env` file in your project.\n" +
+        "2. Replace the placeholder values for `NEXT_PUBLIC_FIREBASE_...` with your actual keys from the Firebase console.\n" +
+        "3. Redeploy your application. These values are safely baked into your client-side code during the build process.\n\n" +
         "Potentially missing or invalid keys: " + (missingOrPlaceholderKeys.join(', ') || 'N/A')
       );
   }
@@ -81,3 +81,4 @@ export const app = appInstance;
 export const db = firestoreInstance;
 export const auth = authInstance;
 export const storage = storageInstance;
+

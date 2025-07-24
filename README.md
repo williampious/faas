@@ -5,176 +5,63 @@ This is a Next.js starter project for a collaborative, cloud-based farm manageme
 
 ## **Important Setup Instructions**
 
-To run this application successfully, you must configure several server-side secrets and Firebase settings.
+To run this application successfully, you must configure several server-side secrets and provide your client-side Firebase configuration.
 
-### 1. Required Secrets in Google Cloud Secret Manager
+### **Part 1: Client-Side Firebase Configuration (Required for App to Load)**
 
-Because you are using Firebase App Hosting, all secrets and environment variables **must** be stored in Google Cloud Secret Manager. Your application will not run correctly without them.
+Your application needs to know how to connect to your Firebase project in the browser.
 
-Go to the **[Google Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager)** for your project and create secrets with the following names. The secret names must match exactly.
+**Action Required:**
 
-#### **Firebase Admin SDK Configuration (Required)**
-*   **`FIREBASE_SERVICE_ACCOUNT_JSON`**: This is the most critical secret. It allows your server to perform administrative actions.
-    *   **To get the value:** Go to your **[Firebase Console](https://console.firebase.google.com/) -> Project settings -> Service accounts**. Click **Generate new private key**. Copy the **ENTIRE content** of the downloaded JSON file and paste it as the secret's value.
-*   **`FIREBASE_STORAGE_BUCKET`**: The name of your Firebase Storage bucket.
-    *   **To get the value:** Go to your **[Firebase Console](https://console.firebase.google.com/) -> Storage**. Your bucket name is at the top (e.g., `your-project-id.appspot.com`).
-
-#### **Firebase Client SDK Configuration (Required)**
-These secrets are needed for the client-side application (your browser) to connect to Firebase services.
-*   `NEXT_PUBLIC_FIREBASE_API_KEY`
-*   `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-*   `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-*   `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-*   `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-*   `NEXT_PUBLIC_FIREBASE_APP_ID`
+1.  Open the file `src/.env`.
+2.  Replace the placeholder values (`YOUR_API_KEY`, `YOUR_PROJECT_ID`, etc.) with the actual values from your Firebase project.
     *   **To get these values:** Go to your **[Firebase Console](https://console.firebase.google.com/) -> Project settings**. In the "Your apps" card, select your web app. You will find all these values listed in the "Firebase SDK snippet" section under "Config".
-
-#### **Application & Payment Gateway Configuration (Required)**
-*   **`NEXT_PUBLIC_BASE_URL`**: The full public URL of your deployed application (e.g., `https://your-app-name.web.app`). This is crucial for payment callbacks.
-*   **`PAYSTACK_SECRET_KEY`**: Your Paystack Secret Key from your developer dashboard.
-*   **`NEXT_PUBLIC_PAYPAL_CLIENT_ID`**: Your PayPal application's Client ID.
-*   **`PAYPAL_CLIENT_SECRET`**: Your PayPal application's Client Secret.
-
-#### **Email Sending Configuration (Optional)**
-These are needed to send invitation emails to new users.
-*   `EMAIL_HOST`: Your SMTP server host (e.g., `smtp.gmail.com`).
-*   `EMAIL_PORT`: Your SMTP port (e.g., `587` or `465`).
-*   `EMAIL_USER`: Your SMTP username.
-*   `EMAIL_PASS`: Your SMTP password or an app-specific password.
-*   `EMAIL_SENDER`: The "From" address for emails, e.g., `"AgriFAAS Connect" <noreply@yourdomain.com>`.
 
 ---
 
-### 2. Firestore Security Rules
+### **Part 2: Server-Side Secrets (Required for Backend Features)**
 
-If you encounter permission errors, especially during **Farm Setup**, **User Management**, or when an **AEO manages farmers**, you MUST update your Firestore Security Rules. The default rules are too restrictive.
+Backend features like user invitations, payment processing, and subscription management require secret keys. For security, these **must** be stored in **Google Cloud Secret Manager**.
 
-Copy and paste the entire ruleset below into your **Firebase Console -> Firestore Database -> Rules**.
+**Action Required:**
 
-```firestore
-rules_version = '2';
+1.  Go to the **[Google Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager)** for your project.
+2.  Create secrets with the following names. The names must match exactly.
 
-service cloud.firestore {
-  match /databases/{database}/documents {
+#### **Core & Payment Secrets (Critical)**
 
-    // Helper Functions
-    function isUserAdmin() {
-      return request.auth != null &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin']);
-    }
-    
-    function isUserAEO() {
-      return request.auth != null &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Agric Extension Officer']);
-    }
+*   **`FIREBASE_SERVICE_ACCOUNT_JSON`**: Allows your server to perform administrative actions.
+    *   **To get the value:** Go to your **[Firebase Console](https://console.firebase.google.com/) -> Project settings -> Service accounts**. Click **Generate new private key**. Copy the **ENTIRE content** of the downloaded JSON file and paste it as the secret's value.
+*   **`FIREBASE_STORAGE_BUCKET`**: The name of your Firebase Storage bucket (e.g., `your-project-id.appspot.com`).
+*   **`PAYSTACK_SECRET_KEY`**: Your Paystack Secret Key from your developer dashboard.
+*   **`PAYPAL_CLIENT_SECRET`**: Your PayPal application's Client Secret.
 
-    function isFarmMember(farmId) {
-      return request.auth != null &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.farmId == farmId;
-    }
+#### **Email Sending Secrets (Optional)**
 
-    function isFarmManager(farmId) {
-      return isFarmMember(farmId) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Manager', 'HRManager']);
-    }
+These are only needed if you want to send invitation emails to new users.
+*   `EMAIL_HOST`
+*   `EMAIL_PORT`
+*   `EMAIL_USER`
+*   `EMAIL_PASS`
+*   `EMAIL_SENDER`
 
-    function isOfficeManager(farmId) {
-      return isFarmMember(farmId) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'OfficeManager', 'FinanceManager']);
-    }
+---
 
-    // User Profile Rules
-    match /users/{userId} {
-      allow create: if request.auth != null && (request.auth.uid == userId || isUserAdmin());
-      allow read: if request.auth != null && (
-                    request.auth.uid == userId ||
-                    isUserAdmin() ||
-                    (isUserAEO() && resource.data.managedByAEO == request.auth.uid)
-                  );
-      allow update: if request.auth != null && (
-                      request.auth.uid == userId ||
-                      isUserAdmin() ||
-                      (isUserAEO() && resource.data.managedByAEO == request.auth.uid)
-                    );
-      allow delete: if isUserAdmin();
-    }
+### **Part 3: Firebase Console Configuration**
 
-    // Farm Rules
-    match /farms/{farmId} {
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow read: if isFarmMember(farmId);
-      allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || isUserAdmin());
-    }
-    
-    // Admin-only Collections
-    match /promotionalCodes/{codeId} {
-        allow read, write, create, delete: if isUserAdmin();
-    }
-    match /promotionalCodes/{codeId}/recordedUsages/{usageId} {
-        allow read, write, create, delete: if isUserAdmin();
-    }
+You must update the security rules in your Firebase project to allow the app to function.
 
+#### **Firestore Security Rules**
 
-    // Rules for Multi-Tenant Data Collections
-    match /plots/{plotId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /landPreparationActivities/{activityId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /plantingRecords/{recordId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /plantingAdviceRecords/{recordId} { allow create, read: if isFarmMember(request.resource.data.farmId); }
-    match /cropMaintenanceActivities/{activityId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /harvestingRecords/{recordId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /animalHousingRecords/{recordId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /animalHealthRecords/{recordId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /breedingRecords/{recordId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /feedingRecords/{recordId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /soilTestRecords/{recordId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /resources/{resourceId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /tasks/{taskId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /farmEvents/{eventId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    
-    // HR & Office Management
-    match /payrollRecords/{recordId} { allow create, read, update, delete: if isFarmManager(request.resource.data.farmId); }
-    match /budgets/{budgetId} { allow create, read, update, delete: if isFarmManager(request.resource.data.farmId); }
-    match /farmingYears/{yearId} { allow create, read, update, delete: if isFarmMember(request.resource.data.farmId); }
-    match /financialYears/{yearId} { allow create, read, update, delete: if isOfficeManager(request.resource.data.farmId); }
-    match /technologyAssets/{assetId} { allow create, read, update, delete: if isOfficeManager(resource.data.farmId); }
-    match /facilityManagementRecords/{recordId} { allow create, read, update, delete: if isOfficeManager(resource.data.farmId); }
-    match /recordsManagementRecords/{recordId} { allow create, read, update, delete: if isOfficeManager(resource.data.farmId); }
-    match /safetySecurityRecords/{recordId} { allow create, read, update, delete: if isOfficeManager(resource.data.farmId); }
-    match /officeEvents/{eventId} { allow create, read, update, delete: if isOfficeManager(resource.data.farmId); }
-    
-    // AEO Tools
-    match /knowledgeArticles/{articleId} { allow create, read, update, delete: if isUserAEO() && request.auth.uid == resource.data.authorId; }
-    match /supportLogs/{logId} { allow create, read, update, delete: if isUserAEO() && request.auth.uid == resource.data.aeoId; }
+If you encounter permission errors, especially during **Farm Setup** or **User Management**, copy the rules from `workspace/README.md` and paste them into your **Firebase Console -> Firestore Database -> Rules**.
 
-    // Financial Transactions
-    match /transactions/{transactionId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read: if isFarmMember(resource.data.farmId);
-      allow update, delete: if false; // Prevent modification of financial records
-    }
+#### **Firebase Storage Security Rules**
 
-    // Default deny for all other paths to ensure security.
-    match /{document=**} { allow read, write: if false; }
-  }
-}
-```
-
-### 3. Firebase Storage Security Rules
-
-If you see a `storage/unauthorized` error in the browser console when trying to **upload a profile photo**, you must update your Firebase Storage Security Rules.
-
-Copy and paste the entire ruleset below into your **Firebase Console -> Storage -> Rules**.
-
+If you see a `storage/unauthorized` error when uploading a profile photo, copy these rules into your **Firebase Console -> Storage -> Rules**:
 ```
 rules_version = '2';
-
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow users to read and write to their own profile photo directory.
-    // The path must match the structure 'profile-photos/{userId}/{fileName}'.
     match /profile-photos/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
@@ -182,17 +69,12 @@ service firebase.storage {
 }
 ```
 
-### 4. Firestore Indexes (Important)
+#### **Firestore Indexes**
 
-As the app's features grow, Firestore will require specific indexes for complex queries (like sorting or filtering by multiple fields) to work efficiently. If you see long loading times or errors in the browser console about missing indexes, you must create them.
+If the application is slow or shows errors about missing indexes in the browser console, follow the link provided in the error message to automatically create the required index in the Firebase Console.
 
-**Method 1: Automatic (Recommended)**
+---
 
-The best way to create indexes is to **let Firebase tell you which ones you need**.
+### **Part 4: Deploy Your App (Very Important)**
 
-1.  **Run the App:** Use the application and navigate to pages that load lists of data (e.g., Financial Dashboard, Transaction Ledger, AEO Farmer Directory, Promo Codes page).
-2.  **Check for Errors:** If a query requires an index that doesn't exist, **an error will appear in your browser's developer console**.
-3.  **Click the Link:** This error message will contain a direct link to the Firebase Console. Click this link.
-4.  **Create the Index:** The link will pre-fill all the necessary information to create the index. Simply review the details and click the "Create Index" button.
-
-The index will take a few minutes to build. Once it's done, the feature that caused the error will work correctly.
+After you have set up your `.env` file and created all the necessary secrets in Secret Manager, you **MUST redeploy your application** to Firebase App Hosting. The new settings will only take effect on a new deployment.

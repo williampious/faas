@@ -61,9 +61,10 @@ export default function SetupPage() {
     if (!isProfileLoading) {
       if (!user) {
         router.replace('/auth/signin');
+        return;
       }
-      // Redirect if setup is already complete
-      if (user && userProfile && (userProfile.farmId || userProfile.role?.includes('Agric Extension Officer'))) {
+      
+      if (userProfile && (userProfile.farmId || userProfile.role?.includes('Agric Extension Officer'))) {
         const dashboardPath = userProfile.role?.includes('Agric Extension Officer') ? '/aeo/dashboard' : '/dashboard';
         router.replace(dashboardPath);
       }
@@ -71,7 +72,7 @@ export default function SetupPage() {
   }, [user, userProfile, isProfileLoading, router]);
 
   const handleFarmerSubmit: SubmitHandler<FarmSetupFormValues> = async (data) => {
-    if (!user || !userProfile) { // Ensure userProfile is loaded
+    if (!user || !userProfile) { 
         toast({ title: "Error", description: "User profile not available. Please try again.", variant: "destructive"});
         return;
     }
@@ -82,15 +83,13 @@ export default function SetupPage() {
 
     const newFarm: Omit<Farm, 'id' | 'createdAt'|'updatedAt'> = {
       name: data.name, country: data.country, region: data.region,
-      description: data.description || '', ownerId: user.uid,
+      description: data.description || '', ownerId: user.uid, currency: 'GHS'
     };
 
     try {
       const batch = writeBatch(db);
       batch.set(farmRef, { ...newFarm, id: farmRef.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       
-      // Update the existing user profile, do not overwrite it.
-      // Add Admin role and farmId. Keep existing subscription info.
       batch.update(userRef, { 
           farmId: farmRef.id, 
           role: ['Admin'] as UserRole[],
@@ -133,7 +132,7 @@ export default function SetupPage() {
       }
   };
 
-  if (isProfileLoading || !userProfile) { // Wait for userProfile to be loaded
+  if (isProfileLoading || !userProfile) { 
     return (
         <div className="flex flex-col items-center justify-center p-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -142,8 +141,7 @@ export default function SetupPage() {
     );
   }
 
-  if (userProfile && (userProfile.farmId || userProfile.role?.includes('Agric Extension Officer'))) {
-    // This case should be handled by useEffect redirect, but as a fallback:
+  if (userProfile.farmId || userProfile.role?.includes('Agric Extension Officer')) {
     return (
       <div className="flex flex-col items-center justify-center p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
