@@ -6,30 +6,22 @@ import * as admin from 'firebase-admin';
 // It initializes the Firebase Admin SDK once and exports the services for use
 // in other server-side logic, such as Server Actions.
 
-let app: admin.App;
+let app: admin.App | undefined = undefined;
+let db: admin.firestore.Firestore | undefined = undefined;
+let auth: admin.auth.Auth | undefined = undefined;
 
-if (!admin.apps.length) {
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!serviceAccountJson) {
-    console.error(`
-      ===============================================================
-      [Firebase Admin] ❌ CRITICAL: The 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING.
-      
-      This is the most common and critical configuration error. The Admin SDK cannot
-      initialize without it, and server-side features like user invitations and
-      subscription activations will fail.
-
-      ACTION REQUIRED:
-      1. Go to your Firebase Project Settings -> Service accounts -> Generate new private key.
-      2. A JSON file will be downloaded. Open it and copy the ENTIRE content.
-      3. Go to your hosting provider's secret manager (e.g., Google Cloud Secret Manager).
-      4. Create a new secret with the EXACT name 'FIREBASE_SERVICE_ACCOUNT_JSON'.
-      5. Paste the entire content of the JSON file as the secret's value.
-      6. IMPORTANT: You MUST redeploy your application for the new secret to be loaded.
-      7. Refer to the README.md file for a detailed, step-by-step guide.
-      ===============================================================
-    `);
+function initializeAdminApp() {
+  if (admin.apps.length > 0) {
+    app = admin.app();
+    console.log('[Firebase Admin] Using existing SDK instance.');
   } else {
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (!serviceAccountJson) {
+      throw new Error(
+        "[Firebase Admin] CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
+        "The Admin SDK cannot be initialized. Please refer to the README.md for setup instructions."
+      );
+    }
     try {
       const serviceAccount = JSON.parse(serviceAccountJson);
       app = admin.initializeApp({
@@ -39,19 +31,34 @@ if (!admin.apps.length) {
       console.log('[Firebase Admin] ✅ SDK initialized successfully.');
     } catch (error: any) {
       console.error(
-        "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed despite the secret being present. Error: ", 
+        "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed. This is likely due to a malformed service account JSON.",
         error.message
       );
+      throw new Error("Firebase Admin SDK could not be initialized.");
     }
   }
-} else {
-  app = admin.apps[0]!;
-  console.log('[Firebase Admin] SDK already initialized.');
+
+  db = admin.firestore(app);
+  auth = admin.auth(app);
 }
 
-// @ts-ignore - app might not be assigned if initialization fails, which is handled.
-const adminDb = app ? admin.firestore() : undefined;
-// @ts-ignore
-const adminAuth = app ? admin.auth() : undefined;
+// Lazy initialization: the app is only initialized when a service is first requested.
+// This is a robust pattern for serverless environments.
+function getAdminDb() {
+  if (!db) {
+    initializeAdminApp();
+  }
+  // The '!' asserts that after initializeAdminApp, db will be defined.
+  // The function throws an error if it fails, so this is a safe assumption.
+  return db!;
+}
 
-export { adminDb, adminAuth };
+function getAdminAuth() {
+  if (!auth) {
+    initializeAdminApp();
+  }
+  return auth!;
+}
+
+export const adminDb = getAdminDb();
+export const adminAuth = getAdminAuth();
