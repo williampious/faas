@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { useState } from 'react';
 import { Loader2, UserPlus } from 'lucide-react';
 import { auth, isFirebaseClientConfigured } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { createProfileDocument } from './actions';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
@@ -29,7 +29,6 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -46,15 +45,13 @@ export default function RegisterPage() {
       return;
     }
 
-    const planId = searchParams.get('plan') as 'starter' | 'grower' | 'business' | 'enterprise' || 'starter';
-    const cycle = searchParams.get('cycle') as 'monthly' | 'annually' || 'annually';
-
     try {
       // Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       
       // If auth creation is successful, create their Firestore profile via the server action
-      const profileResult = await createProfileDocument(userCredential.user, data, planId, cycle);
+      // The action now handles the universal trial logic internally.
+      const profileResult = await createProfileDocument(userCredential.user, data);
 
       if (!profileResult.success) {
         // This is a critical failure. The user has an auth account but no profile.
@@ -106,7 +103,7 @@ export default function RegisterPage() {
       <CardHeader className="space-y-1 text-center p-8">
         <CardTitle className="text-3xl font-bold tracking-tight text-primary font-headline">Create an Account</CardTitle>
         <CardDescription className="text-muted-foreground">
-          Create your secure, private AgriFAAS Connect account. Immediately after registering, you will enter a private setup process.
+          Join today and get a free 20-day trial of our Business Plan. No credit card required.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-8 grid gap-6">
@@ -134,7 +131,7 @@ export default function RegisterPage() {
           </div>
           <Button type="submit" className="w-full text-lg py-6 mt-2" disabled={isLoading}>
             {isLoading ? (<Loader2 className="mr-2 h-5 w-5 animate-spin" />) : (<UserPlus className="mr-2 h-5 w-5" />)}
-            {isLoading ? 'Creating Account...' : 'Register'}
+            {isLoading ? 'Creating Account...' : 'Register for Free Trial'}
           </Button>
         </form>
       </CardContent>

@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, CreditCard, Check, Star, Gem, Rocket, Mail, Loader2, Tag } from 'lucide-react';
+import { ArrowLeft, CreditCard, Check, Star, Gem, Rocket, Mail, Loader2, Tag, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,8 @@ import type { SubscriptionDetails } from '@/types/user';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { validatePromoCode } from './checkout/actions';
+import { format, parseISO, differenceInDays } from 'date-fns';
+import Link from 'next/link';
 
 
 interface TierFeature {
@@ -144,8 +146,6 @@ function PromoCodeCard() {
         const result = await validatePromoCode(promoCode);
         if (result.success) {
             toast({ title: 'Success!', description: result.message });
-            // In a real app, you would update the user's subscription record in Firestore here
-            // e.g., db.collection('users').doc(userId).update({ 'subscription.promo': { code: promoCode, discount: result.discountAmount }})
         } else {
             toast({ title: 'Invalid Code', description: result.message, variant: 'destructive' });
         }
@@ -173,6 +173,34 @@ function PromoCodeCard() {
                         Apply
                     </Button>
                 </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function TrialStatusCard({ trialEnds }: { trialEnds: string | null }) {
+    if (!trialEnds) return null;
+
+    const endDate = parseISO(trialEnds);
+    const today = new Date();
+    const daysLeft = differenceInDays(endDate, today);
+
+    if (daysLeft < 0) return null; // Trial has ended
+
+    return (
+        <Card className="shadow-lg bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700">
+            <CardHeader>
+                <CardTitle className="flex items-center text-yellow-800 dark:text-yellow-200">
+                    <Sparkles className="mr-2 h-5 w-5" /> Trial Period Active
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-lg font-bold text-yellow-900 dark:text-yellow-100">
+                    {daysLeft} {daysLeft === 1 ? 'day' : 'days'} left
+                </p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                    Your free trial of the Business plan ends on {format(endDate, 'PP')}.
+                </p>
             </CardContent>
         </Card>
     );
@@ -268,6 +296,7 @@ export default function BillingPage() {
                 </div>
                 </CardContent>
             </Card>
+            {currentPlan.status === 'Trialing' && <TrialStatusCard trialEnds={currentPlan.trialEnds} />}
             <PromoCodeCard />
         </div>
 

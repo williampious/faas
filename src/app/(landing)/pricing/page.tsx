@@ -39,7 +39,7 @@ interface PricingTier {
   buttonVariant?: 'default' | 'secondary' | 'outline';
   highlight?: boolean;
   badge?: string;
-  href: (planId: string, cycle: BillingCycle) => string;
+  href: string;
 }
 
 const pricingTiers: PricingTier[] = [
@@ -77,7 +77,7 @@ const pricingTiers: PricingTier[] = [
     ],
     buttonText: 'Get Started for Free',
     buttonVariant: 'outline',
-    href: (plan, cycle) => `/auth/register?plan=${plan}&cycle=${cycle}`,
+    href: '/auth/register',
   },
   {
     id: 'grower',
@@ -107,9 +107,9 @@ const pricingTiers: PricingTier[] = [
             ]
         }
     ],
-    buttonText: 'Start 14-Day Free Trial',
+    buttonText: 'Start Free Trial',
     buttonVariant: 'secondary',
-    href: (plan, cycle) => `/auth/register?plan=${plan}&cycle=${cycle}`,
+    href: '/auth/register',
   },
   {
     id: 'business',
@@ -131,10 +131,10 @@ const pricingTiers: PricingTier[] = [
             ],
         }
     ],
-    buttonText: 'Start 14-Day Free Trial',
+    buttonText: 'Start Free Trial',
     buttonVariant: 'default',
     highlight: true,
-    href: (plan, cycle) => `/auth/register?plan=${plan}&cycle=${cycle}`,
+    href: '/auth/register',
   },
   {
     id: 'enterprise',
@@ -157,14 +157,14 @@ const pricingTiers: PricingTier[] = [
     ],
     buttonText: 'Contact Sales',
     buttonVariant: 'outline',
-    href: () => '/#contact-us', 
+    href: '/#contact-us', 
   },
 ];
 
 const faqItems = [
     {
-        question: "Is there a free trial for paid plans?",
-        answer: "Yes! All new users who sign up for a paid plan (Grower or Business) automatically receive a 14-day free trial with full access to all features of that plan—no credit card required upfront."
+        question: "Is there a free trial?",
+        answer: "Yes! All new users automatically receive a 20-day free trial of our comprehensive Business Plan. No credit card is required to start your trial. After 20 days, you can choose a paid plan or be moved to our free Starter plan."
     },
     {
         question: "Can I change my plan later?",
@@ -191,6 +191,14 @@ export default function PricingPage() {
         description="Choose the perfect plan to grow your farm and business. Simple, transparent pricing."
         icon={DollarSign}
       />
+      
+      <div className="text-center mb-8 max-w-2xl mx-auto">
+        <div className="inline-block bg-primary/10 text-primary font-semibold rounded-full px-4 py-2">
+           <Sparkles className="inline-block h-5 w-5 mr-2" />
+           All new accounts start with a 20-day free trial of the Business Plan!
+        </div>
+      </div>
+
 
       <div className="flex justify-center items-center space-x-4 mb-10">
         <Label htmlFor="billing-cycle" className={cn("font-medium", billingCycle === 'monthly' && 'text-primary')}>Monthly</Label>
@@ -254,7 +262,7 @@ export default function PricingPage() {
               ))}
             </CardContent>
             <CardFooter className="mt-auto p-6">
-              <Link href={tier.href(tier.id, billingCycle)} className="w-full">
+              <Link href={tier.href} className="w-full">
                 <Button size="lg" variant={tier.buttonVariant} className="w-full">
                   {tier.buttonText.includes('Trial') && <Sparkles className="mr-2 h-4 w-4" />}
                   {tier.buttonText}

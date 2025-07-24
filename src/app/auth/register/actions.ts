@@ -22,23 +22,19 @@ const usersCollectionName = 'users';
 /**
  * Creates a Firestore profile document for a newly registered user.
  * This is now a self-contained server action to ensure it can be called reliably.
+ * ALL new users get a 20-day trial of the Business plan.
  * @param user - The Firebase Auth User object.
  * @param data - The user's registration data (fullName, email).
- * @param planId - The subscription plan ID from URL params.
- * @param cycle - The billing cycle from URL params.
  * @returns A result object indicating success or failure.
  */
 export async function createProfileDocument(
   user: User, 
   data: RegistrationData,
-  planId: 'starter' | 'grower' | 'business' | 'enterprise',
-  cycle: 'monthly' | 'annually'
 ): Promise<CreateProfileResult> {
     if (!db) {
         return { success: false, message: "Database service is not available." };
     }
     
-    // Check if a document already exists to prevent overwriting
     const userDocRef = doc(db, usersCollectionName, user.uid);
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
@@ -46,14 +42,14 @@ export async function createProfileDocument(
         return { success: true, message: "Profile already exists." };
     }
 
-    const trialEndDate = add(new Date(), { days: 14 });
+    const trialEndDate = add(new Date(), { days: 20 });
 
     const initialSubscription: SubscriptionDetails = {
-        planId: planId,
-        status: planId === 'starter' ? 'Active' : 'Trialing',
-        billingCycle: cycle,
+        planId: 'business', // Universal Business plan trial
+        status: 'Trialing',
+        billingCycle: 'annually', // Default to annual
         nextBillingDate: null,
-        trialEnds: planId !== 'starter' ? trialEndDate.toISOString() : null,
+        trialEnds: trialEndDate.toISOString(),
     };
 
     const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
