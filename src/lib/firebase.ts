@@ -1,4 +1,3 @@
-
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
@@ -21,8 +20,7 @@ const missingOrPlaceholderKeys = Object.entries(firebaseConfigValuesFromEnv)
     return !value ||
            typeof value !== 'string' ||
            value.trim() === '' ||
-           commonPlaceholders.some(placeholder => value.includes(placeholder)) ||
-           (key === 'projectId' && value.includes("demo-")); // Firebase demo projects often have "demo-"
+           commonPlaceholders.some(placeholder => value.includes(placeholder));
   })
   .map(([key]) => key);
 
@@ -49,7 +47,7 @@ if (!isFirebaseClientConfigured) {
       console.error(
         errorMessage + "\n\n" +
         "👉 FOR DEPLOYED ENVIRONMENTS (Firebase App Hosting):\n" +
-        "1. Open the `src/.env` file in your project.\n" +
+        "1. Open the `.env` file in the project's ROOT directory.\n" +
         "2. Replace the placeholder values for `NEXT_PUBLIC_FIREBASE_...` with your actual keys from the Firebase console.\n" +
         "3. Redeploy your application. These values are safely baked into your client-side code during the build process.\n\n" +
         "Potentially missing or invalid keys: " + (missingOrPlaceholderKeys.join(', ') || 'N/A')
@@ -81,4 +79,3 @@ export const app = appInstance;
 export const db = firestoreInstance;
 export const auth = authInstance;
 export const storage = storageInstance;
-

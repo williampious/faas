@@ -3,61 +3,13 @@
 
 This is a Next.js starter project for a collaborative, cloud-based farm management platform, built in Firebase Studio.
 
-To get started, review the setup instructions below and then run the application.
+**For full setup instructions, please refer to the main `README.md` file in the project's root directory.**
 
-### 1. Setting Server Environment Variables for Firebase App Hosting (CRITICAL)
-
-Server-side features like **User Invitations**, **Subscription Activations**, or **Payment Gateways** require special administrative access to Firebase and other services. This is the **most common point of failure** in setting up the application.
-
-Because you are using **Firebase App Hosting**, these secrets MUST be stored in **Google Cloud Secret Manager**.
-
-**Step 1: Get Your Firebase Service Account JSON File**
-1.  Go to your **[Firebase Console](https://console.firebase.google.com/)**.
-2.  Click the gear icon next to "Project Overview" and select **Project settings**.
-3.  Go to the **Service accounts** tab.
-4.  Click **Generate new private key**. A JSON file will download. **Keep this file secure.**
-
-**Step 2: Add Secrets in Google Cloud Secret Manager**
-
-You will need to create several secrets in Google Cloud Secret Manager for the application to function correctly. Go to the **[Google Cloud Secret Manager](https://console.cloud.google.com/security/secret-manager)** for your project and create the following secrets. The secret names must match exactly.
-
-*   **`FIREBASE_SERVICE_ACCOUNT_JSON` (Required)**
-    *   **Secret Value:** Open the JSON file you downloaded in Step 1, select and copy the **ENTIRE content**, and paste it here.
-
-*   **`NEXT_PUBLIC_BASE_URL` (Required for Payments)**
-    *   **Secret Value:** Enter the full public URL of your deployed application (e.g., `https://your-app-name.web.app`).
-
-*   **`PAYSTACK_SECRET_KEY` (Optional, for Paystack payments)**
-    *   **Secret Value:** Your Paystack Secret Key from the developer dashboard.
-
-*   **`NEXT_PUBLIC_PAYPAL_CLIENT_ID` (Optional, for PayPal payments)**
-    *   **Secret Value:** Your PayPal application's Client ID.
-
-*   **`PAYPAL_CLIENT_SECRET` (Optional, for PayPal payments)**
-    *   **Secret Value:** Your PayPal application's Client Secret.
-
-*   **`EMAIL_HOST` (Optional, for sending invitation emails)**
-    *   **Secret Value:** Your SMTP server host (e.g., `smtp.gmail.com`).
-
-*   **`EMAIL_PORT` (Optional, for sending emails)**
-    *   **Secret Value:** Your SMTP port (e.g., `587` or `465`).
-
-*   **`EMAIL_USER` (Optional, for sending emails)**
-    *   **Secret Value:** Your SMTP username.
-
-*   **`EMAIL_PASS` (Optional, for sending emails)**
-    *   **Secret Value:** Your SMTP password or an app-specific password.
-
-*   **`EMAIL_SENDER` (Optional, for sending emails)**
-    *   **Secret Value:** The "From" address for emails, e.g., `"Your App Name" <noreply@yourdomain.com>`.
-
-**Step 3: Deploy Your App (VERY IMPORTANT)**
-1.  The `apphosting.yaml` file in this project is already configured to look for these secrets.
-2.  After you have created the secrets in Secret Manager, you **MUST redeploy your application** to Firebase App Hosting (e.g., via `firebase deploy` or by pushing a new commit). The new settings will only take effect on a new deployment.
+This file contains the necessary Firestore Security Rules for your project.
 
 ---
 
-### 2. Firestore Security Rules
+### Firestore Security Rules
 
 If you encounter permission errors, especially during **Farm Setup**, **User Management**, **Plot Management**, or when an **AEO manages farmers**, you MUST update your Firestore Security Rules. The default rules are too restrictive.
 
@@ -294,7 +246,7 @@ service cloud.firestore {
 }
 ```
 
-### 3. Firebase Storage Security Rules
+### Firebase Storage Security Rules
 
 If you see a `storage/unauthorized` error in the browser console when trying to **upload a profile photo**, you must update your Firebase Storage Security Rules.
 
@@ -314,7 +266,7 @@ service firebase.storage {
 }
 ```
 
-### 4. Firestore Indexes (Important)
+### Firestore Indexes (Important)
 
 As the app's features grow, Firestore will require specific indexes for complex queries (like sorting or filtering by multiple fields) to work efficiently. If you see long loading times or errors in the browser console about missing indexes, you must create them.
 
@@ -328,24 +280,3 @@ The best way to create indexes is to **let Firebase tell you which ones you need
 4.  **Create the Index:** The link will pre-fill all the necessary information to create the index. Simply review the details and click the "Create Index" button.
 
 The index will take a few minutes to build. Once it's done, the feature that caused the error will work correctly.
-
-**Method 2: Manual Creation**
-
-If you prefer to create indexes manually, here are the details for the ones required by the app:
-
-**User Invitation Link Validation**
-*   **Collection ID:** `users`
-*   **Fields to index:**
-    1.  `invitationToken` - **Ascending**
-    2.  `accountStatus` - **Ascending**
-*   **Query scope:** Collection
-
-**Promotional Code Validation**
-*   **Collection ID:** `promotionalCodes`
-*   **Fields to index:**
-    1.  `code` - **Ascending**
-*   **Query scope:** Collection
- 
-    
-
-    
