@@ -1,3 +1,4 @@
+
 // src/lib/firebase.ts
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
@@ -13,68 +14,70 @@ const firebaseConfigValuesFromEnv = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// More robust check for valid configuration values
-const missingOrPlaceholderKeys = Object.entries(firebaseConfigValuesFromEnv)
-  .filter(([key, value]) => {
-    const commonPlaceholders = ["YOUR_API_KEY", "YOUR_PROJECT_ID", "YOUR_AUTH_DOMAIN", "YOUR_APP_ID", "YOUR_STORAGE_BUCKET", "YOUR_MESSAGING_SENDER_ID"];
-    return !value ||
-           typeof value !== 'string' ||
-           value.trim() === '' ||
-           commonPlaceholders.some(placeholder => value.includes(placeholder));
-  })
-  .map(([key]) => key);
+// A more robust check for valid configuration values. This is the first line of defense.
+const getMissingKeys = () => {
+    return Object.entries(firebaseConfigValuesFromEnv)
+      .filter(([key, value]) => !value || typeof value !== 'string' || value.trim() === '' || value.includes('YOUR_'))
+      .map(([key]) => key);
+};
 
-export const isFirebaseClientConfigured = missingOrPlaceholderKeys.length === 0;
+const missingKeys = getMissingKeys();
+export const isFirebaseClientConfigured = missingKeys.length === 0;
 
 let appInstance: ReturnType<typeof initializeApp> | null = null;
 let firestoreInstance: ReturnType<typeof getFirestore> | null = null;
 let authInstance: ReturnType<typeof getAuth> | null = null;
 let storageInstance: ReturnType<typeof getStorage> | null = null;
 
-if (!isFirebaseClientConfigured) {
-  const errorMessage = "CRITICAL: Firebase client configuration is missing or incomplete. This app cannot connect to Firebase services."
-  // Differentiate error message for developers vs production.
-  if (process.env.NODE_ENV === 'development') {
-      console.error(
-        errorMessage + "\n\n" +
+// This function initializes the Firebase app and services, and it's designed to be called once.
+function initializeFirebase() {
+  if (!isFirebaseClientConfigured) {
+    const errorMessage = "CRITICAL: Firebase client configuration is missing or incomplete. This app cannot connect to Firebase services.";
+    const devMessage = 
         "👉 FOR LOCAL DEVELOPMENT: 👈\n" +
         "1. Ensure you have a `.env.local` file in the project root.\n" +
-        "2. Make sure ALL `NEXT_PUBLIC_FIREBASE_...` variables in that file are set with actual values from your Firebase project.\n" +
-        "3. Restart your Next.js development server after making changes.\n\n" +
-        "Potentially missing or invalid keys: " + (missingOrPlaceholderKeys.join(', ') || 'N/A')
-      );
-  } else {
-      console.error(
-        errorMessage + "\n\n" +
-        "👉 FOR DEPLOYED ENVIRONMENTS (Firebase App Hosting):\n" +
+        "2. Make sure ALL `NEXT_PUBLIC_FIREBASE_...` variables are set with your actual Firebase project values.\n" +
+        "3. Restart your Next.js development server.\n\n" +
+        `Potentially missing or invalid keys: ${missingKeys.join(', ')}`;
+    const prodMessage = 
+        "👉 FOR DEPLOYED ENVIRONMENTS (e.g., Firebase App Hosting): 👈\n" +
         "1. Open the `.env` file in the project's ROOT directory.\n" +
-        "2. Replace the placeholder values for `NEXT_PUBLIC_FIREBASE_...` with your actual keys from the Firebase console.\n" +
-        "3. Redeploy your application. These values are safely baked into your client-side code during the build process.\n\n" +
-        "Potentially missing or invalid keys: " + (missingOrPlaceholderKeys.join(', ') || 'N/A')
-      );
+        "2. Replace the placeholder values for `NEXT_PUBLIC_FIREBASE_...` with your actual keys.\n" +
+        "3. Redeploy your application.\n\n" +
+        `Potentially missing or invalid keys: ${missingKeys.join(', ')}`;
+
+    console.error(errorMessage + "\n\n" + (process.env.NODE_ENV === 'development' ? devMessage : prodMessage));
+    return; // Stop initialization
   }
-} else {
+
+  // Initialize Firebase App only if it hasn't been initialized yet.
   if (!getApps().length) {
     try {
       appInstance = initializeApp(firebaseConfigValuesFromEnv as FirebaseOptions);
+      console.log("Firebase App Initialized Successfully.");
     } catch (e: any) {
-      console.error("CRITICAL Firebase Error: Failed to initialize Firebase app (client-side). Check configuration values.", e);
+      console.error("CRITICAL Firebase Error: Failed to initialize Firebase app.", e);
+      return; // Stop if initialization fails
     }
   } else {
     appInstance = getApp();
   }
 
-  if (appInstance) {
-    try {
-      firestoreInstance = getFirestore(appInstance);
-      authInstance = getAuth(appInstance);
-      storageInstance = getStorage(appInstance);
-    } catch (e: any) {
-        console.error("CRITICAL Firebase Error: Failed to get Firestore/Auth/Storage instances.", e);
-    }
+  // Get services from the initialized app instance.
+  try {
+    firestoreInstance = getFirestore(appInstance);
+    authInstance = getAuth(appInstance);
+    storageInstance = getStorage(appInstance);
+  } catch (e: any) {
+    console.error("CRITICAL Firebase Error: Failed to get Firestore/Auth/Storage instances.", e);
   }
 }
 
+// Run the initialization function immediately when the module is first loaded.
+initializeFirebase();
+
+// Export the initialized instances.
+// If initialization failed, these will be null, and dependent code should handle it gracefully.
 export const app = appInstance;
 export const db = firestoreInstance;
 export const auth = authInstance;

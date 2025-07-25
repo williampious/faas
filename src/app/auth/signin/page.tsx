@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,8 @@ import { useState, type ReactNode } from 'react';
 import { Loader2, LogIn } from 'lucide-react';
 import { auth, isFirebaseClientConfigured } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
 
 const signInSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -40,13 +42,13 @@ export default function SignInPage() {
     setError(null);
 
     if (!isFirebaseClientConfigured) {
-      setError("Firebase client configuration is missing or incomplete. Please ensure all NEXT_PUBLIC_FIREBASE_... variables are correctly set in your .env.local file and that you have restarted your development server.");
+      setError("Firebase client configuration is missing or incomplete. Please ensure all NEXT_PUBLIC_FIREBASE_... variables are correctly set in your .env.local file or hosting environment.");
       setIsLoading(false);
       return;
     }
     
     if (!auth) {
-      setError("Firebase authentication service is not available. This could be due to a network issue or Firebase services not being fully enabled in your project console. Please check your setup and internet connection.");
+      setError("Firebase authentication service is not available. This could be due to a network issue or an incomplete setup. Please check your setup and internet connection.");
       setIsLoading(false);
       return;
     }
@@ -54,29 +56,35 @@ export default function SignInPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       console.log('User signed in:', userCredential.user);
-      // Redirection to /dashboard is now handled by the root layout after auth state update
-      // router.push('/dashboard'); 
+      // Let the root layout handle redirection
     } catch (firebaseError: any) {
       console.error('Firebase Sign In Error:', firebaseError);
-      let errorMessage: ReactNode = "An unknown error occurred during sign-in. Please try again.";
+      let errorMessage: ReactNode = `An unknown error occurred during sign-in. (Code: ${firebaseError.code || 'UNKNOWN'})`;
 
-      // Modern Firebase returns 'auth/invalid-credential' for both wrong password and user not found
-      // to prevent email enumeration attacks.
-      if (firebaseError.code === 'auth/invalid-credential') {
-        errorMessage = (
-          <span>
-            Invalid email or password. Please try again or{' '}
-            <Link href="/auth/forgot-password" className="font-bold underline">
-              reset your password
-            </Link>
-            .
-          </span>
-        );
-      } else if (firebaseError.code === 'auth/too-many-requests') {
-        errorMessage = 'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.';
-      } else if (firebaseError.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error: Could not connect to authentication servers. Please check your internet connection.';
+      switch (firebaseError.code) {
+        case 'auth/invalid-credential':
+          errorMessage = (
+            <span>
+              Invalid email or password. Please try again or{' '}
+              <Link href="/auth/forgot-password" className="font-bold underline">
+                reset your password
+              </Link>
+              .
+            </span>
+          );
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error: Could not connect to authentication servers. Please check your internet connection.';
+          break;
+        case 'auth/user-disabled':
+            errorMessage = 'This user account has been disabled by an administrator.';
+            break;
+        // default case will use the generic message defined above
       }
+      
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -93,9 +101,10 @@ export default function SignInPage() {
       </CardHeader>
       <CardContent className="p-8 grid gap-6">
         {error && (
-          <div className="bg-destructive/10 p-3 rounded-md text-center text-sm text-destructive">
-            {error}
-          </div>
+            <Alert variant="destructive">
+                <AlertTitle>Sign-In Failed</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
         )}
         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
           <div className="grid gap-2">
@@ -112,7 +121,12 @@ export default function SignInPage() {
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center">
+              <Label htmlFor="password">Password</Label>
+              <Link href="/auth/forgot-password" className="ml-auto inline-block text-sm underline">
+                  Forgot your password?
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"
@@ -134,10 +148,7 @@ export default function SignInPage() {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="p-8 pt-0 flex flex-col items-center gap-4">
-        <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
-            Forgot your password?
-        </Link>
+      <CardFooter className="p-8 pt-0 text-center">
         <p className="text-sm text-muted-foreground">
           Don&apos;t have an account?{' '}
           <Link href="/auth/register" className="font-semibold text-primary hover:underline">
