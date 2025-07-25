@@ -140,7 +140,10 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
-  const isPublicUnauthenticatedArea = ['/', '/faq', '/help', '/features', '/installation-guide', '/pricing', '/partners', '/terms-of-service', '/privacy-policy', '/roles-permissions'].includes(pathname);
+  const isPublicUnauthenticatedArea = [
+    '/', '/faq', '/help', '/features', '/installation-guide', 
+    '/pricing', '/partners', '/terms-of-service', '/privacy-policy', '/roles-permissions'
+  ].includes(pathname);
 
 
   useEffect(() => {
@@ -191,17 +194,13 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
           router.replace('/setup');
           return;
         }
-
+        
         if (isSetUp) {
             if (isAuthPage || isSetupPage) {
                 router.replace(userDashboardPath);
-                return;
-            }
-            if (isPublicUnauthenticatedArea) {
-                router.replace(userDashboardPath);
-                return;
             }
         }
+
       }
     } else { // User is NOT authenticated
       if (!isAuthPage && !isPublicUnauthenticatedArea) {
@@ -250,12 +249,24 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   const isAuthPage = pathname.startsWith('/auth/');
   const isSetupPage = pathname.startsWith('/setup');
   
+  // This logic determines whether to show the main app shell or the public/auth layouts.
+  // We show the app shell ONLY if the user is logged in AND they are fully set up.
   const isSetUp = userProfile?.farmId || userProfile?.role?.includes('Agric Extension Officer');
-  const showAppShell = user && isSetUp && !isAuthPage && !isSetupPage;
+  const showAppShell = user && isSetUp;
 
   if (showAppShell) {
-    return <AppShell>{children}</AppShell>;
+      if(isAuthPage || isSetupPage || isPublicUnauthenticatedArea) {
+          // This should be handled by the useEffect redirect, but as a fallback, show a loader.
+           return (
+              <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-background">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="mt-4 text-lg text-muted-foreground">Redirecting to your dashboard...</p>
+              </div>
+            );
+      }
+      return <AppShell>{children}</AppShell>;
   } else {
+    // If not showing the app shell, render the children directly (e.g., for landing pages, auth, setup)
     return <>{children}</>;
   }
 }

@@ -60,11 +60,21 @@ export async function createProfileDocument(
         role: [],
         accountStatus: 'Active',
         registrationDate: new Date().toISOString(),
-        phoneNumber: '',
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
         subscription: initialSubscription,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        
+        // Initialize all optional fields to ensure consistent document structure
+        phoneNumber: '',
+        gender: undefined,
+        dateOfBirth: undefined,
+        address: {},
+        farmDetails: {},
+        notificationPreferences: { email: true, push: true, sms: false, whatsApp: false },
+        alertsToggle: { dailySummary: true, weeklySummary: false, priceAlerts: true, pestAlerts: true },
+        receiveAgriculturalTips: true,
+        receiveWeatherUpdates: true,
     };
 
     try {
