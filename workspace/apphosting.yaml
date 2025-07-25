@@ -14,13 +14,13 @@ secretEnvironmentVariables:
   - secret: FIREBASE_SERVICE_ACCOUNT_JSON
     keyName: FIREBASE_SERVICE_ACCOUNT_JSON
   
+  # Server-side storage bucket name
+  - secret: FIREBASE_STORAGE_BUCKET
+    keyName: FIREBASE_STORAGE_BUCKET
+    
   # Application and Payment Gateway config (SERVER-SIDE)
-  - secret: NEXT_PUBLIC_BASE_URL # Used by server actions for payment callbacks
-    keyName: NEXT_PUBLIC_BASE_URL
   - secret: PAYSTACK_SECRET_KEY
     keyName: PAYSTACK_SECRET_KEY
-  - secret: NEXT_PUBLIC_PAYPAL_CLIENT_ID # Public key also needed by server actions
-    keyName: NEXT_PUBLIC_PAYPAL_CLIENT_ID
   - secret: PAYPAL_CLIENT_SECRET
     keyName: PAYPAL_CLIENT_SECRET
     
@@ -36,6 +36,22 @@ secretEnvironmentVariables:
   - secret: EMAIL_SENDER
     keyName: EMAIL_SENDER
 
-  # The storage bucket name is needed by both client and server, so we provide it to both.
-  - secret: FIREBASE_STORAGE_BUCKET
-    keyName: FIREBASE_STORAGE_BUCKET
+  # Client-side Firebase config (CRITICAL FOR APP TO LOAD)
+  # These are public keys, but storing them as secrets is the most reliable
+  # way to provide them to the app on Firebase App Hosting.
+  - secret: NEXT_PUBLIC_FIREBASE_API_KEY
+    keyName: NEXT_PUBLIC_FIREBASE_API_KEY
+  - secret: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    keyName: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+  - secret: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    keyName: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  - secret: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    keyName: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  - secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    keyName: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+  - secret: NEXT_PUBLIC_FIREBASE_APP_ID
+    keyName: NEXT_PUBLIC_FIREBASE_APP_ID
+  - secret: NEXT_PUBLIC_BASE_URL
+    keyName: NEXT_PUBLIC_BASE_URL
+  - secret: NEXT_PUBLIC_PAYPAL_CLIENT_ID
+    keyName: NEXT_PUBLIC_PAYPAL_CLIENT_ID
