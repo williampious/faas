@@ -1,13 +1,10 @@
 
+'use client';
+
 import type { Metadata } from 'next';
 import '../globals.css';
 import Image from 'next/image';
 import Link from 'next/link';
-
-export const metadata: Metadata = {
-  title: 'AgriFAAS Connect - Authentication',
-  description: 'Sign in or Register for AgriFAAS Connect.',
-};
 
 export default function AuthLayout({
   children,
