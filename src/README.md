@@ -28,6 +28,12 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin']);
     }
     
+    function isSuperAdmin() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Super Admin']);
+    }
+    
     function isUserAEO() {
       return request.auth != null &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
@@ -95,8 +101,8 @@ service cloud.firestore {
     
     // Admin-only Collections
     match /promotionalCodes/{codeId} {
-        // Only Admins can manage promotional codes
-        allow read, write, create, delete: if isUserAdmin();
+        // Only Super Admins can manage promotional codes
+        allow read, write, create, delete: if isSuperAdmin();
     }
 
     // Rules for Multi-Tenant Data Collections

@@ -5,8 +5,13 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ShieldHalf, UsersRound, Settings, TicketPercent, ExternalLink, Info } from 'lucide-react';
 import Link from 'next/link';
+import { useUserProfile } from '@/contexts/user-profile-context';
 
 export default function AdminDashboardPage() {
+  const { userProfile } = useUserProfile();
+  // A Super Admin is an Admin who can manage promo codes.
+  const isSuperAdmin = userProfile?.role.includes('Super Admin');
+
   return (
     <div>
       <PageHeader
@@ -43,6 +48,22 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         </Link>
+        
+        {isSuperAdmin && (
+          <Link href="/admin/promo-codes" passHref>
+            <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary border-accent/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium">Promo Codes</CardTitle>
+                <TicketPercent className="h-6 w-6 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Create and manage subscription promotional codes. (Super Admin)
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
       </div>
 
       <Card className="mt-8 bg-muted/30 p-4">

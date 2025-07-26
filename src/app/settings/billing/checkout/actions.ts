@@ -3,7 +3,7 @@
 'use server';
 
 import { adminDb } from '@/lib/firebase-admin';
-import type { PromotionalCode } from '@/types/user';
+import type { PromotionalCode } from '@/types/promo-code';
 import { parseISO, isAfter } from 'date-fns';
 
 interface PromoCodeValidationResult {
@@ -27,7 +27,6 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
   }
 
   const upperCaseCode = code.toUpperCase();
-
   const promoCodeRef = adminDb.collection('promotionalCodes').where('code', '==', upperCaseCode);
 
   try {
@@ -56,7 +55,6 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
     const discountAmount = promoData.type === 'fixed' ? promoData.discountAmount : 0;
     const discountPercentage = promoData.type === 'percentage' ? promoData.discountAmount : 0;
     
-    // Check for 100% discount
     const isFullDiscount = promoData.type === 'percentage' && promoData.discountAmount >= 100;
 
     let message = 'Promotional code applied successfully!';
