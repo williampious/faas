@@ -1,8 +1,8 @@
 
 'use client';
 
-import type { AgriFAASUserProfile, SubscriptionDetails } from '@/types/user';
-import { auth, db, isFirebaseClientConfigured } from '@/lib/firebase';
+import type { AgriFAASUserProfile, SubscriptionDetails, UserRole } from '@/types/user';
+import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -75,8 +75,6 @@ async function createMissingProfile(user: User): Promise<void> {
     };
 
     try {
-        // Set the document. The onSnapshot listener will then pick up this new document
-        // and update the application state, making this function's return value unnecessary.
         await setDoc(userDocRef, {
             ...newProfile,
             createdAt: serverTimestamp(),
@@ -97,7 +95,6 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const [access, setAccess] = useState<UserAccess>(defaultAccess);
 
   useEffect(() => {
-    // The detailed check is now inside firebase.ts. We just check for service availability here.
     if (!auth || !db) {
       setError("CRITICAL: Firebase services (Auth/DB) are not available. This is often due to missing or incorrect environment variables. Check the browser console for detailed setup instructions.");
       setIsLoading(false);
@@ -119,13 +116,11 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             const profileData = docSnap.data() as AgriFAASUserProfile;
             setUserProfile(profileData);
             
-            const userIsAdmin = profileData.role?.includes('Admin') || false;
+            const isSuperAdmin = profileData.role?.includes('Super Admin') || false;
+            const userIsAdmin = profileData.role?.includes('Admin') || isSuperAdmin;
             setIsAdmin(userIsAdmin);
 
-            const isSuperAdmin = profileData.role?.includes('Super Admin') || false;
-
             if (isSuperAdmin) {
-              // Super Admin gets full access, regardless of subscription.
               setAccess({
                 canAccessFarmOps: true,
                 canAccessAnimalOps: true,
@@ -134,7 +129,6 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
                 canAccessAeoTools: true,
               });
             } else {
-              // Standard permission logic for all other users.
               const plan = profileData.subscription?.planId || 'starter';
               const status = profileData.subscription?.status;
               const trialEnds = profileData.subscription?.trialEnds;
@@ -156,10 +150,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             setError(null);
             setIsLoading(false);
           } else {
-            // Attempt to create the profile. The onSnapshot listener will then
-            // fire again with the new data, triggering the logic above.
             await createMissingProfile(currentUser);
-            // No need to set state here, the listener will handle it.
           }
         }, (firestoreError: any) => { 
           console.error("Error fetching user profile from Firestore:", firestoreError);
