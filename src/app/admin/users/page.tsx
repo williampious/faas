@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy, Trash2, Info, Mail } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { AgriFAASUserProfile, UserRole, AccountStatus } from '@/types/user';
-import { db, isFirebaseClientConfigured } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, doc, updateDoc, serverTimestamp, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import { useUserProfile } from '@/contexts/user-profile-context';
@@ -185,7 +185,7 @@ export default function AdminUsersPage() {
   };
 
   const handleInviteUserSubmit: SubmitHandler<InviteUserFormValues> = async (data) => {
-    if (!isFirebaseClientConfigured || !db) {
+    if (!db) {
         setInviteUserError("Firebase is not configured correctly. Cannot invite user.");
         return;
     }
@@ -651,7 +651,7 @@ export default function AdminUsersPage() {
             <p>&bull; This page lists all users associated with **your farm**.</p>
             <p>&bull; Use "Invite New User" to send an email invitation with a registration link to a new team member.</p>
             <p>&bull; For users with 'Invited' status, you can copy their invitation link again if they did not receive the email. Their roles/status cannot be edited until they complete registration.</p>
-            <p>&bull; <strong>Profile Deletion:</strong> The "Delete" button removes the user's data from Firestore only. It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. This action is primarily for cleaning up test data or revoking invitations.</p>
+            <p>&bull; <strong>Profile Deletion:</strong> The "Delete" button removes the user's data from the application database (Firestore). It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. This action is primarily for cleaning up test data or revoking invitations.</p>
         </CardContent>
       </Card>
     </div>

@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlus, Link as LinkIcon, Copy, Trash2, Info, Mail } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { AgriFAASUserProfile, UserRole, AccountStatus } from '@/types/user';
-import { db, isFirebaseClientConfigured } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy, doc, updateDoc, serverTimestamp, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import { useUserProfile } from '@/contexts/user-profile-context';
@@ -64,7 +64,7 @@ export default function AdminUsersPage() {
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
 
-  const availableRoles: UserRole[] = ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'OfficeManager', 'FinanceManager', 'Farmer', 'Investor', 'Farm Staff', 'Agric Extension Officer'];
+  const availableRoles: UserRole[] = ['Super Admin', 'Admin', 'Manager', 'FieldOfficer', 'HRManager', 'OfficeManager', 'FinanceManager', 'Farmer', 'Investor', 'Farm Staff', 'Agric Extension Officer'];
 
   const inviteUserForm = useForm<InviteUserFormValues>({
     resolver: zodResolver(inviteUserFormSchema),
@@ -185,7 +185,7 @@ export default function AdminUsersPage() {
   };
 
   const handleInviteUserSubmit: SubmitHandler<InviteUserFormValues> = async (data) => {
-    if (!isFirebaseClientConfigured || !db) {
+    if (!db) {
         setInviteUserError("Firebase is not configured correctly. Cannot invite user.");
         return;
     }
@@ -614,7 +614,7 @@ export default function AdminUsersPage() {
                   <TableCell>{user.emailAddress}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {user.role?.map(r => <Badge key={r} variant={r === 'Admin' ? 'default' : 'secondary'}>{r}</Badge>)}
+                      {user.role?.map(r => <Badge key={r} variant={r === 'Admin' || r === 'Super Admin' ? 'default' : 'secondary'}>{r}</Badge>)}
                       {(!user.role || user.role.length === 0) && <Badge variant="outline">No Roles Assigned</Badge>}
                     </div>
                   </TableCell>
