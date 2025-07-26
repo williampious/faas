@@ -129,7 +129,7 @@ export default function LandingPage() {
                 alt="AgriFAAS Connect Logo"
                 width={200}
                 height={67}
-                objectFit="contain"
+                style={{ objectFit: 'contain' }}
                 priority
               />
             </Link>

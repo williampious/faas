@@ -23,7 +23,7 @@ export default function SetupLayout({
                 alt="AgriFAAS Connect Logo"
                 width={280}
                 height={84}
-                objectFit="contain"
+                style={{ objectFit: 'contain' }}
             />
         </Link>
       </header>
