@@ -9,21 +9,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { isAdmin, isLoading, user, error: profileError } = useUserProfile();
+  const { userProfile, isLoading, user, error: profileError } = useUserProfile();
   const router = useRouter();
+
+  const canAccessAdminPanel = userProfile?.role?.includes('Admin') || userProfile?.role?.includes('Super Admin');
 
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
         // No user logged in, redirect to sign-in
-        router.replace('/auth/signin?redirect=/admin/dashboard'); // Redirect back to admin after sign in
-      } else if (!isAdmin) {
-        // User is logged in but not an admin, redirect to dashboard
-        router.replace('/dashboard');
+        router.replace('/auth/signin?redirect=/admin/dashboard');
+      } else if (!canAccessAdminPanel) {
+        // User is logged in but not an admin or super admin, redirect to their dashboard
+        const dashboardPath = userProfile?.role?.includes('Agric Extension Officer') ? '/aeo/dashboard' : '/dashboard';
+        router.replace(dashboardPath);
       }
-      // If user is logged in AND isAdmin is true, they can proceed.
+      // If user is logged in AND canAccessAdminPanel is true, they can proceed.
     }
-  }, [isAdmin, isLoading, user, router]);
+  }, [canAccessAdminPanel, isLoading, user, userProfile, router]);
 
   if (isLoading) {
     return (
@@ -64,7 +67,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
   
-  if (user && !isAdmin && !isLoading) {
+  if (user && !canAccessAdminPanel && !isLoading) {
     // User is logged in, not an admin, and not loading. Should be redirected by useEffect.
     // Display a more explicit unauthorized message.
     return (
@@ -85,7 +88,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-
-  // If loading is false, user is present, and isAdmin is true
+  // If loading is false, user is present, and has access
   return <>{children}</>;
 }
