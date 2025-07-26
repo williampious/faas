@@ -4,7 +4,6 @@
 import { getAdminDb } from '@/lib/firebase-admin';
 import type { SubscriptionDetails, UserRole } from '@/types/user';
 import { add, format } from 'date-fns';
-import { serverTimestamp } from 'firebase/firestore';
 
 
 type PlanId = 'starter' | 'grower' | 'business' | 'enterprise';

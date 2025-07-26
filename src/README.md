@@ -25,7 +25,7 @@ service cloud.firestore {
     function isUserAdmin() {
       return request.auth != null &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin']);
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Super Admin']);
     }
     
     function isSuperAdmin() {
@@ -49,13 +49,13 @@ service cloud.firestore {
     // New helper function to check for manager-level roles within a farm
     function isFarmManager(farmId) {
       return isFarmMember(farmId) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Manager', 'HRManager']);
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Super Admin', 'Manager', 'HRManager']);
     }
 
     // New helper function for office management roles
     function isOfficeManager(farmId) {
       return isFarmMember(farmId) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'OfficeManager', 'FinanceManager']);
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Super Admin', 'OfficeManager', 'FinanceManager']);
     }
 
     // User Profile Rules
@@ -298,7 +298,7 @@ Below are the composite indexes required by the application. Go to **Firebase Co
     *   Query Scope: Collection
 *   **For Admin Promo Codes:**
     *   Collection: `promotionalCodes`
-    *   Fields: `createdAt` (Descending)
+    *   Fields: `code` (Ascending)
     *   Query Scope: Collection
 *   **For Financial Dashboard & Reports:**
     *   Collection: `transactions`

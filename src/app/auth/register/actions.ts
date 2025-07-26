@@ -1,8 +1,7 @@
 
 'use server';
 
-import { db } from '@/lib/firebase';
-import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { getAdminDb } from '@/lib/firebase-admin';
 import type { AgriFAASUserProfile, SubscriptionDetails } from '@/types/user';
 import { add } from 'date-fns';
 import type { User } from 'firebase/auth';
@@ -31,11 +30,14 @@ export async function createProfileDocument(
   user: User, 
   data: RegistrationData,
 ): Promise<CreateProfileResult> {
-    if (!db) {
-        return { success: false, message: "Database service is not available." };
+    let adminDb;
+    try {
+        adminDb = getAdminDb();
+    } catch(error: any) {
+        return { success: false, message: error.message };
     }
     
-    const userDocRef = doc(db, usersCollectionName, user.uid);
+    const userDocRef = doc(adminDb, usersCollectionName, user.uid);
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
         console.log(`Profile for user ${user.uid} already exists. Skipping creation.`);

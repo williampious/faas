@@ -21,11 +21,12 @@ function initializeAdminApp() {
 
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!serviceAccountJson) {
+    // This will be caught by the getter functions below and thrown as an error.
     console.error(
         "[Firebase Admin] CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
         "The Admin SDK cannot be initialized. Please refer to the README.md for setup instructions."
     );
-    return; // Do not throw, let the getters handle the undefined app state
+    return;
   }
 
   try {
@@ -40,27 +41,33 @@ function initializeAdminApp() {
       "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed. This is likely due to a malformed service account JSON.",
       error.message
     );
-    // Let app remain undefined
   }
 }
 
-// Export getters that ensure initialization before returning the service
+/**
+ * Getter for the Firestore Admin instance. Ensures the app is initialized.
+ * @throws {Error} If the Firebase Admin App is not initialized.
+ */
 export const getAdminDb = (): admin.firestore.Firestore => {
+  if (!app) {
+    initializeAdminApp();
     if (!app) {
-        initializeAdminApp(); // Attempt to re-initialize if app is not available
-        if (!app) {
-            throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
-        }
+      throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
     }
-    return admin.firestore(app);
+  }
+  return admin.firestore(app);
 };
 
+/**
+ * Getter for the Firebase Auth Admin instance. Ensures the app is initialized.
+ * @throws {Error} If the Firebase Admin App is not initialized.
+ */
 export const getAdminAuth = (): admin.auth.Auth => {
+  if (!app) {
+    initializeAdminApp();
     if (!app) {
-        initializeAdminApp(); // Attempt to re-initialize
-        if (!app) {
-            throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
-        }
+      throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
     }
-    return admin.auth(app);
+  }
+  return admin.auth(app);
 };
