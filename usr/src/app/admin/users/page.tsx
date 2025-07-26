@@ -236,6 +236,7 @@ export default function AdminUsersPage() {
         accountStatus: 'Invited',
         registrationDate: serverTimestamp(),
         invitationToken: invitationToken,
+        invitationSentAt: serverTimestamp(), // Add timestamp for expiration
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -259,7 +260,7 @@ export default function AdminUsersPage() {
               <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                 <h2>Hello ${data.fullName},</h2>
                 <p>You have been invited by <strong>${userProfile.fullName}</strong> to join their farm on AgriFAAS Connect, a collaborative farm management platform.</p>
-                <p>To accept the invitation and set up your account, please click the link below:</p>
+                <p>To accept the invitation and set up your account, please click the link below. This link is valid for 48 hours.</p>
                 <p style="text-align: center;">
                   <a href="${inviteLink}" style="background-color: #8CC63F; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Complete Your Registration</a>
                 </p>
