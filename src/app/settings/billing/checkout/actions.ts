@@ -14,15 +14,18 @@ interface PromoCodeValidationResult {
 }
 
 export async function validatePromoCode(code: string): Promise<PromoCodeValidationResult> {
+  console.log('--- [validatePromoCode] Action called with code:', code);
   if (!code) {
     return { success: false, message: 'Promotional code cannot be empty.' };
   }
   
   let adminDb;
   try {
+    console.log('[validatePromoCode] Before getAdminDb() call');
     adminDb = getAdminDb();
+    console.log('[validatePromoCode] After getAdminDb() call - successful');
   } catch (error: any) {
-    console.error('[validatePromoCode]', error.message);
+    console.error('[validatePromoCode] Error during getAdminDb() call:', error.message);
     return { success: false, message: error.message };
   }
 

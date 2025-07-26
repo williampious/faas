@@ -2,9 +2,11 @@
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
-// This file is a standard server-side module. It should NOT have 'use server'.
-// It initializes the Firebase Admin SDK once and exports the services for use
-// in other server-side logic, such as Server Actions.
+// This log will run once when the module is first loaded by the server.
+console.log(
+  "[Firebase Admin] Module loaded. Checking for FIREBASE_SERVICE_ACCOUNT_JSON:",
+  process.env.FIREBASE_SERVICE_ACCOUNT_JSON ? "Exists" : "MISSING or empty"
+);
 
 let app: admin.App | undefined;
 
@@ -21,7 +23,6 @@ function initializeAdminApp() {
 
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!serviceAccountJson) {
-    // This will be caught by the getter functions below and thrown as an error.
     console.error(
         "[Firebase Admin] CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
         "The Admin SDK cannot be initialized. Please refer to the README.md for setup instructions."
@@ -50,8 +51,10 @@ function initializeAdminApp() {
  */
 export const getAdminDb = (): admin.firestore.Firestore => {
   if (!app) {
+    console.log('[getAdminDb] Admin App not initialized. Attempting to initialize now...');
     initializeAdminApp();
     if (!app) {
+      console.error('[getAdminDb] Initialization failed. Throwing error.');
       throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
     }
   }
@@ -64,8 +67,10 @@ export const getAdminDb = (): admin.firestore.Firestore => {
  */
 export const getAdminAuth = (): admin.auth.Auth => {
   if (!app) {
+    console.log('[getAdminAuth] Admin App not initialized. Attempting to initialize now...');
     initializeAdminApp();
     if (!app) {
+      console.error('[getAdminAuth] Initialization failed. Throwing error.');
       throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
     }
   }
