@@ -1,9 +1,11 @@
 
 'use server';
 
-import { adminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
 import type { SubscriptionDetails, UserRole } from '@/types/user';
 import { add, format } from 'date-fns';
+import { serverTimestamp } from 'firebase/firestore';
+
 
 type PlanId = 'starter' | 'grower' | 'business' | 'enterprise';
 type BillingCycle = 'monthly' | 'annually';
@@ -16,10 +18,12 @@ type BillingCycle = 'monthly' | 'annually';
  * @returns A promise that resolves when the update is complete.
  */
 export async function updateUserSubscription(userId: string, planId: PlanId, billingCycle: BillingCycle): Promise<{success: boolean; message: string;}> {
-    if (!adminDb) {
-        const errorMessage = "Firebase Admin SDK is not initialized. This is a server-configuration issue. Please check your FIREBASE_SERVICE_ACCOUNT_JSON secret and ensure the app has been redeployed as described in the README.md file.";
-        console.error('[updateUserSubscription]', errorMessage);
-        return { success: false, message: errorMessage };
+    let adminDb;
+    try {
+        adminDb = getAdminDb();
+    } catch (error: any) {
+        console.error('[updateUserSubscription]', error.message);
+        return { success: false, message: error.message };
     }
     
     if (!userId || !planId || !billingCycle) {
@@ -60,7 +64,7 @@ export async function updateUserSubscription(userId: string, planId: PlanId, bil
         await userDocRef.update({
           subscription: newSubscription,
           role: newRoles,
-          updatedAt: serverTimestamp(),
+          updatedAt: adminDb.FieldValue.serverTimestamp(),
         });
 
         const successMessage = `Successfully updated subscription for user ${userId} to ${planId} (${billingCycle}).`;

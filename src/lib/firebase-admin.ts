@@ -44,9 +44,6 @@ function initializeAdminApp() {
   }
 }
 
-// Call initialization on module load as a first attempt.
-initializeAdminApp();
-
 // Export getters that ensure initialization before returning the service
 export const getAdminDb = (): admin.firestore.Firestore => {
     if (!app) {
@@ -67,8 +64,3 @@ export const getAdminAuth = (): admin.auth.Auth => {
     }
     return admin.auth(app);
 };
-
-// For backward compatibility, export potentially undefined instances.
-// The getters are the preferred and safer way to access the services.
-export const adminDb = app ? getAdminDb() : undefined;
-export const adminAuth = app ? getAdminAuth() : undefined;

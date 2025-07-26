@@ -3,6 +3,7 @@
 
 import { getAdminDb } from '@/lib/firebase-admin';
 import type { AgriFAASUserProfile } from '@/types/user';
+import { add, isBefore } from 'date-fns';
 
 interface ValidationResult {
   success: boolean;
@@ -44,12 +45,26 @@ export async function validateInvitationToken(token: string): Promise<Validation
     if (querySnapshot.empty) {
       return {
         success: false,
-        message: 'This invitation link is invalid, has expired, or has already been used. Please request a new invitation if needed.',
+        message: 'This invitation link is invalid or has already been used. Please request a new invitation if needed.',
       };
     }
 
     const userDoc = querySnapshot.docs[0];
     const userData = { userId: userDoc.id, ...userDoc.data() } as AgriFAASUserProfile;
+
+    // Time-based expiration check
+    if (userData.invitationSentAt) {
+      const sentAt = (userData.invitationSentAt as any).toDate(); // Convert Firestore Timestamp
+      const expiresAt = add(sentAt, { hours: 48 });
+      if (isBefore(expiresAt, new Date())) {
+        return { success: false, message: 'This invitation link has expired (valid for 48 hours). Please request a new one.' };
+      }
+    }
+
+    // Stricter check for email
+    if (!userData.emailAddress) {
+        return { success: false, message: 'The invited user data is incomplete (missing email). Please ask the administrator to re-invite you.' };
+    }
 
     // We return the whole userData object for the final registration step.
     return {
@@ -57,7 +72,7 @@ export async function validateInvitationToken(token: string): Promise<Validation
       userData: {
         userId: userDoc.id,
         fullName: userData.fullName,
-        emailAddress: userData.emailAddress || '',
+        emailAddress: userData.emailAddress,
         profileData: userData,
       },
     };

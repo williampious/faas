@@ -1,8 +1,7 @@
 
-
 'use server';
 
-import { adminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
 import type { PromotionalCode } from '@/types/promo-code';
 import { parseISO, isAfter } from 'date-fns';
 
@@ -19,11 +18,12 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
     return { success: false, message: 'Promotional code cannot be empty.' };
   }
   
-  if (!adminDb) {
-    return { 
-        success: false, 
-        message: "Server configuration error. The admin database is not available. Please contact support." 
-    };
+  let adminDb;
+  try {
+    adminDb = getAdminDb();
+  } catch (error: any) {
+    console.error('[validatePromoCode]', error.message);
+    return { success: false, message: error.message };
   }
 
   const upperCaseCode = code.toUpperCase();
