@@ -222,6 +222,7 @@ export interface AgriFAASUserProfile {
   accountStatus: AccountStatus;
   registrationDate: string; // ISO string of initial profile creation/invitation
   invitationToken?: string; // Unique token for completing registration
+  invitationSentAt?: any; // Firestore ServerTimestamp
 
   // 7. Notifications & Preferences
   notificationPreferences?: NotificationPreferences;

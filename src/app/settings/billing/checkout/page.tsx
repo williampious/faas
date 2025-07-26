@@ -160,8 +160,8 @@ function CheckoutPageContent() {
               <div className="space-y-2">
                 <Label htmlFor="promo-code" className="flex items-center gap-2 text-sm text-muted-foreground"><Tag className="h-4 w-4" /> Have a code?</Label>
                 <div className="flex gap-2">
-                    <Input id="promo-code" placeholder="Enter code" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} disabled={isApplyingCode}/>
-                    <Button onClick={handleApplyPromoCode} disabled={isApplyingCode}>
+                    <Input id="promo-code" placeholder="Enter code" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} disabled={isApplyingCode || promoMessage?.type === 'success'}/>
+                    <Button onClick={handleApplyPromoCode} disabled={isApplyingCode || promoMessage?.type === 'success'}>
                         {isApplyingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Apply
                     </Button>
