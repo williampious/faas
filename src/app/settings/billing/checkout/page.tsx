@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
@@ -12,9 +11,12 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useUserProfile } from '@/contexts/user-profile-context';
-import { initializePaystackTransaction, validatePromoCode } from './actions';
+import { initializePaystackTransaction } from './actions';
 import { updateUserSubscription } from '../actions';
 import { Input } from '@/components/ui/input';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+
 
 // Data can be moved to a shared file later
 const pricingTiers = [
@@ -31,7 +33,7 @@ function CheckoutPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { userProfile } = useUserProfile();
+  const { userProfile, user } = useUserProfile();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [promoCode, setPromoCode] = useState('');
@@ -53,30 +55,57 @@ function CheckoutPageContent() {
   
   const billingCycleText = cycle === 'annually' ? 'Billed Annually' : 'Billed Monthly';
   const isFreeCheckout = finalPrice <= 0;
-  
-  const handleApplyPromoCode = async () => {
-      if (!promoCode.trim()) {
-          setPromoMessage({ type: 'error', text: 'Please enter a promotional code.' });
-          return;
-      }
-      setIsApplyingCode(true);
-      setPromoMessage(null);
-      
-      const result = await validatePromoCode(promoCode);
 
-      if (result.success) {
-          setIsFullDiscount(result.isFullDiscount || false);
-          setAppliedDiscount(result.discountAmount || 0);
-          setAppliedPercentage(result.discountPercentage || 0);
-          setPromoMessage({ type: 'success', text: result.message });
+  const handleApplyPromoCode = async () => {
+    if (!promoCode.trim() || !user) {
+      setPromoMessage({ type: 'error', text: 'Please enter a code and ensure you are logged in.' });
+      return;
+    }
+    setIsApplyingCode(true);
+    setPromoMessage(null);
+
+    try {
+      const upperCaseCode = promoCode.toUpperCase();
+      // This write will be validated by Firestore security rules.
+      await addDoc(collection(db, 'promoCodeActivations'), {
+        code: upperCaseCode,
+        userId: user.uid,
+        attemptedAt: serverTimestamp(),
+      });
+      
+      // If the write succeeds, the rule was satisfied. Now, fetch the code's details.
+      const promoCodeRef = doc(db, `promotionalCodes/${upperCaseCode}`);
+      const docSnap = await getDoc(promoCodeRef);
+      if (docSnap.exists()) {
+          const promoData = docSnap.data();
+          const discountAmount = promoData.type === 'fixed' ? promoData.discountAmount : 0;
+          const discountPercentage = promoData.type === 'percentage' ? promoData.discountAmount : 0;
+          const fullDiscount = promoData.type === 'percentage' && promoData.discountAmount >= 100;
+          
+          setIsFullDiscount(fullDiscount);
+          setAppliedDiscount(discountAmount);
+          setAppliedPercentage(discountPercentage);
+          
+          let message = 'Success! Your discount has been applied.';
+          if (fullDiscount) message = 'Success! Your plan will be activated at no cost.';
+          
+          setPromoMessage({ type: 'success', text: message });
       } else {
-          setIsFullDiscount(false);
-          setAppliedDiscount(0);
-          setAppliedPercentage(0);
-          setPromoMessage({ type: 'error', text: result.message });
+          throw new Error("Validation passed but could not retrieve code details.");
       }
+
+    } catch (error: any) {
+      console.error("Error applying promo code:", error);
+      let message = "Invalid promotional code or you do not meet the requirements.";
+      if (error.code === 'permission-denied') {
+          message = "This code is invalid, expired, has reached its usage limit, or is not applicable.";
+      }
+      setPromoMessage({ type: 'error', text: message });
+    } finally {
       setIsApplyingCode(false);
+    }
   };
+
 
   const handlePaystackPayment = async () => {
       if (!userProfile) return;

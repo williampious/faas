@@ -1,81 +1,8 @@
 
 'use server';
 
-import { getAdminDb } from '@/lib/firebase-admin';
-import type { PromotionalCode } from '@/types/promo-code';
-import { parseISO, isAfter } from 'date-fns';
-
-interface PromoCodeValidationResult {
-  success: boolean;
-  message: string;
-  discountAmount?: number;
-  discountPercentage?: number;
-  isFullDiscount?: boolean;
-}
-
-export async function validatePromoCode(code: string): Promise<PromoCodeValidationResult> {
-  console.log('--- [validatePromoCode] Action called with code:', code);
-  if (!code) {
-    return { success: false, message: 'Promotional code cannot be empty.' };
-  }
-  
-  let adminDb;
-  try {
-    console.log('[validatePromoCode] Before getAdminDb() call');
-    adminDb = getAdminDb();
-    console.log('[validatePromoCode] After getAdminDb() call - successful');
-  } catch (error: any) {
-    console.error('[validatePromoCode] Error during getAdminDb() call:', error.message);
-    return { success: false, message: error.message };
-  }
-
-  const upperCaseCode = code.toUpperCase();
-  const promoCodeRef = adminDb.collection('promotionalCodes').where('code', '==', upperCaseCode);
-
-  try {
-    const snapshot = await promoCodeRef.get();
-    if (snapshot.empty) {
-      return { success: false, message: 'Invalid promotional code.' };
-    }
-
-    const promoDoc = snapshot.docs[0];
-    const promoData = promoDoc.data() as PromotionalCode;
-
-    if (!promoData.isActive) {
-      return { success: false, message: 'This promotional code is no longer active.' };
-    }
-
-    const now = new Date();
-    const expiryDate = parseISO(promoData.expiryDate);
-    if (isAfter(now, expiryDate)) {
-      return { success: false, message: 'This promotional code has expired.' };
-    }
-
-    if (promoData.timesUsed >= promoData.usageLimit) {
-      return { success: false, message: 'This promotional code has reached its usage limit.' };
-    }
-
-    const discountAmount = promoData.type === 'fixed' ? promoData.discountAmount : 0;
-    const discountPercentage = promoData.type === 'percentage' ? promoData.discountAmount : 0;
-    
-    const isFullDiscount = promoData.type === 'percentage' && promoData.discountAmount >= 100;
-
-    let message = 'Promotional code applied successfully!';
-    if (isFullDiscount) {
-        message = 'Success! Your plan will be activated for free.';
-    } else if (discountAmount > 0) {
-      message = `Success! A discount of GHS ${discountAmount.toFixed(2)} has been applied.`;
-    } else if (discountPercentage > 0) {
-      message = `Success! A discount of ${discountPercentage}% has been applied.`;
-    }
-    
-    return { success: true, message, discountAmount, discountPercentage, isFullDiscount };
-
-  } catch (error: any) {
-    console.error("Error validating promo code:", error);
-    return { success: false, message: 'An error occurred while validating the code.' };
-  }
-}
+// This server action is now only used for initializing Paystack.
+// Promo code validation has been moved to Firestore security rules.
 
 interface UserInfoForPayment {
   userId: string;

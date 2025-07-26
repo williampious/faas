@@ -99,13 +99,31 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || isUserAdmin());
     }
     
-    // Admin-only Collections
+    // --- SPECIALIZED RULES ---
+
+    // PROMO CODES
+    // Only Super Admins can manage promotional codes
     match /promotionalCodes/{codeId} {
-        // Only Super Admins can manage promotional codes
         allow read, write, create, delete: if isSuperAdmin();
     }
 
-    // Rules for Multi-Tenant Data Collections
+    // PROMO CODE ACTIVATION
+    // Users can attempt to activate a promo code by writing to this collection.
+    // The rules will validate the attempt before allowing the write.
+    match /promoCodeActivations/{activationId} {
+        allow create: if request.auth != null &&
+                       request.resource.data.userId == request.auth.uid &&
+                       exists(/databases/$(database)/documents/promotionalCodes/$(request.resource.data.code)) &&
+                       get(/databases/$(database)/documents/promotionalCodes/$(request.resource.data.code)).data.isActive == true &&
+                       get(/databases/$(database)/documents/promotionalCodes/$(request.resource.data.code)).data.timesUsed < get(/databases/$(database)/documents/promotionalCodes/$(request.resource.data.code)).data.usageLimit &&
+                       get(/databases/$(database)/documents/promotionalCodes/$(request.resource.data.code)).data.expiryDate > request.time.toMillis(); // Compare expiryDate with current timestamp
+        // No one can read/update/delete these activation requests once made.
+        allow read, update, delete: if false;
+    }
+
+
+    // --- MULTI-TENANT DATA COLLECTIONS ---
+    
     match /plots/{plotId} {
       allow create: if isFarmMember(request.resource.data.farmId);
       allow read, update, delete: if isFarmMember(resource.data.farmId);
