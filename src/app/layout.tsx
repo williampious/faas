@@ -249,24 +249,23 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   const isAuthPage = pathname.startsWith('/auth/');
   const isSetupPage = pathname.startsWith('/setup');
   
-  // This logic determines whether to show the main app shell or the public/auth layouts.
-  // We show the app shell ONLY if the user is logged in AND they are fully set up.
   const isSetUp = userProfile?.farmId || userProfile?.role?.includes('Agric Extension Officer');
   const showAppShell = user && isSetUp;
 
-  if (showAppShell) {
-      if(isAuthPage || isSetupPage || isPublicUnauthenticatedArea) {
-          // This should be handled by the useEffect redirect, but as a fallback, show a loader.
+  // This logic determines whether to show the main app shell or the public/auth layouts.
+  if (showAppShell && !isPublicUnauthenticatedArea) {
+      if(isAuthPage || isSetupPage) {
+           // This state is temporary while useEffect redirects.
            return (
               <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-background">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-lg text-muted-foreground">Redirecting to your dashboard...</p>
+                <p className="mt-4 text-lg text-muted-foreground">Redirecting...</p>
               </div>
             );
       }
       return <AppShell>{children}</AppShell>;
   } else {
-    // If not showing the app shell, render the children directly (e.g., for landing pages, auth, setup)
+    // Render children directly for public pages, auth pages, and the setup flow.
     return <>{children}</>;
   }
 }
