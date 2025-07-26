@@ -99,7 +99,6 @@ service cloud.firestore {
         allow read, write, create, delete: if isUserAdmin();
     }
 
-
     // Rules for Multi-Tenant Data Collections
     match /plots/{plotId} {
       allow create: if isFarmMember(request.resource.data.farmId);

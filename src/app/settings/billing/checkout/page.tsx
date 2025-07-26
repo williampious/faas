@@ -43,8 +43,7 @@ function CheckoutPageContent() {
   const [isFullDiscount, setIsFullDiscount] = useState(false);
   const [promoMessage, setPromoMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [isApplyingCode, setIsApplyingCode] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'momo' | 'card'>('momo');
-
+  
   const planId = searchParams.get('plan') as PlanId || 'starter';
   const cycle = searchParams.get('cycle') as BillingCycle || 'annually';
 
@@ -156,7 +155,7 @@ function CheckoutPageContent() {
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center p-4 border rounded-lg bg-muted/30">
                 <div>
-                  <p className="font-semibold text-lg capitalize">{isFullDiscount ? 'Business' : selectedPlan.name} Plan</p>
+                  <p className="font-semibold text-lg capitalize">{selectedPlan.name} Plan</p>
                   <p className="text-sm text-muted-foreground">{billingCycleText}</p>
                 </div>
                 <p className="font-bold text-2xl text-primary">{formatCurrency(price)}</p>
@@ -214,22 +213,15 @@ function CheckoutPageContent() {
             </CardHeader>
             <CardContent>
               {!isFreeCheckout ? (
-                <RadioGroup 
-                  value={selectedPaymentMethod} 
-                  onValueChange={(value) => setSelectedPaymentMethod(value as 'momo' | 'card')} 
-                  className="space-y-3"
-                >
-                  <Label className={cn("flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors", selectedPaymentMethod === 'momo' ? "border-primary ring-2 ring-primary/50" : "hover:border-primary/50")}>
-                    <RadioGroupItem value="momo" id="momo" />
-                    <CircleDollarSign className="h-6 w-6 text-yellow-500" />
-                    <span className="font-medium">Mobile Money</span>
-                  </Label>
-                  <Label className={cn("flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors", selectedPaymentMethod === 'card' ? "border-primary ring-2 ring-primary/50" : "hover:border-primary/50")}>
-                    <RadioGroupItem value="card" id="card" />
-                    <CreditCard className="h-6 w-6 text-blue-500" />
-                    <span className="font-medium">Credit/Debit Card</span>
-                  </Label>
-                </RadioGroup>
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Pay with Paystack:</p>
+                  <div className="p-4 border rounded-lg bg-muted/20">
+                     <div className="flex items-center space-x-3">
+                        <CircleDollarSign className="h-6 w-6 text-yellow-500" />
+                        <span className="font-medium">Mobile Money & Card</span>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <p className="font-semibold text-green-700 dark:text-green-200">Your plan will be activated for free upon checkout.</p>
