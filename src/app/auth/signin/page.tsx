@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState, type ReactNode } from 'react';
 import { Loader2, LogIn } from 'lucide-react';
-import { auth, isFirebaseClientConfigured } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -41,14 +41,8 @@ export default function SignInPage() {
     setIsLoading(true);
     setError(null);
 
-    if (!isFirebaseClientConfigured) {
-      setError("Firebase client configuration is missing or incomplete. Please ensure all NEXT_PUBLIC_FIREBASE_... variables are correctly set in your .env.local file or hosting environment.");
-      setIsLoading(false);
-      return;
-    }
-    
     if (!auth) {
-      setError("Firebase authentication service is not available. This could be due to a network issue or an incomplete setup. Please check your setup and internet connection.");
+      setError("Firebase authentication service is not available. This is likely a configuration issue. Please check the setup instructions in README.md.");
       setIsLoading(false);
       return;
     }

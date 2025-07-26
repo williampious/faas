@@ -37,13 +37,18 @@ const defaultAccess: UserAccess = {
 const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
 
 // This is the self-healing function to create a profile if one is missing for an authenticated user.
-async function createMissingProfile(user: User): Promise<AgriFAASUserProfile | null> {
-    if (!db) return null;
+async function createMissingProfile(user: User): Promise<void> {
+    if (!db) {
+        console.error("Self-healing failed: Firestore service is not available.");
+        return;
+    }
     const userDocRef = doc(db, 'users', user.uid);
     
+    // Check one last time before writing to prevent race conditions.
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
-        return docSnap.data() as AgriFAASUserProfile;
+        console.log(`Profile for user ${user.uid} already exists. Skipping creation.`);
+        return;
     }
     
     console.warn(`Attempting to self-heal profile for user: ${user.uid}`);
@@ -70,16 +75,15 @@ async function createMissingProfile(user: User): Promise<AgriFAASUserProfile | n
     };
 
     try {
+        // Set the document. The onSnapshot listener will then pick up this new document
+        // and update the application state, making this function's return value unnecessary.
         await setDoc(userDocRef, {
             ...newProfile,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
-        const createdDocSnap = await getDoc(userDocRef);
-        return createdDocSnap.data() as AgriFAASUserProfile;
     } catch (error) {
         console.error("Self-healing profile creation failed:", error);
-        return null;
     }
 }
 
@@ -93,13 +97,9 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const [access, setAccess] = useState<UserAccess>(defaultAccess);
 
   useEffect(() => {
-    if (!isFirebaseClientConfigured) {
-      setError("CRITICAL INIT PHASE 1: Firebase client environment variables (NEXT_PUBLIC_...) appear to be missing, incomplete, or use placeholder values. Please ensure these are correctly set in your hosting environment (e.g., Vercel, Cloud Run) and that the latest deployment includes these changes. App features dependent on Firebase will not work.");
-      setIsLoading(false);
-      return;
-    }
+    // The detailed check is now inside firebase.ts. We just check for service availability here.
     if (!auth || !db) {
-      setError("CRITICAL INIT PHASE 2: Firebase services (Auth/DB) are not available even after environment variables seem correct. This could indicate a deeper issue with Firebase SDK initialization. Contact support if this persists after verifying environment variables.");
+      setError("CRITICAL: Firebase services (Auth/DB) are not available. This is often due to missing or incorrect environment variables. Check the browser console for detailed setup instructions.");
       setIsLoading(false);
       return;
     }
@@ -122,9 +122,9 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             const userIsAdmin = profileData.role?.includes('Admin') || false;
             setIsAdmin(userIsAdmin);
 
-            const userIsSuperAdmin = profileData.role?.includes('Super Admin') || false;
+            const isSuperAdmin = profileData.role?.includes('Super Admin') || false;
 
-            if (userIsSuperAdmin) {
+            if (isSuperAdmin) {
               // Super Admin gets full access, regardless of subscription.
               setAccess({
                 canAccessFarmOps: true,
@@ -156,17 +156,10 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             setError(null);
             setIsLoading(false);
           } else {
-            const healedProfile = await createMissingProfile(currentUser);
-            if(healedProfile) {
-                setUserProfile(healedProfile);
-                 // No need to set anything else, the onSnapshot will re-trigger with the new data
-            } else {
-                setUserProfile(null);
-                setIsAdmin(false);
-                setAccess(defaultAccess);
-                setError(`Your account exists, but we couldn't find or create your user profile. This could be a permission issue with your database rules. Please contact support.`);
-                setIsLoading(false);
-            }
+            // Attempt to create the profile. The onSnapshot listener will then
+            // fire again with the new data, triggering the logic above.
+            await createMissingProfile(currentUser);
+            // No need to set state here, the listener will handle it.
           }
         }, (firestoreError: any) => { 
           console.error("Error fetching user profile from Firestore:", firestoreError);

@@ -14,24 +14,44 @@ const firebaseConfigValuesFromEnv = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// A more robust check for valid configuration values. This is the first line of defense.
-const getMissingKeys = () => {
-    return Object.entries(firebaseConfigValuesFromEnv)
-      .filter(([key, value]) => !value || typeof value !== 'string' || value.trim() === '' || value.includes('YOUR_'))
-      .map(([key]) => key);
-};
-
-const missingKeys = getMissingKeys();
-export const isFirebaseClientConfigured = missingKeys.length === 0;
+// This check is now internal to the module to prevent exporting uninitialized services.
+const isFirebaseClientConfigured = !Object.values(firebaseConfigValuesFromEnv).some(
+  value => !value || typeof value !== 'string' || value.includes('YOUR_')
+);
 
 let appInstance: ReturnType<typeof initializeApp> | null = null;
 let firestoreInstance: ReturnType<typeof getFirestore> | null = null;
 let authInstance: ReturnType<typeof getAuth> | null = null;
 let storageInstance: ReturnType<typeof getStorage> | null = null;
 
-// This function initializes the Firebase app and services, and it's designed to be called once.
-function initializeFirebase() {
-  if (!isFirebaseClientConfigured) {
+if (isFirebaseClientConfigured) {
+  // Initialize Firebase App only if it hasn't been initialized yet.
+  if (!getApps().length) {
+    try {
+      appInstance = initializeApp(firebaseConfigValuesFromEnv as FirebaseOptions);
+      console.log("Firebase App Initialized Successfully.");
+    } catch (e: any) {
+      console.error("CRITICAL Firebase Error: Failed to initialize Firebase app.", e);
+    }
+  } else {
+    appInstance = getApp();
+  }
+
+  // Get services from the initialized app instance.
+  if (appInstance) {
+    try {
+      firestoreInstance = getFirestore(appInstance);
+      authInstance = getAuth(appInstance);
+      storageInstance = getStorage(appInstance);
+    } catch (e: any) {
+      console.error("CRITICAL Firebase Error: Failed to get Firestore/Auth/Storage instances.", e);
+    }
+  }
+} else {
+    const missingKeys = Object.entries(firebaseConfigValuesFromEnv)
+      .filter(([, value]) => !value || typeof value !== 'string' || value.includes('YOUR_'))
+      .map(([key]) => key);
+
     const errorMessage = "CRITICAL: Firebase client configuration is missing or incomplete. This app cannot connect to Firebase services.";
     const devMessage = 
         "👉 FOR LOCAL DEVELOPMENT: 👈\n" +
@@ -47,37 +67,9 @@ function initializeFirebase() {
         `Potentially missing or invalid keys: ${missingKeys.join(', ')}`;
 
     console.error(errorMessage + "\n\n" + (process.env.NODE_ENV === 'development' ? devMessage : prodMessage));
-    return; // Stop initialization
-  }
-
-  // Initialize Firebase App only if it hasn't been initialized yet.
-  if (!getApps().length) {
-    try {
-      appInstance = initializeApp(firebaseConfigValuesFromEnv as FirebaseOptions);
-      console.log("Firebase App Initialized Successfully.");
-    } catch (e: any) {
-      console.error("CRITICAL Firebase Error: Failed to initialize Firebase app.", e);
-      return; // Stop if initialization fails
-    }
-  } else {
-    appInstance = getApp();
-  }
-
-  // Get services from the initialized app instance.
-  try {
-    firestoreInstance = getFirestore(appInstance);
-    authInstance = getAuth(appInstance);
-    storageInstance = getStorage(appInstance);
-  } catch (e: any) {
-    console.error("CRITICAL Firebase Error: Failed to get Firestore/Auth/Storage instances.", e);
-  }
 }
 
-// Run the initialization function immediately when the module is first loaded.
-initializeFirebase();
-
-// Export the initialized instances.
-// If initialization failed, these will be null, and dependent code should handle it gracefully.
+// Export the potentially null instances. The context provider will check for their existence.
 export const app = appInstance;
 export const db = firestoreInstance;
 export const auth = authInstance;
