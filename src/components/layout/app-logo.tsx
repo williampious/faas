@@ -9,9 +9,10 @@ export function AppLogo() {
         <Image
           src="/agrifaas-logo.png" // Assumes agrifaas-logo.png is in /public
           alt="AgriFAAS Connect Logo"
-          layout="fill"
-          objectFit="contain"
+          fill
+          style={{ objectFit: 'contain' }}
           priority
+          sizes="(max-width: 768px) 192px, 240px"
         />
       </div>
     </Link>
