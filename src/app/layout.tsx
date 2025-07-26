@@ -252,22 +252,25 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   const isSetUp = userProfile?.farmId || userProfile?.role?.includes('Agric Extension Officer');
   const showAppShell = user && isSetUp;
 
-  // This logic determines whether to show the main app shell or the public/auth layouts.
-  if (showAppShell && !isPublicUnauthenticatedArea) {
-      if(isAuthPage || isSetupPage) {
-           // This state is temporary while useEffect redirects.
-           return (
-              <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-background">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-lg text-muted-foreground">Redirecting...</p>
-              </div>
-            );
+  if (isAuthPage || isSetupPage) {
+      if(showAppShell) {
+          // This state is temporary while useEffect redirects.
+          return (
+             <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-background">
+               <Loader2 className="h-12 w-12 animate-spin text-primary" />
+               <p className="mt-4 text-lg text-muted-foreground">Redirecting...</p>
+             </div>
+           );
       }
-      return <AppShell>{children}</AppShell>;
-  } else {
-    // Render children directly for public pages, auth pages, and the setup flow.
-    return <>{children}</>;
+      return <>{children}</>;
   }
+  
+  if (showAppShell) {
+      return <AppShell>{children}</AppShell>;
+  }
+
+  // Fallback for public unauthenticated area
+  return <>{children}</>;
 }
 
 

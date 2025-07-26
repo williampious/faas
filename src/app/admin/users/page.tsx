@@ -64,7 +64,7 @@ export default function AdminUsersPage() {
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
 
-  const availableRoles: UserRole[] = ['Admin', 'Manager', 'FieldOfficer', 'HRManager', 'OfficeManager', 'FinanceManager', 'Farmer', 'Investor', 'Farm Staff', 'Agric Extension Officer'];
+  const availableRoles: UserRole[] = ['Super Admin', 'Admin', 'Manager', 'FieldOfficer', 'HRManager', 'OfficeManager', 'FinanceManager', 'Farmer', 'Investor', 'Farm Staff', 'Agric Extension Officer'];
 
   const inviteUserForm = useForm<InviteUserFormValues>({
     resolver: zodResolver(inviteUserFormSchema),
@@ -193,6 +193,13 @@ export default function AdminUsersPage() {
       setInviteUserError("Your admin profile is missing a farm ID or name. Cannot invite users to a farm.");
       return;
     }
+    
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+    if (!baseUrl) {
+      setInviteUserError("Application Base URL is not configured. Cannot generate invitation links. Please set NEXT_PUBLIC_BASE_URL in your environment.");
+      setIsInvitingUser(false);
+      return;
+    }
 
     setIsInvitingUser(true);
     setInviteUserError(null);
@@ -229,6 +236,7 @@ export default function AdminUsersPage() {
         accountStatus: 'Invited',
         registrationDate: serverTimestamp(),
         invitationToken: invitationToken,
+        invitationSentAt: serverTimestamp(), // Add timestamp for expiration
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -241,7 +249,6 @@ export default function AdminUsersPage() {
         batch.set(newDocRef, newUserProfile);
         await batch.commit();
 
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
         const inviteLink = `${baseUrl}/auth/complete-registration?token=${invitationToken}`;
         setGeneratedInviteLink(inviteLink);
         setInviteeName(data.fullName);
@@ -253,7 +260,7 @@ export default function AdminUsersPage() {
               <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                 <h2>Hello ${data.fullName},</h2>
                 <p>You have been invited by <strong>${userProfile.fullName}</strong> to join their farm on AgriFAAS Connect, a collaborative farm management platform.</p>
-                <p>To accept the invitation and set up your account, please click the link below:</p>
+                <p>To accept the invitation and set up your account, please click the link below. This link is valid for 48 hours.</p>
                 <p style="text-align: center;">
                   <a href="${inviteLink}" style="background-color: #8CC63F; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Complete Your Registration</a>
                 </p>
@@ -607,7 +614,7 @@ export default function AdminUsersPage() {
                   <TableCell>{user.emailAddress}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {user.role?.map(r => <Badge key={r} variant={r === 'Admin' ? 'default' : 'secondary'}>{r}</Badge>)}
+                      {user.role?.map(r => <Badge key={r} variant={r === 'Admin' || r === 'Super Admin' ? 'default' : 'secondary'}>{r}</Badge>)}
                       {(!user.role || user.role.length === 0) && <Badge variant="outline">No Roles Assigned</Badge>}
                     </div>
                   </TableCell>
@@ -626,7 +633,11 @@ export default function AdminUsersPage() {
                     </Button>
                     {user.accountStatus === 'Invited' && user.invitationToken && (
                        <Button variant="link" size="sm" onClick={() => {
-                         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+                         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+                         if (!baseUrl) {
+                           toast({ title: "Error", description: "Base URL is not configured. Cannot generate link.", variant: "destructive"});
+                           return;
+                         }
                          const link = `${baseUrl}/auth/complete-registration?token=${user.invitationToken}`;
                          copyToClipboard(link);
                        }} className="h-8 px-2">
@@ -651,7 +662,7 @@ export default function AdminUsersPage() {
             <p>&bull; This page lists all users associated with **your farm**.</p>
             <p>&bull; Use "Invite New User" to send an email invitation with a registration link to a new team member.</p>
             <p>&bull; For users with 'Invited' status, you can copy their invitation link again if they did not receive the email. Their roles/status cannot be edited until they complete registration.</p>
-            <p>&bull; <strong>Profile Deletion:</strong> The "Delete" button removes the user's data from the application database (Firestore). It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. This action is primarily for cleaning up test data or revoking invitations.</p>
+            <p>&bull; <strong>Profile Deletion:</strong> The "Delete" button removes the user's data from Firestore only. It <span className="font-bold">DOES NOT</span> delete their Firebase Authentication account. This action is primarily for cleaning up test data or revoking invitations.</p>
         </CardContent>
       </Card>
     </div>

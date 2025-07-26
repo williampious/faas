@@ -9,15 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CreditCard, Lock, CircleDollarSign, Loader2, Tag, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { initializePaystackTransaction, validatePromoCode } from './actions';
 import { updateUserSubscription } from '../actions';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-
 
 // Data can be moved to a shared file later
 const pricingTiers = [
