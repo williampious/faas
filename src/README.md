@@ -5,7 +5,7 @@ This is a Next.js starter project for a collaborative, cloud-based farm manageme
 
 **For full setup instructions, please refer to the main `README.md` file in the project's root directory.**
 
-This file contains the necessary Firestore Security Rules for your project.
+This file contains the necessary Firestore Security Rules and Indexes for your project.
 
 ---
 
@@ -270,13 +270,38 @@ service firebase.storage {
 
 As the app's features grow, Firestore will require specific indexes for complex queries (like sorting or filtering by multiple fields) to work efficiently. If you see long loading times or errors in the browser console about missing indexes, you must create them.
 
+**The most common cause of slow load times is missing indexes.**
+
 **Method 1: Automatic (Recommended)**
 
-The best way to create indexes is to **let Firebase tell you which ones you need**.
-
-1.  **Run the App:** Use the application and navigate to pages that load lists of data (e.g., Financial Dashboard, Transaction Ledger, AEO Farmer Directory, Promo Codes page).
+1.  **Run the App:** Use the application and navigate to pages that load lists of data (e.g., Financial Dashboard, AEO Farmer Directory, Promo Codes page).
 2.  **Check for Errors:** If a query requires an index that doesn't exist, **an error will appear in your browser's developer console**.
 3.  **Click the Link:** This error message will contain a direct link to the Firebase Console. Click this link.
 4.  **Create the Index:** The link will pre-fill all the necessary information to create the index. Simply review the details and click the "Create Index" button.
+
+**Method 2: Manual Creation**
+
+Below are the composite indexes required by the application. Go to **Firebase Console -> Firestore Database -> Indexes** to create them.
+
+*   **For Admin User Management:**
+    *   Collection: `users`
+    *   Fields: `farmId` (Ascending), `fullName` (Ascending)
+    *   Query Scope: Collection
+*   **For AEO Farmer Directory:**
+    *   Collection: `users`
+    *   Fields: `managedByAEO` (Ascending), `fullName` (Ascending)
+    *   Query Scope: Collection
+*   **For Admin Promo Codes:**
+    *   Collection: `promotionalCodes`
+    *   Fields: `createdAt` (Descending)
+    *   Query Scope: Collection
+*   **For Financial Dashboard & Reports:**
+    *   Collection: `transactions`
+    *   Fields: `farmId` (Ascending), `date` (Ascending/Descending - both are fine)
+    *   Query Scope: Collection
+*   **For AEO Support Logs:**
+    *   Collection: `supportLogs`
+    *   Fields: `aeoId` (Ascending), `interactionDate` (Descending)
+    *   Query Scope: Collection
 
 The index will take a few minutes to build. Once it's done, the feature that caused the error will work correctly.

@@ -3,7 +3,7 @@
 'use server';
 
 import { adminDb } from '@/lib/firebase-admin';
-import type { PromotionalCode } from '@/types/promo-code';
+import type { PromotionalCode } from '@/types/user';
 import { parseISO, isAfter } from 'date-fns';
 
 interface PromoCodeValidationResult {
@@ -22,20 +22,11 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
   if (!adminDb) {
     return { 
         success: false, 
-        message: "Server configuration error. The admin database is not available. This is the most common setup issue and is likely due to missing server-side secrets. Please contact the administrator and refer them to the README file." 
+        message: "Server configuration error. The admin database is not available. Please contact support." 
     };
   }
 
   const upperCaseCode = code.toUpperCase();
-
-  // Handle special, hardcoded codes
-  if (upperCaseCode === 'FREEBIZYEAR') {
-    return { success: true, message: 'Success! You have unlocked one free year of the Business Plan.', isFullDiscount: true };
-  }
-  
-  if (upperCaseCode === 'BIZ97') {
-    return { success: true, message: 'Success! You have unlocked a 97% discount on the annual Business Plan.', discountPercentage: 97 };
-  }
 
   const promoCodeRef = adminDb.collection('promotionalCodes').where('code', '==', upperCaseCode);
 
@@ -65,14 +56,19 @@ export async function validatePromoCode(code: string): Promise<PromoCodeValidati
     const discountAmount = promoData.type === 'fixed' ? promoData.discountAmount : 0;
     const discountPercentage = promoData.type === 'percentage' ? promoData.discountAmount : 0;
     
+    // Check for 100% discount
+    const isFullDiscount = promoData.type === 'percentage' && promoData.discountAmount >= 100;
+
     let message = 'Promotional code applied successfully!';
-    if (discountAmount > 0) {
+    if (isFullDiscount) {
+        message = 'Success! Your plan will be activated for free.';
+    } else if (discountAmount > 0) {
       message = `Success! A discount of GHS ${discountAmount.toFixed(2)} has been applied.`;
     } else if (discountPercentage > 0) {
       message = `Success! A discount of ${discountPercentage}% has been applied.`;
     }
     
-    return { success: true, message, discountAmount, discountPercentage };
+    return { success: true, message, discountAmount, discountPercentage, isFullDiscount };
 
   } catch (error: any) {
     console.error("Error validating promo code:", error);

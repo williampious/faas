@@ -60,7 +60,8 @@ export async function POST(req: NextRequest) {
                       console.error(`Promo code document not found during transaction for code: ${promo_code}`);
                       return;
                   }
-
+                  
+                  // Use a subcollection to record unique usages to ensure idempotency
                   const usageRecordRef = promoDocRef.collection('recordedUsages').doc(paystackReference);
                   const usageRecord = await transaction.get(usageRecordRef);
 

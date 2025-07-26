@@ -14,12 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { initializePaystackTransaction, validatePromoCode } from './actions';
-import { createPayPalOrder, capturePayPalOrder } from './paypal_actions';
 import { updateUserSubscription } from '../actions';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { PayPalScriptProvider, PayPalButtons, usePayPalScriptReducer, type OnApproveData, type OnApproveActions } from '@paypal/react-paypal-js';
-import type { UserRole } from '@/types/user';
 
 
 // Data can be moved to a shared file later
@@ -32,67 +29,6 @@ const pricingTiers = [
 
 type PlanId = typeof pricingTiers[number]['id'];
 type BillingCycle = 'monthly' | 'annually';
-
-interface PayPalButtonWrapperProps {
-  finalPrice: number;
-  planId: PlanId;
-  cycle: BillingCycle;
-}
-
-
-function PayPalButtonWrapper({ finalPrice, planId, cycle }: PayPalButtonWrapperProps) {
-    const [{ isPending }] = usePayPalScriptReducer();
-    const { toast } = useToast();
-    const { userProfile } = useUserProfile();
-    const router = useRouter();
-    const [isProcessing, setIsProcessing] = useState(false);
-
-    if (isPending) {
-        return <div className="flex justify-center items-center h-20"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-    }
-
-    return (
-        <PayPalButtons
-            style={{ layout: "vertical", color: 'blue', shape: 'rect', label: 'pay' }}
-            disabled={isProcessing}
-            createOrder={async (data, actions) => {
-                setIsProcessing(true);
-                const amountInGHS = finalPrice;
-                const res = await createPayPalOrder(amountInGHS, planId, cycle);
-                if (res.success && res.orderId) {
-                    return res.orderId;
-                } else {
-                    toast({ title: "PayPal Error", description: res.message, variant: "destructive" });
-                    setIsProcessing(false);
-                    return '';
-                }
-            }}
-            onApprove={async (data: OnApproveData, actions: OnApproveActions) => {
-               if (!userProfile) return;
-               const captureResult = await capturePayPalOrder(data.orderID);
-               if (captureResult.success) {
-                   const subResult = await updateUserSubscription(userProfile.userId, planId, cycle);
-                   if (subResult.success) {
-                       toast({ title: "Payment Successful!", description: "Your plan has been upgraded."});
-                       router.push('/dashboard');
-                   } else {
-                       toast({ title: "Subscription Update Failed", description: subResult.message, variant: 'destructive'});
-                   }
-               } else {
-                   toast({ title: "Payment Capture Failed", description: captureResult.message, variant: 'destructive'});
-               }
-               setIsProcessing(false);
-            }}
-            onError={(err) => {
-                toast({ title: "PayPal Error", description: `An unexpected error occurred: ${err}`, variant: 'destructive' });
-                setIsProcessing(false);
-            }}
-            onCancel={() => {
-                setIsProcessing(false);
-            }}
-        />
-    );
-}
 
 function CheckoutPageContent() {
   const router = useRouter();
@@ -107,11 +43,10 @@ function CheckoutPageContent() {
   const [isFullDiscount, setIsFullDiscount] = useState(false);
   const [promoMessage, setPromoMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [isApplyingCode, setIsApplyingCode] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'momo' | 'card' | 'paypal' | 'stripe'>('momo');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'momo' | 'card'>('momo');
 
   const planId = searchParams.get('plan') as PlanId || 'starter';
   const cycle = searchParams.get('cycle') as BillingCycle || 'annually';
-  const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
   const selectedPlan = pricingTiers.find(p => p.id === planId) || pricingTiers[0];
   const price = cycle === 'annually' ? selectedPlan.price.annually : selectedPlan.price.monthly;
@@ -172,9 +107,7 @@ function CheckoutPageContent() {
   
   const handleFreeCheckout = async () => {
     if (!userProfile) return;
-    const newPlanId = (isFullDiscount || appliedPercentage > 0) ? 'business' : planId;
-    const newCycle = (isFullDiscount || appliedPercentage > 0) ? 'annually' : cycle;
-    const result = await updateUserSubscription(userProfile.userId, newPlanId, newCycle);
+    const result = await updateUserSubscription(userProfile.userId, planId, cycle);
     if (result.success) {
         toast({ title: "Plan Activated!", description: "Your new plan is now active." });
         router.push('/dashboard');
@@ -197,18 +130,7 @@ function CheckoutPageContent() {
         return; 
     }
     
-    if (selectedPaymentMethod === 'momo' || selectedPaymentMethod === 'card') {
-      await handlePaystackPayment();
-    } else if (selectedPaymentMethod === 'paypal') {
-        setIsProcessing(false); 
-    }
-     else {
-        toast({
-            title: "Coming Soon",
-            description: `Payment with ${selectedPaymentMethod.charAt(0).toUpperCase() + selectedPaymentMethod.slice(1)} is not yet available.`,
-        });
-        setIsProcessing(false);
-    }
+    await handlePaystackPayment();
   };
   
   const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' }).format(amount);
@@ -235,7 +157,7 @@ function CheckoutPageContent() {
               <div className="flex justify-between items-center p-4 border rounded-lg bg-muted/30">
                 <div>
                   <p className="font-semibold text-lg capitalize">{isFullDiscount ? 'Business' : selectedPlan.name} Plan</p>
-                  <p className="text-sm text-muted-foreground">{isFullDiscount ? 'Billed Annually (Free Year)' : billingCycleText}</p>
+                  <p className="text-sm text-muted-foreground">{billingCycleText}</p>
                 </div>
                 <p className="font-bold text-2xl text-primary">{formatCurrency(price)}</p>
               </div>
@@ -294,7 +216,7 @@ function CheckoutPageContent() {
               {!isFreeCheckout ? (
                 <RadioGroup 
                   value={selectedPaymentMethod} 
-                  onValueChange={(value) => setSelectedPaymentMethod(value as 'momo' | 'card' | 'paypal' | 'stripe')} 
+                  onValueChange={(value) => setSelectedPaymentMethod(value as 'momo' | 'card')} 
                   className="space-y-3"
                 >
                   <Label className={cn("flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors", selectedPaymentMethod === 'momo' ? "border-primary ring-2 ring-primary/50" : "hover:border-primary/50")}>
@@ -307,35 +229,21 @@ function CheckoutPageContent() {
                     <CreditCard className="h-6 w-6 text-blue-500" />
                     <span className="font-medium">Credit/Debit Card</span>
                   </Label>
-                   <Label className={cn("flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-colors", selectedPaymentMethod === 'paypal' ? "border-primary ring-2 ring-primary/50" : "hover:border-primary/50", !PAYPAL_CLIENT_ID && "cursor-not-allowed opacity-50")}>
-                    <RadioGroupItem value="paypal" id="paypal" disabled={!PAYPAL_CLIENT_ID} />
-                     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 fill-[#00457C]"><path d="M7.722 17.584c.323.018.631-.077.893-.243.633-.399 1.011-1.11 1.229-1.933.05-.192.083-.392.11-.598.159-1.229.096-2.5-.203-3.718-.219-.877-.577-1.693-1.045-2.422-.448-.693-.99-1.28-1.6-1.745-.631-.482-1.341-.796-2.09-.92-.097-.015-.195-.022-.293-.022H2.213C1.293 6 1 6.33 1 6.837c0 .416.03.627.09.832.062.208.156.463.273.75.295.72.675 1.402 1.132 2.015.488.653 1.056 1.22 1.688 1.68.706.517 1.488.89 2.321 1.096.313.076.633.127.954.153l-.001.001zm8.384-11.233c-.15-.002-.303.01-.453.036-.883.155-1.637.6-2.222 1.228-.582.625-.97 1.41-1.144 2.292-.128.65-.16 1.32-.1 1.98.05.57.215 1.12.474 1.63.264.52.628.97 1.065 1.32.44.35.952.59 1.499.7.545.11 1.104.1 1.65-.01.55-.11 1.08-.34 1.54-.66.45-.32.84-.73 1.14-1.2.3-.47.51-.99.62-1.54.11-.55.12-1.11.02-1.67-.1-.56-.3-1.1-.6-1.58-.3-.48-.69-.88-1.14-1.2-.45-.31-.96-.54-1.5-.66-.18-.04-.36-.06-.54-.06h-.01zm2.34 9.453c-.312.3-.68.53-1.085.68-.4.15-.82.21-1.24.18-.42-.03-.83-.15-1.21-.35-.38-.2-.72-.48-1-.83-.28-.34-.5-.73-.66-1.16-.16-.43-.25-.88-.26-1.34 0-.46.07-.91.22-1.34.15-.43.37-.84.66-1.2.29-.36.64-.67.04-.98l.6-.01c.32-.23.68-.4 1.06-.5.4-.1.8-.13 1.2-.08.4.05.78.18 1.14.38.36.2.68.46.95.78.27.32.48.69.62 1.08.14.4.22.8.23 1.21.01.4-.05.8-.18 1.18-.13.38-.33.74-.58 1.05z"/></svg>
-                    <span className="font-medium">PayPal (USD)</span>
-                  </Label>
                 </RadioGroup>
               ) : (
                 <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <p className="font-semibold text-green-700 dark:text-green-200">Your plan is free upon checkout. No payment is needed.</p>
+                  <p className="font-semibold text-green-700 dark:text-green-200">Your plan will be activated for free upon checkout.</p>
                 </div>
               )}
             </CardContent>
             <CardFooter className="flex-col items-start gap-4">
-              {selectedPaymentMethod === 'paypal' && !isFreeCheckout && PAYPAL_CLIENT_ID ? (
-                  <PayPalButtonWrapper finalPrice={finalPrice} planId={planId} cycle={cycle} />
-              ) : selectedPaymentMethod === 'paypal' && !isFreeCheckout && !PAYPAL_CLIENT_ID ? (
-                  <div className="text-sm text-destructive p-3 bg-destructive/10 rounded-md w-full">
-                      <AlertTriangle className="inline h-4 w-4 mr-2" />
-                      PayPal is not available. The Client ID has not been configured by the site administrator.
-                  </div>
-              ) : (
-                    <Button size="lg" className="w-full" onClick={handleProceedToPayment} disabled={isProcessing}>
-                        {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isFreeCheckout ? <CheckCircle className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
-                        {isProcessing ? 'Processing...' : isFreeCheckout ? 'Activate Your Plan' : `Pay ${formatCurrency(finalPrice)}`}
-                    </Button>
-               )}
+               <Button size="lg" className="w-full" onClick={handleProceedToPayment} disabled={isProcessing}>
+                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isFreeCheckout ? <CheckCircle className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
+                    {isProcessing ? 'Processing...' : isFreeCheckout ? 'Activate Your Plan' : `Pay ${formatCurrency(finalPrice)}`}
+                </Button>
 
-               {!isFreeCheckout && (selectedPaymentMethod === 'momo' || selectedPaymentMethod === 'card') && (
+               {!isFreeCheckout && (
                  <p className="text-xs text-muted-foreground text-center w-full">
                   You will be redirected to Paystack's secure payment page to complete your purchase.
                  </p>
@@ -350,17 +258,10 @@ function CheckoutPageContent() {
 
 
 export default function CheckoutPage() {
-  const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-
-  return (
-    <Suspense fallback={<div className="flex justify-center items-center h-screen"><Loader2 className="h-12 w-12 animate-spin text-primary"/></div>}>
-      {PAYPAL_CLIENT_ID ? (
-        <PayPalScriptProvider options={{ clientId: PAYPAL_CLIENT_ID, components: "buttons", currency: 'USD' }}>
-          <CheckoutPageContent />
-        </PayPalScriptProvider>
-      ) : (
-        <CheckoutPageContent />
-      )}
-    </Suspense>
-  )
+    // The Suspense boundary is a good pattern for pages that rely on search params.
+    return (
+        <Suspense fallback={<div className="flex justify-center items-center h-screen"><Loader2 className="h-12 w-12 animate-spin text-primary"/></div>}>
+            <CheckoutPageContent />
+        </Suspense>
+    )
 }
