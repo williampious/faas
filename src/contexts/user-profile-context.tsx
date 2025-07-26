@@ -122,24 +122,37 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             const userIsAdmin = profileData.role?.includes('Admin') || false;
             setIsAdmin(userIsAdmin);
 
-            const plan = profileData.subscription?.planId || 'starter';
-            const status = profileData.subscription?.status;
-            const trialEnds = profileData.subscription?.trialEnds;
-            
-            const isTrialActive = status === 'Trialing' && trialEnds && isAfter(new Date(trialEnds), new Date());
-            
-            const hasPaidAccess = status === 'Active' || isTrialActive;
+            const userIsSuperAdmin = profileData.role?.includes('Super Admin') || false;
 
-            const canAccessGrowerFeatures = (plan === 'grower' || plan === 'business' || plan === 'enterprise') && hasPaidAccess;
-            const canAccessBusinessFeatures = (plan === 'business' || plan === 'enterprise') && hasPaidAccess;
+            if (userIsSuperAdmin) {
+              // Super Admin gets full access, regardless of subscription.
+              setAccess({
+                canAccessFarmOps: true,
+                canAccessAnimalOps: true,
+                canAccessOfficeOps: true,
+                canAccessHrOps: true,
+                canAccessAeoTools: true,
+              });
+            } else {
+              // Standard permission logic for all other users.
+              const plan = profileData.subscription?.planId || 'starter';
+              const status = profileData.subscription?.status;
+              const trialEnds = profileData.subscription?.trialEnds;
+              
+              const isTrialActive = status === 'Trialing' && trialEnds && isAfter(new Date(trialEnds), new Date());
+              const hasPaidAccess = status === 'Active' || isTrialActive;
 
-            setAccess({
-                canAccessFarmOps: canAccessGrowerFeatures,
-                canAccessAnimalOps: canAccessGrowerFeatures,
-                canAccessOfficeOps: canAccessBusinessFeatures,
-                canAccessHrOps: canAccessBusinessFeatures,
-                canAccessAeoTools: canAccessBusinessFeatures,
-            });
+              const canAccessGrowerFeatures = (plan === 'grower' || plan === 'business' || plan === 'enterprise') && hasPaidAccess;
+              const canAccessBusinessFeatures = (plan === 'business' || plan === 'enterprise') && hasPaidAccess;
+
+              setAccess({
+                  canAccessFarmOps: canAccessGrowerFeatures,
+                  canAccessAnimalOps: canAccessGrowerFeatures,
+                  canAccessOfficeOps: canAccessBusinessFeatures,
+                  canAccessHrOps: canAccessBusinessFeatures,
+                  canAccessAeoTools: canAccessBusinessFeatures,
+              });
+            }
             setError(null);
             setIsLoading(false);
           } else {
