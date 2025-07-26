@@ -1,7 +1,7 @@
 
 'use server';
 
-import { adminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
 import type { AgriFAASUserProfile } from '@/types/user';
 
 interface ValidationResult {
@@ -17,13 +17,17 @@ interface ValidationResult {
 }
 
 export async function validateInvitationToken(token: string): Promise<ValidationResult> {
-  if (!adminDb) {
-    console.error("[validateInvitationToken] Admin DB is not available. This is a server configuration error. Check FIREBASE_SERVICE_ACCOUNT_JSON secret and ensure app has been redeployed after setting it, as per the README file.");
+  let adminDb;
+  try {
+    adminDb = getAdminDb();
+  } catch (error: any) {
+    console.error("[validateInvitationToken] Admin DB is not available. This is a server configuration error. Check FIREBASE_SERVICE_ACCOUNT_JSON secret and ensure app has been redeployed after setting it, as per the README file.", error);
     return {
       success: false,
       message: 'Server configuration error. The admin database is not available. This is the most common setup issue and is likely due to missing server-side secrets. Please contact the administrator and refer them to the README file.',
     };
   }
+  
   if (!token) {
     return { success: false, message: 'Invitation token is missing.' };
   }

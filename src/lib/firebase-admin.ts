@@ -8,6 +8,11 @@ import * as admin from 'firebase-admin';
 
 let app: admin.App | undefined;
 
+/**
+ * Initializes the Firebase Admin SDK if it hasn't been already.
+ * This function is designed to be called before accessing any admin services.
+ * It's a singleton pattern to prevent re-initialization.
+ */
 function initializeAdminApp() {
   if (admin.apps.length > 0) {
     app = admin.apps[0];
@@ -16,10 +21,11 @@ function initializeAdminApp() {
 
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!serviceAccountJson) {
-    throw new Error(
-      "[Firebase Admin] CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
-      "The Admin SDK cannot be initialized. Please refer to the README.md for setup instructions."
+    console.error(
+        "[Firebase Admin] CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
+        "The Admin SDK cannot be initialized. Please refer to the README.md for setup instructions."
     );
+    return; // Do not throw, let the getters handle the undefined app state
   }
 
   try {
@@ -34,15 +40,35 @@ function initializeAdminApp() {
       "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed. This is likely due to a malformed service account JSON.",
       error.message
     );
-    throw new Error(`[Firebase Admin] Failed to initialize: ${error.message}`);
+    // Let app remain undefined
   }
 }
 
-// Call initialization on module load. This ensures it runs once when the server starts.
+// Call initialization on module load as a first attempt.
 initializeAdminApp();
 
-// Export initialized services. If initialization failed, these will be undefined and will cause
-// any server action that uses them to fail with a clear "undefined" error, pointing back to the init failure.
-export const adminDb = app ? admin.firestore(app) : undefined;
-export const adminAuth = app ? admin.auth(app) : undefined;
+// Export getters that ensure initialization before returning the service
+export const getAdminDb = (): admin.firestore.Firestore => {
+    if (!app) {
+        initializeAdminApp(); // Attempt to re-initialize if app is not available
+        if (!app) {
+            throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
+        }
+    }
+    return admin.firestore(app);
+};
 
+export const getAdminAuth = (): admin.auth.Auth => {
+    if (!app) {
+        initializeAdminApp(); // Attempt to re-initialize
+        if (!app) {
+            throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
+        }
+    }
+    return admin.auth(app);
+};
+
+// For backward compatibility, export potentially undefined instances.
+// The getters are the preferred and safer way to access the services.
+export const adminDb = app ? getAdminDb() : undefined;
+export const adminAuth = app ? getAdminAuth() : undefined;
