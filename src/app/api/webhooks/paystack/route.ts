@@ -3,12 +3,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { updateUserSubscription } from '@/app/settings/billing/actions';
-import { adminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
 import type { FieldValue } from 'firebase-admin/firestore';
 
 /**
  * Handles Paystack webhook events.
  * This is the definitive source of truth for successful payments.
+ * It is designed to be idempotent to handle webhook retries gracefully.
  */
 export async function POST(req: NextRequest) {
   const secret = process.env.PAYSTACK_SECRET_KEY;
@@ -33,61 +34,79 @@ export async function POST(req: NextRequest) {
     const { metadata, reference, amount } = event.data;
     const { user_id, plan_id, billing_cycle, promo_code } = metadata;
 
-    console.log(`Processing successful payment for user ${user_id}, plan ${plan_id}, reference ${reference}`);
+    console.log(`Processing successful payment webhook for user ${user_id}, plan ${plan_id}, reference ${reference}`);
 
     try {
-      // 1. Update user subscription (This action is self-contained and can be run first)
-      const subResult = await updateUserSubscription(user_id, plan_id, billing_cycle);
-      if (!subResult.success) {
-        // Log critical error if subscription update fails after payment
-        console.error(`CRITICAL: Payment successful (Ref: ${reference}) but failed to update subscription for user ${user_id}. Reason: ${subResult.message}`);
-        // Still return 200 to Paystack to prevent retries, but log the issue for manual follow-up.
-        return NextResponse.json({ status: 'success', message: 'Webhook received, but subscription update failed server-side.' });
-      }
+      const adminDb = getAdminDb(); // Ensure DB is initialized
+      
+      // 1. Update user subscription and promo code usage in a transaction
+      // to ensure atomicity and idempotency.
+      await adminDb.runTransaction(async (transaction) => {
+        const userDocRef = adminDb.collection('users').doc(user_id);
+        const userDoc = await transaction.get(userDocRef);
 
-      // 2. Increment promo code usage idempotently if one was used
-      if (promo_code && adminDb) {
+        if (!userDoc.exists) {
+            console.error(`Webhook error: User document for user_id ${user_id} not found.`);
+            // Don't throw to avoid retries for a non-existent user.
+            return;
+        }
+
+        const subscriptionUpdateData = {
+          planId: plan_id,
+          status: 'Active',
+          billingCycle: billing_cycle,
+          nextBillingDate: billing_cycle === 'annually'
+            ? new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString()
+            : new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString(),
+          trialEnds: null,
+        };
+
+        // Update the user's subscription details.
+        transaction.update(userDocRef, {
+          subscription: subscriptionUpdateData,
+          updatedAt: adminDb.FieldValue.serverTimestamp(),
+        });
+
+        // 2. Increment promo code usage idempotently if one was used.
+        if (promo_code) {
           const promoQuery = adminDb.collection('promotionalCodes').where('code', '==', promo_code.toUpperCase()).limit(1);
-          const promoSnapshot = await promoQuery.get();
+          const promoSnapshot = await promoQuery.get(); // Note: get() inside transaction is fine
 
           if (!promoSnapshot.empty) {
-              const promoDocRef = promoSnapshot.docs[0].ref;
-              const paystackReference = reference;
+            const promoDocRef = promoSnapshot.docs[0].ref;
+            const paystackReference = reference;
+            
+            // Use a subcollection to record unique usages to ensure idempotency
+            const usageRecordRef = promoDocRef.collection('recordedUsages').doc(paystackReference);
+            const usageRecordSnap = await transaction.get(usageRecordRef);
 
-              await adminDb.runTransaction(async (transaction) => {
-                  const promoDoc = await transaction.get(promoDocRef);
-                  if (!promoDoc.exists) {
-                      console.error(`Promo code document not found during transaction for code: ${promo_code}`);
-                      return;
-                  }
-                  
-                  // Use a subcollection to record unique usages to ensure idempotency
-                  const usageRecordRef = promoDocRef.collection('recordedUsages').doc(paystackReference);
-                  const usageRecord = await transaction.get(usageRecordRef);
-
-                  if (!usageRecord.exists) {
-                      // This is a new, unrecorded usage.
-                      const currentUses = promoDoc.data()?.timesUsed || 0;
-                      transaction.update(promoDocRef, { timesUsed: currentUses + 1 });
-                      transaction.set(usageRecordRef, {
-                          timestamp: adminDb.FieldValue.serverTimestamp() as FieldValue,
-                          paymentReference: paystackReference,
-                          userId: user_id,
-                      });
-                      console.log(`Promo code ${promo_code} usage incremented and recorded for reference ${paystackReference}.`);
-                  } else {
-                      // This usage has already been recorded (webhook retry).
-                      console.log(`Promo code ${promo_code} usage for reference ${paystackReference} already recorded. Skipping increment.`);
-                  }
+            if (!usageRecordSnap.exists) {
+              // This is a new, unrecorded usage. Increment and record.
+              const currentUses = promoSnapshot.docs[0].data()?.timesUsed || 0;
+              transaction.update(promoDocRef, { timesUsed: currentUses + 1 });
+              transaction.set(usageRecordRef, {
+                timestamp: adminDb.FieldValue.serverTimestamp(),
+                paymentReference: paystackReference,
+                userId: user_id,
+                amount: amount,
               });
+              console.log(`Promo code ${promo_code} usage incremented and recorded for reference ${paystackReference}.`);
+            } else {
+              // This usage has already been recorded (e.g., from a webhook retry).
+              console.log(`Idempotency check: Promo code usage for reference ${paystackReference} already recorded. Skipping increment.`);
+            }
+          } else {
+              console.warn(`Webhook warning: Promo code ${promo_code} used in payment but not found in database.`);
           }
-      }
-
-      console.log(`Successfully processed webhook for user ${user_id}.`);
+        }
+      });
+      
+      console.log(`Successfully processed webhook for reference ${reference}.`);
       return NextResponse.json({ status: 'success' }, { status: 200 });
 
     } catch (error: any) {
-      console.error(`Error processing webhook for reference ${reference}:`, error);
+      console.error(`CRITICAL: Error processing webhook transaction for reference ${reference}:`, error);
+      // Return a 500 error to signal to Paystack that something went wrong and it should retry.
       return NextResponse.json({ status: 'error', message: 'Internal server error processing webhook.' }, { status: 500 });
     }
   }

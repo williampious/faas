@@ -101,16 +101,16 @@ export async function initializePaystackTransaction(
   const paystackUrl = 'https://api.paystack.co/transaction/initialize';
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-  if (!baseUrl) {
+  if (!baseUrl || baseUrl.includes('YOUR_')) {
     return {
       success: false,
-      message: "The application's public URL (NEXT_PUBLIC_BASE_URL) is not configured. Cannot generate payment links.",
+      message: "The application's public URL (NEXT_PUBLIC_BASE_URL) is not configured correctly. Cannot generate payment links. Please check your .env file.",
     };
   }
 
-  if (!secretKey || secretKey.includes("YOUR_SECRET_KEY")) {
-    console.error("Paystack secret key is not configured.");
-    return { success: false, message: "Payment gateway is not configured correctly. Please contact support." };
+  if (!secretKey || secretKey.includes('YOUR_SECRET_KEY')) {
+    console.error("Paystack secret key is not configured or is a placeholder.");
+    return { success: false, message: "The payment gateway is not configured correctly on the server. Please contact support." };
   }
 
   if (!userInfo.email) {
