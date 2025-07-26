@@ -61,8 +61,8 @@ interface LandPreparationActivity {
   notes?: string;
   costItems: CostItem[];
   totalActivityCost: number;
-  farmingYearId?: string;
-  farmingSeasonId?: string;
+  farmingYearId: string;
+  farmingSeasonId: string;
   createdAt: any;
   updatedAt: any;
 }
@@ -522,3 +522,4 @@ export default function LandPreparationPage() {
     </div>
   );
 }
+
