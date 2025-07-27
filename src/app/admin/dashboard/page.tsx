@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldHalf, UsersRound, Settings, TicketPercent, ExternalLink, Info, Building } from 'lucide-react';
 import Link from 'next/link';
 import { useUserProfile } from '@/contexts/user-profile-context';
-import { CreateTenantDialog } from './create-tenant-dialog';
+import { CreateTenantDialog } from '../create-tenant-dialog';
 
 export default function AdminDashboardPage() {
   const { userProfile } = useUserProfile();
