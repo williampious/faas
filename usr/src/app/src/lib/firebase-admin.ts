@@ -1,4 +1,3 @@
-
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
@@ -12,12 +11,14 @@ function initializeAdminApp() {
   // This function is designed to be idempotent (safe to call multiple times).
   if (admin.apps.length > 0) {
     if (!app) {
+      // If the app was initialized elsewhere (e.g., during testing or in another module),
+      // ensure our 'app' variable references it.
       app = admin.apps[0]!;
     }
     return;
   }
 
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  let serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!serviceAccountJson) {
     throw new Error(
       "CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
@@ -26,11 +27,9 @@ function initializeAdminApp() {
   }
 
   try {
-    // This sanitization is crucial. Environment variables can misinterpret
-    // newline characters within the private_key, breaking JSON parsing.
-    // This regex replaces any actual newline and carriage return characters with their escaped versions.
-    const sanitizedServiceAccountJson = serviceAccountJson.replace(/\\n/g, '\\\\n').replace(/\r/g, '');
-    const serviceAccount = JSON.parse(sanitizedServiceAccountJson);
+    // Correctly replace literal newlines and carriage returns before parsing.
+    serviceAccountJson = serviceAccountJson.replace(/\n/g, '\\n').replace(/\r/g, '');
+    const serviceAccount = JSON.parse(serviceAccountJson);
     
     app = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
@@ -49,8 +48,6 @@ function initializeAdminApp() {
 initializeAdminApp();
 
 // Export the initialized services directly.
-// If initialization failed, `app` will be undefined, and these will throw an error upon access,
-// which is the desired behavior to signal a critical configuration issue.
 export const adminDb = app ? admin.firestore(app) : undefined;
 export const adminAuth = app ? admin.auth(app) : undefined;
 
@@ -61,11 +58,20 @@ export const adminAuth = app ? admin.auth(app) : undefined;
  */
 export function getAdminDb() {
   if (!adminDb) {
-    // Attempt re-initialization if db is not available, as a fallback.
-    initializeAdminApp();
-    if(!adminDb) {
-      throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
+    initializeAdminApp(); 
+    if(!adminDb) { 
+      throw new Error("Firebase Admin SDK for Firestore is not initialized. Please ensure FIREBASE_SERVICE_ACCOUNT_JSON is correctly set and try again.");
     }
   }
   return adminDb;
+}
+
+export function getAdminAuth() {
+  if (!adminAuth) {
+    initializeAdminApp();
+    if(!adminAuth) {
+      throw new Error("Firebase Admin SDK for Auth is not initialized. Please ensure FIREBASE_SERVICE_ACCOUNT_JSON is correctly set and try again.");
+    }
+  }
+  return adminAuth;
 }
