@@ -1,4 +1,5 @@
 
+
 # AgriFAAS Connect - A Firebase Studio Project
 
 This is a Next.js starter project for a collaborative, cloud-based farm management platform, built in Firebase Studio.
