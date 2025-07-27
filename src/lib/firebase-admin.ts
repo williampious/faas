@@ -26,7 +26,10 @@ function initializeAdminApp() {
   }
 
   try {
-    const serviceAccount = JSON.parse(serviceAccountJson);
+    // Replace literal newlines with escaped newlines, which is a common issue with multi-line env vars.
+    const sanitizedServiceAccountJson = serviceAccountJson.replace(/\\n/g, '\\n');
+    const serviceAccount = JSON.parse(sanitizedServiceAccountJson);
+    
     app = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
@@ -56,7 +59,11 @@ export const adminAuth = app ? admin.auth(app) : undefined;
  */
 export function getAdminDb() {
   if (!adminDb) {
-    throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
+    // Attempt re-initialization if db is not available, as a fallback.
+    initializeAdminApp();
+    if(!adminDb) {
+      throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
+    }
   }
   return adminDb;
 }
