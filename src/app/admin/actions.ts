@@ -23,8 +23,10 @@ interface ActionResult {
 export async function createNewTenant(data: CreateTenantData): Promise<ActionResult> {
   let adminDb;
   try {
+    // This now reliably gets the initialized DB instance or throws a clear error.
     adminDb = getAdminDb();
   } catch (error: any) {
+    console.error('[createNewTenant]', error.message);
     return { success: false, message: error.message };
   }
   
