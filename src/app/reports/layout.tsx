@@ -1,4 +1,3 @@
-
 // src/app/reports/layout.tsx
 import type { ReactNode } from 'react';
 

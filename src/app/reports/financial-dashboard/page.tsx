@@ -151,11 +151,11 @@ export default function FinancialDashboardPage() {
             monthlyAggregates[monthKey] = { income: 0, expense: 0 };
           }
           if (t.type === 'Income') {
-            monthlyAggregates[monthKey].income += t.amount || 0;
+            monthlyAggregates[monthKey].income += t.amount;
           } else {
-            monthlyAggregates[monthKey].expense += t.amount || 0;
+            monthlyAggregates[monthKey].expense += t.amount;
             if (!expenseByCategory[t.category]) expenseByCategory[t.category] = 0;
-            expenseByCategory[t.category] += t.amount || 0;
+            expenseByCategory[t.category] += t.amount;
           }
         });
         
