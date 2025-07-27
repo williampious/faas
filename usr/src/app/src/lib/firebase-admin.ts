@@ -6,35 +6,49 @@ import * as admin from 'firebase-admin';
 // in other server-side logic, such as Server Actions.
 
 let app: admin.App | undefined;
+let db: admin.firestore.Firestore | undefined;
+let auth: admin.auth.Auth | undefined;
 
 function initializeAdminApp() {
   // This function is designed to be idempotent (safe to call multiple times).
   if (admin.apps.length > 0) {
     if (!app) {
-      // If the app was initialized elsewhere (e.g., during testing or in another module),
-      // ensure our 'app' variable references it.
       app = admin.apps[0]!;
+      db = admin.firestore(app);
+      auth = admin.auth(app);
     }
     return;
   }
 
-  let serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!serviceAccountJson) {
-    throw new Error(
-      "CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
-      "The Admin SDK cannot be initialized. Please refer to the README.md for setup instructions."
-    );
-  }
-
   try {
-    // Correctly replace literal newlines and carriage returns before parsing.
+    let serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+    if (!serviceAccountJson) {
+      throw new Error(
+        "CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
+        "The Admin SDK cannot be initialized. Please refer to the README.md for setup instructions."
+      );
+    }
+
+    // --- DEBUG: Inspect the Raw Environment Variable Content ---
+    console.log("--- DEBUG: Raw Service Account JSON from ENV ---");
+    console.log(serviceAccountJson);
+    console.log("--- END DEBUG ---");
+    
+    // Replace actual newline characters with their JSON-escaped representation '\\n'.
+    // Also, handle carriage returns by removing them.
     serviceAccountJson = serviceAccountJson.replace(/\n/g, '\\n').replace(/\r/g, '');
+
     const serviceAccount = JSON.parse(serviceAccountJson);
     
     app = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
+
+    db = admin.firestore(app);
+    auth = admin.auth(app);
+    
     console.log('[Firebase Admin] ✅ SDK initialized successfully.');
   } catch (error: any) {
     throw new Error(
@@ -44,34 +58,7 @@ function initializeAdminApp() {
   }
 }
 
-// Call the initialization function immediately on module load.
+// Initialize on module load
 initializeAdminApp();
 
-// Export the initialized services directly.
-export const adminDb = app ? admin.firestore(app) : undefined;
-export const adminAuth = app ? admin.auth(app) : undefined;
-
-/**
- * A helper function to get the initialized Firestore instance.
- * Throws a clear error if the Admin SDK is not initialized.
- * This is the recommended way to access the DB from server actions.
- */
-export function getAdminDb() {
-  if (!adminDb) {
-    initializeAdminApp(); 
-    if(!adminDb) { 
-      throw new Error("Firebase Admin SDK for Firestore is not initialized. Please ensure FIREBASE_SERVICE_ACCOUNT_JSON is correctly set and try again.");
-    }
-  }
-  return adminDb;
-}
-
-export function getAdminAuth() {
-  if (!adminAuth) {
-    initializeAdminApp();
-    if(!adminAuth) {
-      throw new Error("Firebase Admin SDK for Auth is not initialized. Please ensure FIREBASE_SERVICE_ACCOUNT_JSON is correctly set and try again.");
-    }
-  }
-  return adminAuth;
-}
+export { adminDb, adminAuth };
