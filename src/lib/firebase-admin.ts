@@ -1,4 +1,3 @@
-
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
@@ -12,6 +11,8 @@ function initializeAdminApp() {
   // This function is designed to be idempotent (safe to call multiple times).
   if (admin.apps.length > 0) {
     if (!app) {
+      // If the app was initialized elsewhere (e.g., during testing or in another module),
+      // ensure our 'app' variable references it.
       app = admin.apps[0]!;
     }
     return;
@@ -26,9 +27,8 @@ function initializeAdminApp() {
   }
 
   try {
-    // Replace literal newlines with escaped newlines, which is a common issue with multi-line env vars.
-    const sanitizedServiceAccountJson = serviceAccountJson.replace(/\\n/g, '\\n');
-    const serviceAccount = JSON.parse(sanitizedServiceAccountJson);
+    // Assuming FIREBASE_SERVICE_ACCOUNT_JSON contains a properly escaped JSON string.
+    const serviceAccount = JSON.parse(serviceAccountJson);
     
     app = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
@@ -59,11 +59,22 @@ export const adminAuth = app ? admin.auth(app) : undefined;
  */
 export function getAdminDb() {
   if (!adminDb) {
-    // Attempt re-initialization if db is not available, as a fallback.
-    initializeAdminApp();
-    if(!adminDb) {
-      throw new Error("Firebase Admin App is not initialized. Check server logs for configuration errors.");
+    // Attempt re-initialization as a last resort, but primarily
+    // ensure initial setup is correct.
+    initializeAdminApp(); 
+    if(!adminDb) { // Check again after attempt
+      throw new Error("Firebase Admin SDK for Firestore is not initialized. Please ensure FIREBASE_SERVICE_ACCOUNT_JSON is correctly set and try again.");
     }
   }
   return adminDb;
+}
+
+export function getAdminAuth() {
+  if (!adminAuth) {
+    initializeAdminApp(); // Attempt re-initialization for Auth too
+    if(!adminAuth) {
+      throw new Error("Firebase Admin SDK for Auth is not initialized. Please ensure FIREBASE_SERVICE_ACCOUNT_JSON is correctly set and try again.");
+    }
+  }
+  return adminAuth;
 }
