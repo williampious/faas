@@ -22,259 +22,129 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper Functions
-    function isUserAdmin() {
-      return request.auth != null &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Super Admin']);
-    }
-    
+    // --- HELPER FUNCTIONS ---
     function isSuperAdmin() {
       return request.auth != null &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Super Admin']);
+             'Super Admin' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isUserAEO(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+             'Agric Extension Officer' in get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    function isMemberOfTenant(tenantId) {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;
     }
     
-    function isUserAEO() {
-      return request.auth != null &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Agric Extension Officer']);
+    // Checks if the user has a Managerial role within a specific tenant.
+    function isManagerOfTenant(tenantId) {
+        return isMemberOfTenant(tenantId) &&
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Manager', 'HRManager']);
     }
 
-    function isFarmMember(farmId) {
-      return request.auth != null &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.farmId == farmId;
+    // Checks if the user has an Office Management role within a specific tenant.
+    function isOfficeManagerOfTenant(tenantId) {
+        return isMemberOfTenant(tenantId) &&
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'OfficeManager', 'FinanceManager']);
     }
 
-    // New helper function to check for manager-level roles within a farm
-    function isFarmManager(farmId) {
-      return isFarmMember(farmId) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Super Admin', 'Manager', 'HRManager']);
-    }
 
-    // New helper function for office management roles
-    function isOfficeManager(farmId) {
-      return isFarmMember(farmId) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Super Admin', 'OfficeManager', 'FinanceManager']);
-    }
-
-    // User Profile Rules
+    // --- GLOBAL COLLECTIONS ---
+    
+    // Users can be read/written by themselves, or by Admins/SuperAdmins of their tenant.
     match /users/{userId} {
-      // Allow user creation by a logged-in user for their own account (registration),
-      // OR by an Admin for any account (invitations).
-      allow create: if request.auth != null &&
-                       (request.auth.uid == userId || isUserAdmin());
-
-      // Allow a user to read their own profile, an admin to read any profile,
-      // and an AEO to read profiles of farmers they manage.
-      allow read: if request.auth != null && (
-                    request.auth.uid == userId ||
-                    isUserAdmin() ||
-                    (isUserAEO() && resource.data.managedByAEO == request.auth.uid)
-                  );
-
-      // A user can update their own profile.
-      // An admin can update any user profile (e.g., to assign roles).
-      // An AEO can update profiles of farmers they manage.
-      allow update: if request.auth != null && (
-                      request.auth.uid == userId ||
-                      isUserAdmin() ||
-                      (isUserAEO() && resource.data.managedByAEO == request.auth.uid)
-                    );
-
-      // Only admins can delete user profiles.
-      allow delete: if isUserAdmin();
-    }
-
-
-    // Farm Rules (Legacy - will be deprecated in favor of /tenants)
-    match /farms/{farmId} {
-      // Any authenticated user can create a farm (initial setup).
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow read: if request.auth.uid == userId ||
+                     (isMemberOfTenant(resource.data.tenantId) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Super Admin'])) ||
+                     (isUserAEO(request.auth.uid) && resource.data.managedByAEO == request.auth.uid);
+                     
+      allow create: if request.auth != null; // User registration or admin invites
       
-      // Any member of the farm can read the farm details.
-      allow read: if isFarmMember(farmId);
+      allow update: if request.auth.uid == userId || 
+                       (isMemberOfTenant(resource.data.tenantId) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Super Admin'])) ||
+                       (isUserAEO(request.auth.uid) && resource.data.managedByAEO == request.auth.uid);
 
-      // Only the farm owner or an admin can update or delete the farm.
-      allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || isUserAdmin());
-    }
-
-    // --- MULTI-TENANT RULES (NEW) ---
-    // The 'tenants' collection will eventually replace the 'farms' collection.
-    match /tenants/{tenantId} {
-      // Allow read/write access to the tenant document if the user is part of that tenant.
-      allow read, write: if isFarmMember(tenantId);
-
-      // --- Nested Subcollections ---
-      // This rule structure is more secure and scalable.
-      
-      // Plot/Field Management (Migrated)
-      match /plots/{plotId} {
-        allow read, create, update, delete: if isFarmMember(tenantId);
-      }
+      allow delete: if isSuperAdmin() || (isMemberOfTenant(resource.data.tenantId) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin']));
     }
     
-    // --- SPECIALIZED RULES ---
-
-    // PROMO CODES
-    // Only Super Admins can manage promotional codes
+    // Only SuperAdmins can manage promotional codes
     match /promotionalCodes/{codeId} {
         allow read, write, create, delete: if isSuperAdmin();
     }
-
-    // PROMO CODE ACTIVATION
-    // Users can attempt to activate a promo code by writing to this collection.
-    // The rules will validate the attempt before allowing the write.
+    
+    // Users can write to this collection to attempt to activate a code. The rule validates the attempt.
     match /promoCodeActivations/{activationId} {
         allow create: if request.auth != null &&
                        request.resource.data.userId == request.auth.uid &&
                        exists(/databases/$(database)/documents/promotionalCodes/$(request.resource.data.code)) &&
                        get(/databases/$(database)/documents/promotionalCodes/$(request.resource.data.code)).data.isActive == true &&
                        get(/databases/$(database)/documents/promotionalCodes/$(request.resource.data.code)).data.timesUsed < get(/databases/$(database)/documents/promotionalCodes/$(request.resource.data.code)).data.usageLimit &&
-                       get(/databases/$(database)/documents/promotionalCodes/$(request.resource.data.code)).data.expiryDate > request.time.toMillis(); // Compare expiryDate with current timestamp
-        // No one can read/update/delete these activation requests once made.
+                       get(/databases/$(database)/documents/promotionalCodes/$(request.resource.data.code)).data.expiryDate > request.time.toMillis();
         allow read, update, delete: if false;
     }
 
 
-    // --- MULTI-TENANT DATA COLLECTIONS (LEGACY) ---
-    // These will be migrated to nested subcollections under /tenants/{tenantId}
-    
-    match /landPreparationActivities/{activityId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
+    // --- MULTI-TENANT DATA MODEL ---
+    // All farm-specific data is nested under a tenant document.
+    match /tenants/{tenantId} {
+      // Allow tenant members to read their own farm/tenant document.
+      // Only Admins of that tenant or a SuperAdmin can create/update the main tenant doc.
+      allow read: if isMemberOfTenant(tenantId);
+      allow create, update, delete: if isSuperAdmin() || (isMemberOfTenant(tenantId) && 'Admin' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role);
 
-    match /plantingRecords/{recordId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
-    
-    match /plantingAdviceRecords/{recordId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read: if isFarmMember(resource.data.farmId);
-    }
+      // --- GENERAL FARM OPERATIONS ---
+      match /plots/{plotId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /landPreparationActivities/{activityId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /plantingRecords/{recordId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /cropMaintenanceActivities/{activityId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /harvestingRecords/{recordId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /soilTestRecords/{recordId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /resources/{resourceId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /tasks/{taskId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /farmEvents/{eventId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /plantingAdviceRecords/{recordId} { allow read, write: if isMemberOfTenant(tenantId); }
+      
+      // --- ANIMAL PRODUCTION ---
+      match /animalHousingRecords/{recordId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /animalHealthRecords/{recordId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /breedingRecords/{recordId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /feedingRecords/{recordId} { allow read, write: if isMemberOfTenant(tenantId); }
 
-    match /cropMaintenanceActivities/{activityId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
-
-    match /harvestingRecords/{recordId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
-    
-    match /animalHousingRecords/{recordId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
-
-    match /animalHealthRecords/{recordId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
-
-    match /breedingRecords/{recordId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
-    
-    match /feedingRecords/{recordId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
+      // --- FINANCIAL & PLANNING (Managed by specific roles) ---
+      match /transactions/{transactionId} { 
+          allow read: if isMemberOfTenant(tenantId);
+          allow create: if isMemberOfTenant(tenantId); // Transactions are created programmatically by other modules.
+          allow update, delete: if false; // Prevent direct modification of financial records.
+      }
+      match /budgets/{budgetId} { allow read, write: if isManagerOfTenant(tenantId); }
+      match /farmingYears/{yearId} { allow read, write: if isMemberOfTenant(tenantId); }
+      match /financialYears/{yearId} { allow read, write: if isOfficeManagerOfTenant(tenantId); }
+      
+      // --- OFFICE & HR MANAGEMENT (Managed by specific roles) ---
+      match /payrollRecords/{recordId} { allow read, write: if isManagerOfTenant(tenantId); }
+      match /technologyAssets/{assetId} { allow read, write: if isOfficeManagerOfTenant(tenantId); }
+      match /facilityManagementRecords/{recordId} { allow read, write: if isOfficeManagerOfTenant(tenantId); }
+      match /recordsManagementRecords/{recordId} { allow read, write: if isOfficeManagerOfTenant(tenantId); }
+      match /safetySecurityRecords/{recordId} { allow read, write: if isOfficeManagerOfTenant(tenantId); }
+      match /officeEvents/{eventId} { allow read, write: if isOfficeManagerOfTenant(tenantId); }
     }
     
-    match /soilTestRecords/{recordId} {
-        allow create: if isFarmMember(request.resource.data.farmId);
-        allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
-    
-    match /payrollRecords/{recordId} {
-      // Only Admins or HRManagers can manage payroll records
-      allow create, read, update, delete: if isFarmManager(request.resource.data.farmId);
-    }
-
-    match /resources/{resourceId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
-    
-    match /budgets/{budgetId} {
-        // Only Admins or HRManagers (or Managers) can manage budgets
-      allow create: if isFarmManager(request.resource.data.farmId);
-      allow read, update, delete: if isFarmManager(request.resource.data.farmId);
-    }
-    
-    match /farmingYears/{yearId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
-
-    match /financialYears/{yearId} {
-      // Only users with office roles can manage financial years
-      allow create: if isOfficeManager(request.resource.data.farmId);
-      allow read, update, delete: if isOfficeManager(resource.data.farmId);
-    }
-
-    match /tasks/{taskId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
-
-    match /farmEvents/{eventId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
-    
-    match /technologyAssets/{assetId} {
-      allow create: if isOfficeManager(request.resource.data.farmId);
-      allow read, update, delete: if isOfficeManager(resource.data.farmId);
-    }
-
-    match /facilityManagementRecords/{recordId} {
-      allow create: if isOfficeManager(request.resource.data.farmId);
-      allow read, update, delete: if isOfficeManager(resource.data.farmId);
-    }
-
-    match /recordsManagementRecords/{recordId} {
-      allow create: if isOfficeManager(request.resource.data.farmId);
-      allow read, update, delete: if isOfficeManager(resource.data.farmId);
-    }
-    
-    match /safetySecurityRecords/{recordId} {
-      allow create: if isOfficeManager(request.resource.data.farmId);
-      allow read, update, delete: if isOfficeManager(resource.data.farmId);
-    }
-
-    match /officeEvents/{eventId} {
-      allow create: if isOfficeManager(request.resource.data.farmId);
-      allow read, update, delete: if isOfficeManager(resource.data.farmId);
-    }
-    
+    // --- AEO SPECIFIC COLLECTIONS (Not nested under tenants) ---
     match /knowledgeArticles/{articleId} {
-      // AEOs can create articles for themselves.
-      allow create: if isUserAEO() && request.auth.uid == request.resource.data.authorId;
-      // An AEO can read/update/delete their own articles.
-      // NOTE: Farmers cannot read this yet. A future rule change would be needed for sharing.
-      allow read, update, delete: if isUserAEO() && request.auth.uid == resource.data.authorId;
+      allow create: if isUserAEO(request.auth.uid) && request.auth.uid == request.resource.data.authorId;
+      allow read, update, delete: if isUserAEO(request.auth.uid) && request.auth.uid == resource.data.authorId;
     }
     
     match /supportLogs/{logId} {
-        allow create: if isUserAEO() && request.auth.uid == request.resource.data.aeoId;
-        allow read, update, delete: if isUserAEO() && request.auth.uid == resource.data.aeoId;
+      allow create: if isUserAEO(request.auth.uid) && request.auth.uid == request.resource.data.aeoId;
+      allow read, update, delete: if isUserAEO(request.auth.uid) && request.auth.uid == resource.data.aeoId;
     }
 
-    match /transactions/{transactionId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read: if isFarmMember(resource.data.farmId);
-      // Prevent direct modification of financial records.
-      allow update, delete: if false;
-    }
-
-    // Default deny for all other paths to ensure security.
-    match /{document=**} {
+    // Default deny for any other path to ensure security.
+    match /{path=**} {
       allow read, write: if false;
     }
   }
@@ -320,7 +190,7 @@ Below are the composite indexes required by the application. Go to **Firebase Co
 
 *   **For Admin User Management:**
     *   Collection: `users`
-    *   Fields: `farmId` (Ascending), `fullName` (Ascending)
+    *   Fields: `tenantId` (Ascending), `fullName` (Ascending)
     *   Query Scope: Collection
 *   **For AEO Farmer Directory:**
     *   Collection: `users`
@@ -332,7 +202,7 @@ Below are the composite indexes required by the application. Go to **Firebase Co
     *   Query Scope: Collection
 *   **For Financial Dashboard & Reports:**
     *   Collection: `transactions`
-    *   Fields: `farmId` (Ascending), `date` (Ascending/Descending - both are fine)
+    *   Fields: `tenantId` (Ascending), `date` (Ascending/Descending - both are fine)
     *   Query Scope: Collection
 *   **For AEO Support Logs:**
     *   Collection: `supportLogs`
