@@ -3,15 +3,13 @@
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldHalf, UsersRound, Settings, TicketPercent, ExternalLink, Info } from 'lucide-react';
+import { ShieldHalf, UsersRound, Settings, TicketPercent, ExternalLink, Info, Building } from 'lucide-react';
 import Link from 'next/link';
 import { useUserProfile } from '@/contexts/user-profile-context';
+import { CreateTenantDialog } from './create-tenant-dialog';
 
 export default function AdminDashboardPage() {
   const { userProfile } = useUserProfile();
-  // This page now serves two types of admins.
-  // A Super Admin who can see platform-level settings.
-  // A regular farm Admin who sees farm-specific settings.
   const isSuperAdmin = userProfile?.role.includes('Super Admin');
 
   return (
@@ -24,7 +22,22 @@ export default function AdminDashboardPage() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         
-        {/* Cards visible to BOTH Super Admins and regular Admins */}
+        {isSuperAdmin && (
+           <CreateTenantDialog>
+            <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary border-primary/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium text-primary">Create New Tenant</CardTitle>
+                <Building className="h-6 w-6 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Onboard a new farm, co-operative, or business onto the platform.
+                </p>
+              </CardContent>
+            </Card>
+           </CreateTenantDialog>
+        )}
+
         <Link href="/admin/users" passHref>
           <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -53,7 +66,6 @@ export default function AdminDashboardPage() {
           </Card>
         </Link>
         
-        {/* Card ONLY visible to Super Admins */}
         {isSuperAdmin && (
           <Link href="/admin/promo-codes" passHref>
             <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary border-accent/50">
