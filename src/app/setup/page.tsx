@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -78,20 +77,20 @@ export default function SetupPage() {
     }
     setIsSubmitting(true);
     
-    const farmRef = doc(collection(db, 'farms'));
+    const tenantRef = doc(collection(db, 'tenants'));
     const userRef = doc(db, 'users', user.uid);
 
-    const newFarm: Omit<Farm, 'id' | 'createdAt'|'updatedAt'> = {
+    const newTenant: Omit<Farm, 'id' | 'createdAt'|'updatedAt'> = {
       name: data.name, country: data.country, region: data.region,
       description: data.description || '', ownerId: user.uid, currency: 'GHS'
     };
 
     try {
       const batch = writeBatch(db);
-      batch.set(farmRef, { ...newFarm, id: farmRef.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      batch.set(tenantRef, { ...newTenant, id: tenantRef.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       
       batch.update(userRef, { 
-          farmId: farmRef.id, 
+          farmId: tenantRef.id, 
           role: ['Admin'] as UserRole[],
           updatedAt: serverTimestamp()
       });

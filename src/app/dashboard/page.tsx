@@ -54,25 +54,26 @@ export default function DashboardPage() {
     totalResources: '0'
   });
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
+  const tenantId = userProfile?.farmId;
   
   useEffect(() => {
     if (isProfileLoading) return;
-    if (!userProfile?.farmId) {
+    if (!tenantId) {
       setIsFarmLoading(false);
       setFarmProfile(null);
       return;
     }
     
     const fetchFarmProfile = async () => {
-      if (!userProfile.farmId || !db) return;
+      if (!tenantId || !db) return;
       setIsFarmLoading(true);
       try {
-        const farmDocRef = doc(db, 'farms', userProfile.farmId);
+        const farmDocRef = doc(db, 'tenants', tenantId);
         const farmDocSnap = await getDoc(farmDocRef);
         if (farmDocSnap.exists()) {
           setFarmProfile(farmDocSnap.data() as Farm);
         } else {
-          console.warn("Farm profile not found for farmId:", userProfile.farmId);
+          console.warn("Farm profile not found for tenantId:", tenantId);
         }
       } catch (error) {
         console.error("Error fetching farm profile:", error);
@@ -82,10 +83,10 @@ export default function DashboardPage() {
     };
 
     fetchFarmProfile();
-  }, [userProfile, isProfileLoading]);
+  }, [tenantId, isProfileLoading]);
 
   useEffect(() => {
-    if (isProfileLoading || !userProfile?.farmId) {
+    if (isProfileLoading || !tenantId) {
         if (!isProfileLoading) {
             setSummaryData({ upcomingTasks: '0', eventsToday: '0', totalResources: '0' });
             setIsSummaryLoading(false);
@@ -94,15 +95,12 @@ export default function DashboardPage() {
     }
 
     const fetchSummaryData = async () => {
-        if (!userProfile?.farmId || !db) return;
+        if (!tenantId || !db) return;
         setIsSummaryLoading(true);
         try {
-            const farmId = userProfile.farmId;
-
             // Fetch upcoming tasks
             const tasksQuery = query(
-                collection(db, 'tasks'),
-                where('farmId', '==', farmId),
+                collection(db, `tenants/${tenantId}/tasks`),
                 where('status', 'in', ['To Do', 'In Progress'])
             );
             const tasksSnapshot = await getCountFromServer(tasksQuery);
@@ -111,15 +109,14 @@ export default function DashboardPage() {
             // Fetch events today
             const todayStr = format(new Date(), 'yyyy-MM-dd');
             const eventsQuery = query(
-                collection(db, 'farmEvents'),
-                where('farmId', '==', farmId),
+                collection(db, `tenants/${tenantId}/farmEvents`),
                 where('date', '==', todayStr)
             );
             const eventsSnapshot = await getCountFromServer(eventsQuery);
             const eventsToday = eventsSnapshot.data().count.toString();
 
             // Fetch total resources
-            const resourcesQuery = query(collection(db, 'resources'), where('farmId', '==', farmId));
+            const resourcesQuery = query(collection(db, `tenants/${tenantId}/resources`));
             const resourcesSnapshot = await getCountFromServer(resourcesQuery);
             const totalResources = resourcesSnapshot.data().count.toString();
 
@@ -138,7 +135,7 @@ export default function DashboardPage() {
     };
 
     fetchSummaryData();
-  }, [userProfile, isProfileLoading]);
+  }, [tenantId, isProfileLoading]);
 
   const summaryCards = [
     { title: "Upcoming Tasks", value: summaryData.upcomingTasks, icon: ListChecks, href: "/task-management", color: "text-blue-500", isLoading: isSummaryLoading },

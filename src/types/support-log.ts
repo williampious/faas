@@ -17,7 +17,7 @@ export type InteractionType = typeof interactionTypes[number];
 
 export interface SupportLog {
   id: string; // Firestore document ID
-  farmId: string; // The farm the farmer belongs to, if applicable
+  tenantId: string; // The farm the farmer belongs to, if applicable
   aeoId: string; // The AEO who created the log
   farmerId: string; // The farmer this log is about
   farmerName: string; // For easy display

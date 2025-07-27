@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview TypeScript type definitions for Farming Years and Seasons.
  */
@@ -11,7 +12,7 @@ export interface FarmingSeason {
 
 export interface FarmingYear {
   id: string; // Firestore document ID
-  farmId: string;
+  tenantId: string;
   name: string; // e.g., "2024 Farming Year"
   startDate: string; // ISO yyyy-MM-dd
   endDate: string; // ISO yyyy-MM-dd

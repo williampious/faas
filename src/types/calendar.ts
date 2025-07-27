@@ -5,7 +5,7 @@
 
 export interface CalendarEvent {
   id: string;
-  farmId: string;
+  tenantId: string;
   date: string; // Store date as ISO string "yyyy-MM-dd"
   title: string;
   description?: string;

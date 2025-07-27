@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview TypeScript type definitions for the Payroll Management feature.
  */
@@ -8,7 +9,7 @@ export type PaymentMethod = typeof paymentMethods[number];
 
 export interface PayrollRecord {
   id: string; // Firestore document ID
-  farmId: string;
+  tenantId: string;
   userId: string; // The user (employee) this payroll is for
   userName: string; // For easier display
   payPeriod: string; // e.g., "October 2024"

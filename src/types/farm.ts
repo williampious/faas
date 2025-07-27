@@ -9,7 +9,7 @@ export interface GPSCoordinates {
 }
 
 export interface Farm {
-  id: string; // Firestore document ID
+  id: string; // Firestore document ID, serves as the tenantId
   name: string;
   description?: string;
   country?: string;
@@ -33,10 +33,6 @@ export interface PlotField {
   locationNotes?: string;
   gpsCoordinates?: GPSCoordinates;
   soilType?: string;
-  // Future considerations:
-  // currentCrop?: string;
-  // plantingHistory?: Array<{ crop: string; season: string; yield: number; yieldUnit: string }>;
-  // activityLog?: Array<{ date: string; activity: string; notes?: string }>;
-  createdAt: any; // Firestore ServerTimestamp or ISO string
-  updatedAt: any; // Firestore ServerTimestamp or ISO string
+  createdAt: any; 
+  updatedAt: any;
 }

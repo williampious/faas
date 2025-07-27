@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview TypeScript type definitions for the Safety & Security feature.
  */
@@ -8,7 +9,7 @@ export type SafetyCategory = typeof safetyCategories[number];
 
 export interface SafetySecurityRecord {
   id: string; // Firestore document ID
-  farmId: string;
+  tenantId: string;
   name: string; // e.g., "Annual Fire Safety Inspection", "General Liability Insurance"
   category: SafetyCategory;
   cost: number;

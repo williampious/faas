@@ -9,7 +9,7 @@ export type PlantingMethod = typeof plantingMethods[number];
 
 export interface PlantingRecord {
   id: string;
-  farmId: string;
+  tenantId: string;
   cropType: string;
   variety?: string;
   datePlanted: string; // ISO string "yyyy-MM-dd"

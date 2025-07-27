@@ -21,7 +21,7 @@ export interface SaleItem {
 
 export interface HarvestingRecord {
   id: string;
-  farmId: string;
+  tenantId: string;
   cropType: string;
   variety?: string;
   dateHarvested: string; // ISO "yyyy-MM-dd"

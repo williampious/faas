@@ -18,7 +18,7 @@ export type ResourceCategory = typeof resourceCategories[number];
 
 export interface ResourceItem {
   id: string;
-  farmId: string;
+  tenantId: string;
   name: string;
   category: ResourceCategory;
   quantity: number;

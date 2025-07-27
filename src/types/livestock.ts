@@ -26,7 +26,7 @@ export type HousingType = typeof housingTypes[number];
 
 export interface HousingRecord {
   id: string;
-  farmId: string;
+  tenantId: string;
   name: string; 
   housingType: HousingType;
   capacity: number; 
@@ -52,6 +52,7 @@ export type HealthActivityType = typeof healthActivityTypes[number];
 
 export interface HealthRecord {
   id: string;
+  tenantId: string;
   activityType: HealthActivityType;
   date: string; // ISO string "yyyy-MM-dd"
   animalsAffected: string; // e.g., "Broiler Batch 1", "All Goats"
@@ -73,7 +74,7 @@ export type BreedingActivityType = typeof breedingActivityTypes[number];
 
 export interface BreedingRecord {
   id: string;
-  farmId: string;
+  tenantId: string;
   activityType: BreedingActivityType;
   maleIdentifier: string;
   femaleIdentifier: string;
@@ -96,7 +97,7 @@ export type FeedType = typeof feedTypes[number];
 
 export interface FeedingRecord {
   id: string;
-  farmId: string;
+  tenantId: string;
   date: string; // ISO string "yyyy-MM-dd"
   animalsFed: string; // e.g., "Broiler House 1", "All Goats"
   feedType: FeedType | string; // Allow custom string for 'Other'
@@ -110,7 +111,3 @@ export interface FeedingRecord {
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
-
-// Future types for production, etc. will go here
-// e.g.,
-// export interface ProductionRecord { ... }

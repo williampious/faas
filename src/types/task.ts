@@ -11,7 +11,7 @@ export const taskPriorities: TaskPriority[] = ['High', 'Medium', 'Low'];
 
 export interface Task {
   id: string;
-  farmId: string;
+  tenantId: string;
   name: string;
   status: TaskStatus;
   priority: TaskPriority;

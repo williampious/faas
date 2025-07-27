@@ -7,7 +7,7 @@ import type { PlantingAdviceInput, PlantingAdviceOutput } from '@/ai/flows/gener
 
 export interface PlantingAdviceRecord {
   id: string;
-  farmId: string;
+  tenantId: string;
   inputs: PlantingAdviceInput;
   advice: PlantingAdviceOutput;
   createdAt: any; // Firestore ServerTimestamp or ISO string for client state

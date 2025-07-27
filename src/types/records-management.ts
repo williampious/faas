@@ -9,7 +9,7 @@ export type RecordCategory = typeof recordCategories[number];
 
 export interface RecordsManagementRecord {
   id: string; // Firestore document ID
-  farmId: string;
+  tenantId: string;
   name: string; // e.g., "Business Operating Permit 2024", "QuickBooks Subscription"
   category: RecordCategory;
   cost: number;

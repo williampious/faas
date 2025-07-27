@@ -9,7 +9,7 @@ export type FacilityCategory = typeof facilityCategories[number];
 
 export interface FacilityRecord {
   id: string; // Firestore document ID
-  farmId: string;
+  tenantId: string;
   name: string; // e.g., "Monthly Office Rent", "AC Repair"
   category: FacilityCategory;
   cost: number;

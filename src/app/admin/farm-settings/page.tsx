@@ -44,6 +44,7 @@ export default function FarmSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const tenantId = userProfile?.farmId;
   
   const form = useForm<FarmSettingsFormValues>({
     resolver: zodResolver(farmSettingsSchema),
@@ -55,7 +56,7 @@ export default function FarmSettingsPage() {
 
   useEffect(() => {
     if (isProfileLoading) return;
-    if (!userProfile?.farmId) {
+    if (!tenantId) {
       setError("You are not associated with a farm or you don't have permission to view this page.");
       setIsLoading(false);
       return;
@@ -65,7 +66,7 @@ export default function FarmSettingsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const farmDocRef = doc(db, 'farms', userProfile.farmId);
+        const farmDocRef = doc(db, 'tenants', tenantId);
         const farmDocSnap = await getDoc(farmDocRef);
         if (farmDocSnap.exists()) {
           const farmData = farmDocSnap.data() as Farm;
@@ -92,17 +93,17 @@ export default function FarmSettingsPage() {
     };
     
     fetchFarmData();
-  }, [userProfile, isProfileLoading, form]);
+  }, [tenantId, isProfileLoading, form]);
 
   const onSubmit: SubmitHandler<FarmSettingsFormValues> = async (data) => {
-    if (!userProfile?.farmId) {
+    if (!tenantId) {
       toast({ title: "Error", description: "Farm ID is missing.", variant: "destructive" });
       return;
     }
     
     setIsSubmitting(true);
     try {
-      const farmDocRef = doc(db, 'farms', userProfile.farmId);
+      const farmDocRef = doc(db, 'tenants', tenantId);
       await updateDoc(farmDocRef, {
         ...data,
         updatedAt: serverTimestamp(),

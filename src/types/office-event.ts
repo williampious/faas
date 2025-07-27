@@ -9,7 +9,7 @@ export type OfficeEventCategory = typeof officeEventCategories[number];
 
 export interface OfficeEvent {
   id: string; // Firestore document ID
-  farmId: string;
+  tenantId: string;
   name: string; // e.g., "Q3 Financial Review", "Annual Staff Retreat"
   category: OfficeEventCategory;
   eventDate: string; // ISO yyyy-MM-dd

@@ -25,7 +25,7 @@ export interface BudgetCategory {
 
 export interface Budget {
   id: string;
-  farmId: string;
+  tenantId: string;
   name: string; // e.g., "2024 Maize Season Budget", "Annual Farm Budget 2025"
   budgetType: BudgetType;
   startDate: string; // ISO date string "yyyy-MM-dd"

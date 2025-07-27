@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview TypeScript type definitions for the Technology Management feature.
  */
@@ -11,7 +12,7 @@ export type AssetStatus = typeof assetStatuses[number];
 
 export interface TechnologyAsset {
   id: string;
-  farmId: string;
+  tenantId: string;
   name: string;
   assetType: AssetType;
   status: AssetStatus;

@@ -6,7 +6,7 @@ import type { CostItem } from './finance';
 
 export interface SoilTestRecord {
   id: string;
-  farmId: string;
+  tenantId: string;
   testDate: string; // ISO "yyyy-MM-dd"
   plotName: string; // Simplified for now, just a text field
   phLevel?: number;

@@ -165,7 +165,7 @@ export interface SubscriptionDetails {
 export interface AgriFAASUserProfile {
   // 1. Basic Information
   userId: string; // Auto-generated UUID for Firestore doc ID, primary key
-  farmId?: string; // ID of the farm this user belongs to
+  farmId?: string; // ID of the tenant (farm) this user belongs to
   fullName: string;
   role: UserRole[]; // Can have multiple roles
   gender?: Gender;
