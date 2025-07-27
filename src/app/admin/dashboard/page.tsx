@@ -2,25 +2,29 @@
 'use client';
 
 import { PageHeader } from '@/components/layout/page-header';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldHalf, UsersRound, Settings, TicketPercent, ExternalLink, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useUserProfile } from '@/contexts/user-profile-context';
 
 export default function AdminDashboardPage() {
   const { userProfile } = useUserProfile();
-  // A Super Admin is an Admin who can manage promo codes.
+  // This page now serves two types of admins.
+  // A Super Admin who can see platform-level settings.
+  // A regular farm Admin who sees farm-specific settings.
   const isSuperAdmin = userProfile?.role.includes('Super Admin');
 
   return (
     <div>
       <PageHeader
-        title="Admin Dashboard"
+        title={isSuperAdmin ? "Super Admin Dashboard" : "Admin Dashboard"}
         icon={ShieldHalf}
-        description="Oversee and manage AgriFAAS Connect application."
+        description={isSuperAdmin ? "Oversee and manage the entire AgriFAAS Connect platform." : "Manage your farm's settings and users."}
       />
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        {/* Cards visible to BOTH Super Admins and regular Admins */}
         <Link href="/admin/users" passHref>
           <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -29,7 +33,7 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                View, add, and modify user accounts and roles.
+                View, add, and manage users within your farm.
               </p>
             </CardContent>
           </Card>
@@ -49,16 +53,17 @@ export default function AdminDashboardPage() {
           </Card>
         </Link>
         
+        {/* Card ONLY visible to Super Admins */}
         {isSuperAdmin && (
           <Link href="/admin/promo-codes" passHref>
             <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary border-accent/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">Promo Codes</CardTitle>
+                <CardTitle className="text-lg font-medium text-accent">Promo Codes</CardTitle>
                 <TicketPercent className="h-6 w-6 text-accent" />
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Create and manage subscription promotional codes. (Super Admin)
+                  Manage platform-wide subscription promotional codes.
                 </p>
               </CardContent>
             </Card>
@@ -73,7 +78,7 @@ export default function AdminDashboardPage() {
             </CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-2">
-            <p>This Admin Dashboard is for managing your application's day-to-day business logic (like creating promo codes or managing user roles).</p>
+            <p>This Admin Dashboard is for managing your application's day-to-day business logic (like managing user roles).</p>
             <p>For backend management, such as viewing raw database records, managing user authentication credentials, or updating security rules, you will need to use the Google Firebase Console directly.</p>
             <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary hover:underline font-semibold">
                 Go to Firebase Console <ExternalLink className="ml-1 h-3 w-3" />
