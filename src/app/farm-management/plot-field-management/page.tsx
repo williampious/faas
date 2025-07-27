@@ -48,7 +48,8 @@ const plotFieldFormSchema = z.object({
 type PlotFieldFormValues = z.infer<typeof plotFieldFormSchema>;
 
 const PLOT_FORM_ID = 'plot-field-form';
-const PLOTS_COLLECTION = 'plots';
+const TENANTS_COLLECTION = 'tenants'; // New top-level collection
+const PLOTS_SUBCOLLECTION = 'plots'; // New subcollection name
 
 export default function PlotFieldManagementPage() {
   const [plots, setPlots] = useState<PlotField[]>([]);
@@ -68,13 +69,14 @@ export default function PlotFieldManagementPage() {
     },
   });
 
+  const tenantId = userProfile?.farmId; // Using farmId as the tenantId
   const isStarterPlan = userProfile?.subscription?.planId === 'starter';
   const hasReachedPlotLimit = isStarterPlan && plots.length >= 1;
 
   useEffect(() => {
     if (isProfileLoading) return;
-    if (!userProfile?.farmId) {
-      setError("Farm information is not available. Cannot load plot data.");
+    if (!tenantId) {
+      setError("Tenant (Farm) information is not available. Cannot load plot data.");
       setIsLoading(false);
       return;
     }
@@ -83,12 +85,11 @@ export default function PlotFieldManagementPage() {
       setIsLoading(true);
       setError(null);
       try {
-        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
+        if (!tenantId) throw new Error("User is not associated with a tenant.");
         
-        const plotsQuery = query(
-          collection(db, PLOTS_COLLECTION),
-          where("farmId", "==", userProfile.farmId)
-        );
+        const plotsPath = `${TENANTS_COLLECTION}/${tenantId}/${PLOTS_SUBCOLLECTION}`;
+        const plotsQuery = query(collection(db, plotsPath));
+
         const querySnapshot = await getDocs(plotsQuery);
         const fetchedPlots = querySnapshot.docs.map(doc => ({
           id: doc.id,
@@ -105,7 +106,7 @@ export default function PlotFieldManagementPage() {
     };
 
     fetchPlots();
-  }, [userProfile, isProfileLoading, toast]);
+  }, [userProfile, isProfileLoading, toast, tenantId]);
 
 
   const handleOpenModal = (plotToEdit?: PlotField) => {
@@ -142,8 +143,8 @@ export default function PlotFieldManagementPage() {
   };
 
   const onSubmit: SubmitHandler<PlotFieldFormValues> = async (data) => {
-    if (!userProfile?.farmId) {
-      toast({ title: "Error", description: "Cannot save plot. Farm information is missing.", variant: "destructive" });
+    if (!tenantId) {
+      toast({ title: "Error", description: "Cannot save plot. Tenant (Farm) ID is missing.", variant: "destructive" });
       return;
     }
 
@@ -155,23 +156,24 @@ export default function PlotFieldManagementPage() {
 
     const plotData = {
       ...data,
-      farmId: userProfile.farmId,
       gpsCoordinates: gpsCoords,
       updatedAt: serverTimestamp(),
     };
 
+    const plotsPath = `${TENANTS_COLLECTION}/${tenantId}/${PLOTS_SUBCOLLECTION}`;
+
     try {
       if (editingPlot) {
-        const plotDocRef = doc(db, PLOTS_COLLECTION, editingPlot.id);
+        const plotDocRef = doc(db, plotsPath, editingPlot.id);
         await updateDoc(plotDocRef, plotData);
-        setPlots(plots.map((p) => p.id === editingPlot.id ? { ...p, ...data, gpsCoordinates: gpsCoords } : p));
+        setPlots(plots.map((p) => p.id === editingPlot.id ? { ...p, ...data, tenantId: p.tenantId, gpsCoordinates: gpsCoords } : p));
         toast({ title: "Plot Updated", description: `Plot "${data.name}" has been updated.` });
       } else {
-        const docRef = await addDoc(collection(db, PLOTS_COLLECTION), {
+        const docRef = await addDoc(collection(db, plotsPath), {
             ...plotData,
             createdAt: serverTimestamp(),
         });
-        const newPlot: PlotField = { id: docRef.id, ...plotData, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+        const newPlot: PlotField = { id: docRef.id, tenantId, ...plotData, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
         setPlots(prev => [...prev, newPlot]);
         toast({ title: "Plot Added", description: `Plot "${data.name}" has been added.` });
       }
@@ -185,11 +187,13 @@ export default function PlotFieldManagementPage() {
   };
 
   const handleDeletePlot = async (id: string) => {
+    if (!tenantId) return;
     const plotToDelete = plots.find(p => p.id === id);
     if (!plotToDelete) return;
     
     try {
-      await deleteDoc(doc(db, PLOTS_COLLECTION, id));
+      const plotsPath = `${TENANTS_COLLECTION}/${tenantId}/${PLOTS_SUBCOLLECTION}`;
+      await deleteDoc(doc(db, plotsPath, id));
       setPlots(plots.filter((p) => p.id !== id));
       toast({ title: "Plot Deleted", description: `Plot "${plotToDelete.name}" has been removed.`, variant: "destructive" });
     } catch (err: any) {
@@ -355,12 +359,12 @@ export default function PlotFieldManagementPage() {
       </Card>
        <Card className="mt-6 bg-muted/30 p-4">
         <CardHeader className="p-0 pb-2">
-            <CardTitle className="text-base font-semibold text-muted-foreground">Plot/Field Management Notes</CardTitle>
+            <CardTitle className="text-base font-semibold text-muted-foreground">Architectural Note</CardTitle>
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This data is now stored centrally in Firestore, not in your browser. All users from your farm will see the same list of plots.</p>
-            <p>&bull; Each plot is tagged with your farm's unique ID to keep it separate from other farms on the platform.</p>
-            <p>&bull; For this to work, you must update your Firestore security rules to allow access to the `plots` collection.</p>
+            <p>&bull; This module has been migrated to the new multi-tenant data model.</p>
+            <p>&bull; All plot data is now stored in a subcollection under your unique tenant (farm) ID: `/tenants/{your_farm_id}/plots`.</p>
+            <p>&bull; This improves data isolation and scalability, preparing the app for managing multiple farms under one platform.</p>
         </CardContent>
       </Card>
     </div>

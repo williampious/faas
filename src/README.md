@@ -88,7 +88,7 @@ service cloud.firestore {
     }
 
 
-    // Farm Rules
+    // Farm Rules (Legacy - will be deprecated in favor of /tenants)
     match /farms/{farmId} {
       // Any authenticated user can create a farm (initial setup).
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
@@ -98,6 +98,21 @@ service cloud.firestore {
 
       // Only the farm owner or an admin can update or delete the farm.
       allow update, delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || isUserAdmin());
+    }
+
+    // --- MULTI-TENANT RULES (NEW) ---
+    // The 'tenants' collection will eventually replace the 'farms' collection.
+    match /tenants/{tenantId} {
+      // Allow read/write access to the tenant document if the user is part of that tenant.
+      allow read, write: if isFarmMember(tenantId);
+
+      // --- Nested Subcollections ---
+      // This rule structure is more secure and scalable.
+      
+      // Plot/Field Management (Migrated)
+      match /plots/{plotId} {
+        allow read, create, update, delete: if isFarmMember(tenantId);
+      }
     }
     
     // --- SPECIALIZED RULES ---
@@ -123,12 +138,8 @@ service cloud.firestore {
     }
 
 
-    // --- MULTI-TENANT DATA COLLECTIONS ---
-    
-    match /plots/{plotId} {
-      allow create: if isFarmMember(request.resource.data.farmId);
-      allow read, update, delete: if isFarmMember(resource.data.farmId);
-    }
+    // --- MULTI-TENANT DATA COLLECTIONS (LEGACY) ---
+    // These will be migrated to nested subcollections under /tenants/{tenantId}
     
     match /landPreparationActivities/{activityId} {
       allow create: if isFarmMember(request.resource.data.farmId);

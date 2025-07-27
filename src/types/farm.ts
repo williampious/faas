@@ -26,7 +26,7 @@ export interface Farm {
 
 export interface PlotField {
   id: string;
-  farmId: string; // The ID of the farm this plot belongs to (Tenant ID)
+  tenantId: string; // The ID of the tenant (farm) this plot belongs to
   name: string;
   description?: string;
   sizeAcres?: number;
