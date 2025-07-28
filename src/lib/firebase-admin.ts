@@ -1,3 +1,4 @@
+
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
@@ -18,7 +19,7 @@ function initializeAdminApp() {
     return;
   }
 
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  let serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!serviceAccountJson) {
     throw new Error(
       "CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
@@ -27,7 +28,16 @@ function initializeAdminApp() {
   }
 
   try {
-    // Assuming FIREBASE_SERVICE_ACCOUNT_JSON contains a properly escaped JSON string.
+    // --- DEBUG: Inspect the Raw Environment Variable Content ---
+    // This log helps visualize control characters that might break JSON.parse()
+    console.log("--- DEBUG: Raw Service Account JSON from ENV (before cleaning) ---");
+    console.log(JSON.stringify(serviceAccountJson));
+    console.log("--- END DEBUG ---");
+
+    // Replace actual newline characters with their JSON-escaped representation '\\n'.
+    // Also, handle carriage returns by removing them.
+    serviceAccountJson = serviceAccountJson.replace(/\n/g, '\\n').replace(/\r/g, '');
+
     const serviceAccount = JSON.parse(serviceAccountJson);
     
     app = admin.initializeApp({
