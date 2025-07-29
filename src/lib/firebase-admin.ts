@@ -1,3 +1,4 @@
+
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
@@ -11,7 +12,6 @@ function ensureAdminAppInitialized() {
     return;
   }
 
-  // Proceed with initialization if no existing app
   const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
@@ -21,10 +21,10 @@ function ensureAdminAppInitialized() {
         credential: admin.credential.applicationDefault(),
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
       });
-      console.log('[Firebase Admin] ✅ SDK initialized using GOOGLE_APPLICATION_CREDENTIALS (lazy init).');
+      console.log('[Firebase Admin] ✅ SDK initialized using GOOGLE_APPLICATION_CREDENTIALS file path.');
     } catch (e: any) {
-      console.error(`[Firebase Admin] ❌ CRITICAL: Failed to initialize with file path (lazy init): ${e.message}`);
-      throw new Error(`Firebase Admin SDK initialization failed: ${e.message}`); // Throw error if initialization fails
+      console.error(`[Firebase Admin] ❌ CRITICAL: Failed to initialize with file path: ${e.message}`);
+      throw new Error(`Firebase Admin SDK initialization failed: ${e.message}`);
     }
   } else if (serviceAccountJson) {
     try {
@@ -33,37 +33,33 @@ function ensureAdminAppInitialized() {
         credential: admin.credential.cert(serviceAccount),
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
       });
-      console.log('[Firebase Admin] ✅ SDK initialized using FIREBASE_SERVICE_ACCOUNT_JSON (lazy init).');
+      console.log('[Firebase Admin] ✅ SDK initialized using FIREBASE_SERVICE_ACCOUNT_JSON secret.');
     } catch (e: any) {
-      console.error(
-        "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed with JSON secret (lazy init). ",
-        e.message
-      );
-      throw new Error(`Firebase Admin SDK initialization failed: ${e.message}`); // Throw error if initialization fails
+        console.error("--- DEBUG: FAILED TO PARSE SERVICE ACCOUNT JSON ---");
+        console.error("The string provided in the FIREBASE_SERVICE_ACCOUNT_JSON secret is not valid JSON. This can be due to formatting errors or incorrect escaping of characters like newlines.");
+        console.error("Parser Error:", e.message);
+        console.error("--- END DEBUG ---");
+        throw new Error(`Firebase Admin SDK initialization failed due to malformed JSON: ${e.message}`);
     }
   } else {
     const errorMsg = "[Firebase Admin] ❌ CRITICAL: Neither GOOGLE_APPLICATION_CREDENTIALS nor FIREBASE_SERVICE_ACCOUNT_JSON is set. The Admin SDK cannot be initialized.";
     console.error(errorMsg);
-    throw new Error(errorMsg); // Throw error if no credentials
+    throw new Error(errorMsg);
   }
 }
 
 export function getAdminDb() {
-  ensureAdminAppInitialized(); // Ensure initialization happens before returning db
+  ensureAdminAppInitialized();
   if (!app) {
-       // This should ideally not happen if ensureAdminAppInitialized throws on failure,
-       // but as a safeguard:
-       throw new Error("Firebase Admin SDK for Firestore is not initialized. SDK initialization likely failed.");
+       throw new Error("Firebase Admin SDK for Firestore is not initialized. SDK initialization likely failed. Check server logs for details.");
   }
   return admin.firestore(app);
 }
 
 export function getAdminAuth() {
-  ensureAdminAppInitialized(); // Ensure initialization happens before returning auth
+  ensureAdminAppInitialized();
     if (!app) {
-       // This should ideally not happen if ensureAdminAppInitialized throws on failure,
-       // but as a safeguard:
-       throw new Error("Firebase Admin SDK for Auth is not initialized. SDK initialization likely failed.");
+       throw new Error("Firebase Admin SDK for Auth is not initialized. SDK initialization likely failed. Check server logs for details.");
     }
   return admin.auth(app);
 }
