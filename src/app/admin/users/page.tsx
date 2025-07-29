@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { v4 as uuidv4 } from 'uuid';
-import { sendEmail } from '@/lib/email';
+import { sendInvitationEmail } from './actions';
 
 
 const usersCollectionName = 'users';
@@ -77,18 +77,12 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      if (isAuthLoading || !userProfile) {
+      if (isAuthLoading || !userProfile?.tenantId) {
         if (!isAuthLoading) { 
-            setUsers([]);
+            setError("You do not have permission to view this page or your user profile is missing farm information.");
             setIsLoading(false);
         }
         return;
-      }
-
-      if (!currentUserIsAdmin || !userProfile?.farmId) {
-         setError("You do not have permission to view this page or your user profile is missing farm information.");
-         setIsLoading(false);
-         return;
       }
 
       setIsLoading(true);
@@ -125,7 +119,7 @@ export default function AdminUsersPage() {
     };
 
     fetchUsers();
-  }, [currentUserIsAdmin, isAuthLoading, userProfile]);
+  }, [isAuthLoading, userProfile]);
 
   const handleOpenEditModal = (userToEdit: AgriFAASUserProfile) => {
     setEditingUser(userToEdit);
@@ -253,7 +247,7 @@ export default function AdminUsersPage() {
         setGeneratedInviteLink(inviteLink);
         setInviteeName(data.fullName);
 
-        const emailResult = await sendEmail({
+        const emailResult = await sendInvitationEmail({
             to: data.email,
             subject: `You're invited to join ${userProfile.fullName}'s farm on AgriFAAS Connect!`,
             html: `
