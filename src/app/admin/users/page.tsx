@@ -40,7 +40,7 @@ type InviteUserFormValues = z.infer<typeof inviteUserFormSchema>;
 
 
 export default function AdminUsersPage() {
-  const { userProfile, isAdmin: currentUserIsAdmin, isLoading: isAuthLoading } = useUserProfile();
+  const { userProfile, isLoading: isAuthLoading } = useUserProfile();
   const { toast } = useToast();
   const [users, setUsers] = useState<AgriFAASUserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +64,8 @@ export default function AdminUsersPage() {
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   const isSuperAdmin = userProfile?.role.includes('Super Admin') || false;
+  const isRegularAdmin = userProfile?.role.includes('Admin') || false;
+
 
   const availableRoles: UserRole[] = ['Super Admin', 'Admin', 'Manager', 'FieldOfficer', 'HRManager', 'OfficeManager', 'FinanceManager', 'Farmer', 'Investor', 'Farm Staff', 'Agric Extension Officer'];
 
@@ -86,7 +88,7 @@ export default function AdminUsersPage() {
         return;
       }
       
-      const hasPermission = isSuperAdmin || (currentUserIsAdmin && userProfile.tenantId);
+      const hasPermission = isSuperAdmin || (isRegularAdmin && userProfile.tenantId);
 
       if (!hasPermission) {
          setError("You do not have permission to view this page or your user profile is missing farm information.");
@@ -113,6 +115,9 @@ export default function AdminUsersPage() {
           );
         } else {
           // Regular Admins can only see users in their tenant
+          if (!userProfile.tenantId) {
+            throw new Error("Admin is not associated with a farm.");
+          }
           usersQuery = query(
             collection(db, usersCollectionName), 
             where("tenantId", "==", userProfile.tenantId),
@@ -139,7 +144,7 @@ export default function AdminUsersPage() {
     };
 
     fetchUsers();
-  }, [currentUserIsAdmin, isAuthLoading, userProfile, isSuperAdmin]);
+  }, [isRegularAdmin, isAuthLoading, userProfile, isSuperAdmin]);
 
   const handleOpenEditModal = (userToEdit: AgriFAASUserProfile) => {
     setEditingUser(userToEdit);
@@ -370,7 +375,7 @@ export default function AdminUsersPage() {
      );
   }
 
-  if (!currentUserIsAdmin && !isAuthLoading){
+  if (!isSuperAdmin && !isRegularAdmin && !isAuthLoading){
       return (
            <div className="container mx-auto py-10">
              <Alert variant="destructive" className="mb-6 max-w-lg mx-auto">
@@ -682,4 +687,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-

@@ -27,6 +27,7 @@ export type LinkedModule =
   | 'Records Management'
   | 'Event Planning'
   | 'Safety & Security'
+  | 'Soil & Water Management'
   | 'Other';
 
 // Define which modules fall under which high-level budget type for filtering
@@ -56,7 +57,7 @@ export const OFFICE_OPS_MODULES: LinkedModule[] = [
 
 export interface OperationalTransaction {
   id: string; // a unique id for the transaction itself
-  farmId: string; // Foreign key to the farm
+  tenantId: string; // Foreign key to the tenant (farm)
   date: string; // ISO "yyyy-MM-dd"
   description: string; // From cost/sale item description
   amount: number;

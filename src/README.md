@@ -26,7 +26,7 @@ service cloud.firestore {
     function isSuperAdmin() {
       return request.auth != null &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             'Super Admin' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Super Admin']);
     }
 
     function isUserAEO(userId) {
@@ -58,7 +58,6 @@ service cloud.firestore {
     // Users collection can be listed by Super Admins.
     // Individual user documents can be read/written by themselves, or by Admins of their tenant.
     match /users/{userId} {
-      // Rule to allow reading the whole collection (list)
       allow list: if isSuperAdmin();
     
       allow read: if isSuperAdmin() ||
@@ -203,23 +202,23 @@ The index will take a few minutes to build. Once it's done, the feature that cau
 
 *   **Collection ID:** `users`, Fields to index: `tenantId` (Ascending), `fullName` (Ascending).
 *   **Collection ID:** `tenants`, Fields to index: `name` (Ascending / Descending), `country` (Ascending / Descending), `region` (Ascending / Descending), `createdAt` (Ascending / Descending).
-*   **Collection ID:** `transactions`, Fields to index: `farmId` (Ascending), `date` (Descending).
+*   **Collection ID:** `transactions`, Fields to index: `tenantId` (Ascending), `date` (Descending).
 *   **Collection ID:** `promotionalCodes`, Fields to index: `createdAt` (Descending).
 *   **Collection ID:** `supportLogs`, Fields to index: `aeoId` (Ascending), `interactionDate` (Descending).
 *   **Collection ID:** `knowledgeArticles`, Fields to index: `authorId` (Ascending), `createdAt` (Descending).
-*   **Collection ID:** `plantingAdviceRecords`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
-*   **Collection ID:** `payrollRecords`, Fields to index: `farmId` (Ascending), `paymentDate` (Descending).
-*   **Collection ID:** `facilityManagementRecords`, Fields to index: `farmId` (Ascending), `paymentDate` (Descending).
-*   **Collection ID:** `safetySecurityRecords`, Fields to index: `farmId` (Ascending), `paymentDate` (Descending).
-*   **Collection ID:** `recordsManagementRecords`, Fields to index: `farmId` (Ascending), `paymentDate` (Descending).
-*   **Collection ID:** `technologyAssets`, Fields to index: `farmId` (Ascending), `purchaseDate` (Descending).
-*   **Collection ID:** `officeEvents`, Fields to index: `farmId` (Ascending), `eventDate` (Descending).
-*   **Collection ID:** `soilTestRecords`, Fields to index: `farmId` (Ascending), `testDate` (Descending).
-*   **Collection ID:** `animalHealthRecords`, Fields to index: `farmId` (Ascending), `date` (Descending).
-*   **Collection ID:** `feedingRecords`, Fields to index: `farmId` (Ascending), `date` (Descending).
-*   **Collection ID:** `harvestingRecords`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
-*   **Collection ID:** `plantingRecords`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
-*   **Collection ID:** `landPreparationActivities`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
-*   **Collection ID:** `tasks`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
-*   **Collection ID:** `farmEvents`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
-*   **Collection ID:** `budgets`, Fields to index: `farmId` (Ascending).
+*   **Collection ID:** `plantingAdviceRecords`, Fields to index: `tenantId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `payrollRecords`, Fields to index: `tenantId` (Ascending), `paymentDate` (Descending).
+*   **Collection ID:** `facilityManagementRecords`, Fields to index: `tenantId` (Ascending), `paymentDate` (Descending).
+*   **Collection ID:** `safetySecurityRecords`, Fields to index: `tenantId` (Ascending), `paymentDate` (Descending).
+*   **Collection ID:** `recordsManagementRecords`, Fields to index: `tenantId` (Ascending), `paymentDate` (Descending).
+*   **Collection ID:** `technologyAssets`, Fields to index: `tenantId` (Ascending), `purchaseDate` (Descending).
+*   **Collection ID:** `officeEvents`, Fields to index: `tenantId` (Ascending), `eventDate` (Descending).
+*   **Collection ID:** `soilTestRecords`, Fields to index: `tenantId` (Ascending), `testDate` (Descending).
+*   **Collection ID:** `animalHealthRecords`, Fields to index: `tenantId` (Ascending), `date` (Descending).
+*   **Collection ID:** `feedingRecords`, Fields to index: `tenantId` (Ascending), `date` (Descending).
+*   **Collection ID:** `harvestingRecords`, Fields to index: `tenantId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `plantingRecords`, Fields to index: `tenantId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `landPreparationActivities`, Fields to index: `tenantId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `tasks`, Fields to index: `tenantId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `farmEvents`, Fields to index: `tenantId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `budgets`, Fields to index: `tenantId` (Ascending).

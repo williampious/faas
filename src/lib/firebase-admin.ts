@@ -1,10 +1,10 @@
-
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
 let app: admin.app.App | undefined;
 
 function initializeAdminApp() {
+  // This function is designed to be idempotent (safe to call multiple times).
   if (admin.apps.length > 0) {
     if (!app) app = admin.apps[0]!;
     return;
@@ -13,10 +13,9 @@ function initializeAdminApp() {
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
   if (!serviceAccountJson) {
-    throw new Error(
-      "[Firebase Admin] CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
-      "The Admin SDK cannot be initialized. Please refer to the README.md for setup instructions."
-    );
+    // This will be caught by getAdminDb/getAdminAuth and returned as a user-friendly error
+    console.error("[Firebase Admin] CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. Admin SDK cannot be initialized.");
+    return;
   }
 
   try {
@@ -28,8 +27,8 @@ function initializeAdminApp() {
     console.log('[Firebase Admin] ✅ SDK initialized successfully.');
   } catch (error: any) {
     console.error(
-      "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed. This is likely due to a malformed service account JSON. Ensure the entire JSON content is copied correctly into the secret manager without extra formatting.",
-      `Parser Error: ${error.message}`
+      "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed. This is likely due to a malformed service account JSON.",
+      error.message
     );
     // Let app remain undefined so getAdminDb fails explicitly
   }

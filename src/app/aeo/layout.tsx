@@ -43,7 +43,7 @@ export default function AeoLayout({ children }: { children: ReactNode }) {
 
   const isRoleAEO = userProfile.role?.includes('Agric Extension Officer');
   
-  if (!isRoleAEO && !access.canAccessAeoTools) {
+  if (!isRoleAEO) {
     return (
       <div className="container mx-auto py-10 flex justify-center">
         <Card className="w-full max-w-lg text-center shadow-lg">
@@ -63,7 +63,7 @@ export default function AeoLayout({ children }: { children: ReactNode }) {
   }
 
   if (isRoleAEO && !access.canAccessAeoTools) {
-      const plan = userProfile.subscription?.planId || 'starter';
+      const plan = userProfile.farmProfile?.subscription?.planId || 'starter';
       return (
         <div className="container mx-auto py-10 flex justify-center">
         <Card className="w-full max-w-lg text-center shadow-lg">

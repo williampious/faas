@@ -1,4 +1,3 @@
-
 // src/app/hr/payroll/page.tsx
 'use client';
 
@@ -99,7 +98,7 @@ export default function PayrollPage() {
         // Fetch Employees
         const usersQuery = query(collection(db, USERS_COLLECTION), where("tenantId", "==", tenantId), orderBy("fullName", "asc"));
         const usersSnapshot = await getDocs(usersQuery);
-        const fetchedUsers = usersSnapshot.docs.map(doc => doc.data() as AgriFAASUserProfile);
+        const fetchedUsers = usersSnapshot.docs.map(doc => ({ userId: doc.id, ...doc.data() } as AgriFAASUserProfile));
         setEmployees(fetchedUsers);
         
       } catch (err: any) {

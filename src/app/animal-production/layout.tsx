@@ -42,7 +42,7 @@ export default function AnimalProductionLayout({ children }: { children: ReactNo
   }
   
   if (!access.canAccessAnimalOps) {
-    const plan = userProfile.subscription?.planId || 'starter';
+    const plan = userProfile.farmProfile?.subscription?.planId || 'starter';
     return (
       <div className="container mx-auto py-10 flex justify-center">
         <Card className="w-full max-w-lg text-center shadow-lg">

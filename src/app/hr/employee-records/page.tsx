@@ -138,7 +138,7 @@ export default function HREmployeeRecordsPage() {
         </CardHeader>
         <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
             <p>&bull; This directory provides a read-only view of all personnel on the farm.</p>
-            <p>&bull; To add, invite, or manage user roles and permissions, please use the <strong>Admin &gt; User Management</strong> dashboard.</p>
+            <p>&bull; To add, invite, or manage user roles and permissions, please use the <strong>Admin Panel &gt; User Management</strong> dashboard.</p>
         </CardContent>
       </Card>
     </div>

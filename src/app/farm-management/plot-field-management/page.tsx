@@ -48,8 +48,8 @@ const plotFieldFormSchema = z.object({
 type PlotFieldFormValues = z.infer<typeof plotFieldFormSchema>;
 
 const PLOT_FORM_ID = 'plot-field-form';
-const TENANTS_COLLECTION = 'tenants'; // New top-level collection
-const PLOTS_SUBCOLLECTION = 'plots'; // New subcollection name
+const TENANTS_COLLECTION = 'tenants';
+const PLOTS_SUBCOLLECTION = 'plots';
 
 export default function PlotFieldManagementPage() {
   const [plots, setPlots] = useState<PlotField[]>([]);
@@ -69,7 +69,7 @@ export default function PlotFieldManagementPage() {
     },
   });
 
-  const tenantId = userProfile?.farmId; // Using farmId as the tenantId
+  const tenantId = userProfile?.tenantId; 
   const isStarterPlan = userProfile?.subscription?.planId === 'starter';
   const hasReachedPlotLimit = isStarterPlan && plots.length >= 1;
 
@@ -166,7 +166,7 @@ export default function PlotFieldManagementPage() {
       if (editingPlot) {
         const plotDocRef = doc(db, plotsPath, editingPlot.id);
         await updateDoc(plotDocRef, plotData);
-        setPlots(plots.map((p) => p.id === editingPlot.id ? { ...p, ...data, tenantId: p.tenantId, gpsCoordinates: gpsCoords } : p));
+        setPlots(plots.map((p) => p.id === editingPlot.id ? { ...p, ...data, tenantId, gpsCoordinates: gpsCoords } : p));
         toast({ title: "Plot Updated", description: `Plot "${data.name}" has been updated.` });
       } else {
         const docRef = await addDoc(collection(db, plotsPath), {
@@ -355,16 +355,6 @@ export default function PlotFieldManagementPage() {
               <p className="text-sm text-muted-foreground">Click "Add New Plot/Field" to get started.</p>
             </div>
           )}
-        </CardContent>
-      </Card>
-       <Card className="mt-6 bg-muted/30 p-4">
-        <CardHeader className="p-0 pb-2">
-            <CardTitle className="text-base font-semibold text-muted-foreground">Architectural Note</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-            <p>&bull; This module has been migrated to the new multi-tenant data model.</p>
-            <p>&bull; All plot data is now stored in a subcollection under your unique tenant (farm) ID: `/tenants/{your_farm_id}/plots`.</p>
-            <p>&bull; This improves data isolation and scalability, preparing the app for managing multiple farms under one platform.</p>
         </CardContent>
       </Card>
     </div>

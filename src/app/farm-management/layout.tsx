@@ -42,7 +42,7 @@ export default function FarmManagementLayout({ children }: { children: ReactNode
   }
   
   if (!access.canAccessFarmOps) {
-    const plan = userProfile.subscription?.planId || 'starter';
+    const plan = userProfile.farmProfile?.subscription?.planId || 'starter';
     return (
       <div className="container mx-auto py-10 flex justify-center">
         <Card className="w-full max-w-lg text-center shadow-lg">

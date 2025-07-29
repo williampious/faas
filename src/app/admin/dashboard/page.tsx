@@ -11,7 +11,7 @@ import { CreateTenantDialog } from '../create-tenant-dialog';
 export default function AdminDashboardPage() {
   const { userProfile } = useUserProfile();
   const isSuperAdmin = userProfile?.role.includes('Super Admin');
-  const isAdmin = userProfile?.role.includes('Admin');
+  const isRegularAdmin = userProfile?.role.includes('Admin');
 
   return (
     <div>
@@ -55,7 +55,7 @@ export default function AdminDashboardPage() {
            </>
         )}
 
-        {isAdmin && (
+        {isRegularAdmin && (
           <>
             <Link href="/admin/users" passHref>
               <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary">

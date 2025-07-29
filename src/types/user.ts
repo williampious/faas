@@ -196,6 +196,9 @@ export interface AgriFAASUserProfile {
   assignedDistrict?: string;
   farmChallenges?: string[];
   farmerNeeds?: string[];
+  managedByAEO?: string; // New field to link a farmer to a specific AEO
+  initialAeoRegion?: string;
+  initialAeoDistrict?: string;
 
   // 5. System & Permissions
   firebaseUid?: string;
@@ -204,7 +207,7 @@ export interface AgriFAASUserProfile {
   invitationToken?: string | null; // Can be null after use
   invitationSentAt?: any;
 
-  // 6. Subscription
+  // 6. Subscription (This will be deprecated in favor of tenant-based subscription)
   subscription?: SubscriptionDetails;
 
   // 7. Timestamps
