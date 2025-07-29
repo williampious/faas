@@ -1,7 +1,7 @@
 
+
 'use server';
 
-// Explicitly load environment variables at the start of the server action
 import { config } from 'dotenv';
 config();
 
@@ -27,7 +27,6 @@ interface ActionResult {
 export async function createNewTenant(data: CreateTenantData): Promise<ActionResult> {
   let adminDb;
   try {
-    // This now reliably gets the initialized DB instance or throws a clear error.
     adminDb = getAdminDb();
   } catch (error: any) {
     console.error('[createNewTenant]', error.message);
@@ -41,7 +40,6 @@ export async function createNewTenant(data: CreateTenantData): Promise<ActionRes
       return { success: false, message: "Application Base URL is not configured. Cannot generate invitation links." };
   }
 
-  // Check if an active user with this email already exists
   try {
     const usersRef = collection(adminDb, 'users');
     const q = query(usersRef, where("emailAddress", "==", adminEmail), where("accountStatus", "==", "Active"));
@@ -57,23 +55,8 @@ export async function createNewTenant(data: CreateTenantData): Promise<ActionRes
 
   const batch = writeBatch(adminDb);
   
-  // 1. Create Tenant Document
   const tenantRef = doc(collection(adminDb, 'tenants'));
-  const newTenant: Omit<Farm, 'id' | 'createdAt' | 'updatedAt'> = {
-    name: tenantName,
-    ownerId: '', // Owner will be the first admin once they register
-    currency: 'GHS',
-    // Default other fields as needed
-    country: 'Ghana', 
-    region: 'Greater Accra',
-  };
-  batch.set(tenantRef, { ...newTenant, id: tenantRef.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
 
-  // 2. Create Invited User Profile
-  const invitedUserId = uuidv4();
-  const invitationToken = uuidv4();
-  const userDocRef = doc(adminDb, 'users', invitedUserId);
-  
   const trialEndDate = add(new Date(), { days: 20 });
   const initialSubscription: SubscriptionDetails = {
       planId: 'business',
@@ -83,6 +66,20 @@ export async function createNewTenant(data: CreateTenantData): Promise<ActionRes
       trialEnds: trialEndDate.toISOString(),
   };
 
+  const newTenant: Omit<Farm, 'id' | 'createdAt' | 'updatedAt'> = {
+    name: tenantName,
+    ownerId: '',
+    currency: 'GHS',
+    country: 'Ghana', 
+    region: 'Greater Accra',
+    subscription: initialSubscription,
+  };
+  batch.set(tenantRef, { ...newTenant, id: tenantRef.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+
+  const invitedUserId = uuidv4();
+  const invitationToken = uuidv4();
+  const userDocRef = doc(adminDb, 'users', invitedUserId);
+  
   const newUserProfile: Partial<AgriFAASUserProfile> = {
     userId: invitedUserId,
     tenantId: tenantRef.id,
@@ -92,17 +89,14 @@ export async function createNewTenant(data: CreateTenantData): Promise<ActionRes
     accountStatus: 'Invited',
     invitationToken: invitationToken,
     invitationSentAt: serverTimestamp(),
-    subscription: initialSubscription,
     avatarUrl: `https://placehold.co/100x100.png?text=${adminFullName.charAt(0)}`,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
   batch.set(userDocRef, newUserProfile);
   
-  // 3. Update Tenant with Owner ID (the invited user's ID)
   batch.update(tenantRef, { ownerId: invitedUserId });
 
-  // 4. Send Invitation Email
   const inviteLink = `${baseUrl}/auth/complete-registration?token=${invitationToken}`;
   const emailResult = await send({
     to: adminEmail,
@@ -125,12 +119,9 @@ export async function createNewTenant(data: CreateTenantData): Promise<ActionRes
   });
 
   if (!emailResult.success) {
-    // We don't fail the whole operation if email fails, but we should log it.
     console.error("Failed to send invitation email:", emailResult.message);
-    // You could decide to return a partial success message here.
   }
 
-  // 5. Commit all database changes
   try {
     await batch.commit();
     return { success: true, message: `Tenant ${tenantName} created and invitation sent.` };

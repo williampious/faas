@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import type { AgriFAASUserProfile, SubscriptionDetails, UserRole } from '@/types/user';
+import type { AgriFAASUserProfile, Farm } from '@/types';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
@@ -20,6 +21,7 @@ interface UserAccess {
 interface UserProfileContextType {
   user: User | null;
   userProfile: AgriFAASUserProfile | null;
+  farmProfile: Farm | null;
   isLoading: boolean;
   isAdmin: boolean;
   error: string | null;
@@ -36,7 +38,6 @@ const defaultAccess: UserAccess = {
 
 const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
 
-// This is the self-healing function to create a profile if one is missing for an authenticated user.
 async function createMissingProfile(user: User): Promise<void> {
     if (!db) {
         console.error("Self-healing failed: Firestore service is not available.");
@@ -44,7 +45,6 @@ async function createMissingProfile(user: User): Promise<void> {
     }
     const userDocRef = doc(db, 'users', user.uid);
     
-    // Check one last time before writing to prevent race conditions.
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
         console.log(`Profile for user ${user.uid} already exists. Skipping creation.`);
@@ -52,15 +52,6 @@ async function createMissingProfile(user: User): Promise<void> {
     }
     
     console.warn(`Attempting to self-heal profile for user: ${user.uid}`);
-
-    const trialEndDate = add(new Date(), { days: 20 });
-    const initialSubscription: SubscriptionDetails = {
-        planId: 'business',
-        status: 'Trialing',
-        billingCycle: 'annually',
-        nextBillingDate: null,
-        trialEnds: trialEndDate.toISOString(),
-    };
 
     const newProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> = {
         userId: user.uid,
@@ -71,7 +62,6 @@ async function createMissingProfile(user: User): Promise<void> {
         accountStatus: 'Active',
         registrationDate: new Date().toISOString(),
         avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${(user.displayName || "U").charAt(0)}`,
-        subscription: initialSubscription,
     };
 
     try {
@@ -89,6 +79,7 @@ async function createMissingProfile(user: User): Promise<void> {
 export function UserProfileProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<AgriFAASUserProfile | null>(null);
+  const [farmProfile, setFarmProfile] = useState<Farm | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,76 +87,87 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!auth || !db) {
-      setError("CRITICAL: Firebase services (Auth/DB) are not available. This is often due to missing or incorrect environment variables. Check the browser console for detailed setup instructions.");
+      setError("CRITICAL: Firebase services (Auth/DB) are not available. Check environment variables.");
       setIsLoading(false);
       return;
     }
 
-    let unsubscribeProfile = () => {};
+    let unsubscribeUser = () => {};
+    let unsubscribeFarm = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      unsubscribeProfile();
+      unsubscribeUser();
+      unsubscribeFarm();
 
       setUser(currentUser);
       if (currentUser) {
         setIsLoading(true);
         const userDocRef = doc(db, 'users', currentUser.uid);
         
-        unsubscribeProfile = onSnapshot(userDocRef, async (docSnap) => {
-          if (docSnap.exists()) {
-            const profileData = docSnap.data() as AgriFAASUserProfile;
+        unsubscribeUser = onSnapshot(userDocRef, async (userDoc) => {
+          if (userDoc.exists()) {
+            const profileData = userDoc.data() as AgriFAASUserProfile;
             setUserProfile(profileData);
             
             const isSuperAdmin = profileData.role?.includes('Super Admin') || false;
-            const userIsAdmin = profileData.role?.includes('Admin') || isSuperAdmin;
-            setIsAdmin(userIsAdmin);
+            setIsAdmin(profileData.role?.includes('Admin') || isSuperAdmin);
 
-            if (isSuperAdmin) {
-              setAccess({
-                canAccessFarmOps: true,
-                canAccessAnimalOps: true,
-                canAccessOfficeOps: true,
-                canAccessHrOps: true,
-                canAccessAeoTools: true,
+            // Now listen to the farm/tenant document if tenantId exists
+            if (profileData.tenantId) {
+              const farmDocRef = doc(db, 'tenants', profileData.tenantId);
+              unsubscribeFarm = onSnapshot(farmDocRef, (farmDoc) => {
+                if(farmDoc.exists()){
+                  const farmData = farmDoc.data() as Farm;
+                  setFarmProfile(farmData);
+                  const plan = farmData.subscription?.planId || 'starter';
+                  const status = farmData.subscription?.status;
+                  const trialEnds = farmData.subscription?.trialEnds;
+              
+                  const isTrialActive = status === 'Trialing' && trialEnds && isAfter(new Date(trialEnds), new Date());
+                  const hasPaidAccess = status === 'Active' || isTrialActive;
+
+                  const canAccessGrowerFeatures = (plan === 'grower' || plan === 'business' || plan === 'enterprise') && hasPaidAccess;
+                  const canAccessBusinessFeatures = (plan === 'business' || plan === 'enterprise') && hasPaidAccess;
+
+                  setAccess({
+                      canAccessFarmOps: canAccessGrowerFeatures,
+                      canAccessAnimalOps: canAccessGrowerFeatures,
+                      canAccessOfficeOps: canAccessBusinessFeatures,
+                      canAccessHrOps: canAccessBusinessFeatures,
+                      canAccessAeoTools: canAccessBusinessFeatures && profileData.role.includes('Agric Extension Officer'),
+                  });
+                } else {
+                  setFarmProfile(null);
+                  setAccess(defaultAccess);
+                }
+                setIsLoading(false);
+              }, (farmError) => {
+                 console.error("Error fetching farm profile:", farmError);
+                 setError("Could not load farm-specific data.");
+                 setIsLoading(false);
               });
             } else {
-              const plan = profileData.subscription?.planId || 'starter';
-              const status = profileData.subscription?.status;
-              const trialEnds = profileData.subscription?.trialEnds;
-              
-              const isTrialActive = status === 'Trialing' && trialEnds && isAfter(new Date(trialEnds), new Date());
-              const hasPaidAccess = status === 'Active' || isTrialActive;
-
-              const canAccessGrowerFeatures = (plan === 'grower' || plan === 'business' || plan === 'enterprise') && hasPaidAccess;
-              const canAccessBusinessFeatures = (plan === 'business' || plan === 'enterprise') && hasPaidAccess;
-
-              setAccess({
-                  canAccessFarmOps: canAccessGrowerFeatures,
-                  canAccessAnimalOps: canAccessGrowerFeatures,
-                  canAccessOfficeOps: canAccessBusinessFeatures,
-                  canAccessHrOps: canAccessBusinessFeatures,
-                  canAccessAeoTools: canAccessBusinessFeatures,
-              });
+              setFarmProfile(null);
+              setIsLoading(false);
             }
+            
             setError(null);
-            setIsLoading(false);
           } else {
             await createMissingProfile(currentUser);
+            // After self-healing, state will update on next snapshot, so we just wait.
+            setIsLoading(false); 
           }
-        }, (firestoreError: any) => { 
+        }, (firestoreError) => {
           console.error("Error fetching user profile from Firestore:", firestoreError);
-          if (firestoreError.code === 'permission-denied' || firestoreError.message.toLowerCase().includes('permission denied')) {
-            setError(`CRITICAL PERMISSION ERROR: Firestore denied access to your profile at 'users/${currentUser.uid}'. YOUR FIRESTORE SECURITY RULES ARE BLOCKING THIS. You MUST update your Firestore Rules in the Firebase Console. A common rule needed is: 'match /users/{userId} { allow read, write: if request.auth.uid == userId; }'. Please review Firebase documentation on Security Rules and apply the necessary permissions for user profile access.`);
-          } else {
-            setError(`Failed to fetch user profile due to a database error (code: ${firestoreError.code || 'unknown'}). Some features might be unavailable. Please try again or contact support.`);
-          }
+          setError(`Failed to fetch user profile: ${firestoreError.message}`);
           setUserProfile(null);
           setIsAdmin(false);
           setAccess(defaultAccess);
           setIsLoading(false);
         });
-      } else {
+      } else { // No current user
         setUserProfile(null);
+        setFarmProfile(null);
         setIsAdmin(false);
         setAccess(defaultAccess);
         setIsLoading(false);
@@ -179,12 +181,13 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
     return () => {
       unsubscribeAuth();
-      unsubscribeProfile();
+      unsubscribeUser();
+      unsubscribeFarm();
     };
   }, []);
 
   return (
-    <UserProfileContext.Provider value={{ user, userProfile, isLoading, isAdmin, error, access }}>
+    <UserProfileContext.Provider value={{ user, userProfile, farmProfile, isLoading, isAdmin, error, access }}>
       {children}
     </UserProfileContext.Provider>
   );

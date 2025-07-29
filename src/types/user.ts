@@ -159,25 +159,25 @@ export interface SubscriptionDetails {
   status: 'Active' | 'Canceled' | 'Trialing' | 'Past Due';
   billingCycle: 'monthly' | 'annually';
   nextBillingDate?: string | null;
-  trialEnds?: string | null; // Added for trial management
+  trialEnds?: string | null;
 }
 
 export interface AgriFAASUserProfile {
   // 1. Basic Information
-  userId: string; // Auto-generated UUID for Firestore doc ID, primary key
+  userId: string;
   tenantId?: string; // ID of the tenant (farm) this user belongs to
   fullName: string;
-  role: UserRole[]; // Can have multiple roles
+  role: UserRole[];
   gender?: Gender;
-  dateOfBirth?: string; // ISO 8601 date string
-  nationalId?: string; // Ghana Card Number
+  dateOfBirth?: string;
+  nationalId?: string;
   avatarUrl?: string;
-  primaryLanguage?: string; // e.g., 'en', 'twi', 'ewe'
-  organization?: string; // e.g., Name of the Cooperative or NGO for an AEO
+  primaryLanguage?: string;
+  organization?: string;
 
   // 2. Contact & Login Info
   phoneNumber?: string;
-  emailAddress?: string; // This will be the primary email for auth as well
+  emailAddress?: string;
   address?: {
     street?: string;
     city?: string;
@@ -189,57 +189,23 @@ export interface AgriFAASUserProfile {
   gpsCoordinates?: GPSCoordinates;
   preferredCommunicationChannel?: CommunicationChannel;
 
-  // 3. Farm & Hub Details
+  // 3. Farm & Hub Details (For Farmers)
   farmDetails?: FarmHubDetails;
+  
+  // 4. AEO Specific Details
   assignedRegion?: string;
   assignedDistrict?: string;
   farmChallenges?: string[];
   farmerNeeds?: string[];
 
-  // 4. Financial & Mobile Money
-  mobileMoneyWallets?: MobileMoneyWallet[];
-  bankAccounts?: BankAccountDetails[];
-  investmentPortfolio?: Investment[];
-  loansOrFundingReceived?: Loan[];
-  digitalWalletBalance?: {
-    amount: number;
-    currency: string;
-  };
-  transactionHistory?: Transaction[];
-
-  // 5. HR & Employment
-  employmentDetails?: EmploymentDetails;
-
-  // 6. System & Permissions
-  firebaseUid?: string; // UID from Firebase Authentication, linked after registration completion
-  rbacTags?: string[];
-  appAccess?: AppAccessType[];
-  loginHistory?: LoginHistoryEntry[];
-  lastActiveTimestamp?: string;
-  lastLoginTimestamp?: string;
-  deviceId?: string;
-  deviceType?: string;
+  // 5. System & Permissions
+  firebaseUid?: string;
   accountStatus: AccountStatus;
-  registrationDate: string; // ISO string of initial profile creation/invitation
-  invitationToken?: string; // Unique token for completing registration
-  invitationSentAt?: any; // Firestore ServerTimestamp
+  registrationDate: string;
+  invitationToken?: string;
+  invitationSentAt?: any;
 
-  // 7. Notifications & Preferences
-  notificationPreferences?: NotificationPreferences;
-  languagePreference?: string;
-  alertsToggle?: AlertToggles;
-  receiveAgriculturalTips?: boolean;
-  receiveWeatherUpdates?: boolean;
-
-  // 8. Billing & Subscription
-  subscription?: SubscriptionDetails;
-  
-  // 9. AEO Specific Linkage
-  managedByAEO?: string;
-  initialAeoRegion?: string;
-  initialAeoDistrict?: string;
-
-  // Timestamps
-  createdAt: any; // Firestore ServerTimestamp on creation
-  updatedAt: any; // Firestore ServerTimestamp on update
+  // 6. Timestamps
+  createdAt: any;
+  updatedAt: any;
 }

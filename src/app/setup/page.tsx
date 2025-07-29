@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,10 +18,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Loader2, Tractor, Handshake } from 'lucide-react';
 import type { Farm } from '@/types/farm';
-import type { UserRole } from '@/types/user';
+import type { UserRole, SubscriptionDetails } from '@/types/user';
 import { cn } from '@/lib/utils';
+import { add } from 'date-fns';
 
-// Schema for the Farmer setup
 const farmSetupSchema = z.object({
   name: z.string().min(3, { message: "Farm name must be at least 3 characters." }),
   country: z.string().min(2, { message: "Country is required." }),
@@ -29,7 +30,6 @@ const farmSetupSchema = z.object({
 });
 type FarmSetupFormValues = z.infer<typeof farmSetupSchema>;
 
-// Schema for the AEO setup
 const aeoSetupSchema = z.object({
   organization: z.string().optional(),
   assignedRegion: z.string().min(2, { message: "Region is required." }),
@@ -80,9 +80,19 @@ export default function SetupPage() {
     const tenantRef = doc(collection(db, 'tenants'));
     const userRef = doc(db, 'users', user.uid);
 
+    const trialEndDate = add(new Date(), { days: 20 });
+    const initialSubscription: SubscriptionDetails = {
+        planId: 'business',
+        status: 'Trialing',
+        billingCycle: 'annually',
+        nextBillingDate: null,
+        trialEnds: trialEndDate.toISOString(),
+    };
+
     const newTenant: Omit<Farm, 'id' | 'createdAt'|'updatedAt'> = {
       name: data.name, country: data.country, region: data.region,
-      description: data.description || '', ownerId: user.uid, currency: 'GHS'
+      description: data.description || '', ownerId: user.uid, currency: 'GHS',
+      subscription: initialSubscription,
     };
 
     try {

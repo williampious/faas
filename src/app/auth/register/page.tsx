@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -16,7 +17,7 @@ import { auth, isFirebaseClientConfigured, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import type { AgriFAASUserProfile, SubscriptionDetails } from '@/types/user';
+import type { AgriFAASUserProfile } from '@/types/user';
 import { add } from 'date-fns';
 
 const registerSchema = z.object({
@@ -51,17 +52,6 @@ export default function RegisterPage() {
       // Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       
-      // If auth creation is successful, create their Firestore profile directly here.
-      // This avoids a race condition with the context provider.
-      const trialEndDate = add(new Date(), { days: 20 });
-      const initialSubscription: SubscriptionDetails = {
-          planId: 'business',
-          status: 'Trialing',
-          billingCycle: 'annually',
-          nextBillingDate: null,
-          trialEnds: trialEndDate.toISOString(),
-      };
-      
       const userDocRef = doc(db, 'users', userCredential.user.uid);
       await setDoc(userDocRef, {
         userId: userCredential.user.uid,
@@ -72,12 +62,10 @@ export default function RegisterPage() {
         accountStatus: 'Active',
         registrationDate: new Date().toISOString(),
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
-        subscription: initialSubscription,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
       
-      // On full success, proceed to setup
       router.push(`/setup`);
 
     } catch (registrationError: any) {
