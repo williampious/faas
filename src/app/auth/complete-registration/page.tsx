@@ -12,10 +12,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState, useEffect } from 'react';
 import { Loader2, UserCheck, AlertTriangle } from 'lucide-react';
-import Image from 'next/image';
 import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, serverTimestamp, writeBatch, getDoc, deleteDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import type { AgriFAASUserProfile } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
@@ -110,31 +109,27 @@ export default function CompleteRegistrationPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const firebaseUser = userCredential.user;
 
-      // 2. Use a batch write to atomically update the existing user doc.
-      const batch = writeBatch(db);
-      
+      // 2. Update the existing 'Invited' user document with the new Firebase UID and set status to Active
       const userDocRef = doc(db, usersCollectionName, invitedUserData.userId);
       
-      // Update the existing document with the new Firebase UID and set status to Active
-      batch.update(userDocRef, {
+      await updateDoc(userDocRef, {
         firebaseUid: firebaseUser.uid,
         fullName: data.fullName, // Allow user to confirm/correct their name
         accountStatus: 'Active',
         updatedAt: serverTimestamp(),
-        // We no longer need the invitation token, so remove it
-        invitationToken: null, 
+        invitationToken: null, // Clear the token after use
       });
-
-      // Commit the atomic operations
-      await batch.commit();
       
       toast({
         title: "Registration Complete!",
         description: "Your account has been successfully created. You are now being logged in.",
       });
+
       // Firebase Auth automatically signs in the user. The UserProfileProvider will now find the correct document.
-      // Redirect to dashboard where layout will handle profile loading
-      router.push('/dashboard');
+      // Redirect based on user's role.
+      const isAEO = invitedUserData.role.includes('Agric Extension Officer');
+      const dashboardPath = isAEO ? '/aeo/dashboard' : '/dashboard';
+      router.push(dashboardPath);
       
     } catch (registrationError: any) {
       console.error('Registration Completion Error:', registrationError);

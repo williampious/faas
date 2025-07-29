@@ -1,5 +1,4 @@
 
-
 /**
  * @fileOverview TypeScript type definitions for the AgriFAAS Connect User Profile.
  */
@@ -202,10 +201,13 @@ export interface AgriFAASUserProfile {
   firebaseUid?: string;
   accountStatus: AccountStatus;
   registrationDate: string;
-  invitationToken?: string;
+  invitationToken?: string | null; // Can be null after use
   invitationSentAt?: any;
 
-  // 6. Timestamps
+  // 6. Subscription
+  subscription?: SubscriptionDetails;
+
+  // 7. Timestamps
   createdAt: any;
   updatedAt: any;
 }

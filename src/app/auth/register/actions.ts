@@ -47,7 +47,7 @@ export async function createProfileAfterRegistration(
         trialEnds: trialEndDate.toISOString(),
     };
 
-    const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
+    const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> = {
         userId: user.uid,
         firebaseUid: user.uid,
         fullName: fullName,
@@ -57,12 +57,14 @@ export async function createProfileAfterRegistration(
         registrationDate: new Date().toISOString(),
         avatarUrl: `https://placehold.co/100x100.png?text=${fullName.charAt(0)}`,
         subscription: initialSubscription,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
     };
 
     try {
-        await setDoc(userDocRef, profileForFirestore);
+        await setDoc(userDocRef, {
+            ...profileForFirestore,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
         console.log('User profile created in Firestore for user:', user.uid);
         return { success: true, message: "Profile created successfully." };
     } catch (error: any) {

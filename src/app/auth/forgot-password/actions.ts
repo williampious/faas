@@ -18,6 +18,7 @@ export async function sendPasswordReset(email: string): Promise<ActionResult> {
   }
 
   try {
+    // This is the correct usage according to Firebase SDK v9+
     await sendPasswordResetEmail(auth, email);
     return {
       success: true,
@@ -25,9 +26,10 @@ export async function sendPasswordReset(email: string): Promise<ActionResult> {
     };
   } catch (error: any) {
     console.error('Password reset error:', error);
-    // Return a generic message to avoid leaking information about which emails are registered.
+    // To prevent email enumeration, we return a generic success message even on failure.
+    // The user experience is the same: "If an account exists, an email is sent."
     return {
-      success: true, // Still return success to prevent email enumeration
+      success: true, 
       message: 'If an account with this email exists, a password reset link has been sent.',
     };
   }

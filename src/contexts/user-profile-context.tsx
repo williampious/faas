@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import type { AgriFAASUserProfile, Farm } from '@/types';
@@ -53,7 +52,7 @@ async function createMissingProfile(user: User): Promise<void> {
     
     console.warn(`Attempting to self-heal profile for user: ${user.uid}`);
 
-    const newProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> = {
+    const newProfile: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt' | 'subscription'> = {
         userId: user.uid,
         firebaseUid: user.uid,
         fullName: user.displayName || "New User",
@@ -106,7 +105,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
         
         unsubscribeUser = onSnapshot(userDocRef, async (userDoc) => {
           if (userDoc.exists()) {
-            const profileData = userDoc.data() as AgriFAASUserProfile;
+            const profileData = { ...userDoc.data(), userId: userDoc.id } as AgriFAASUserProfile;
             setUserProfile(profileData);
             
             const isSuperAdmin = profileData.role?.includes('Super Admin') || false;
@@ -146,15 +145,24 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
                  setError("Could not load farm-specific data.");
                  setIsLoading(false);
               });
-            } else {
+            } else { // User exists but has no tenantId (e.g., AEO during setup)
               setFarmProfile(null);
+              // AEO access is determined by role, not plan, if they are not part of a tenant.
+              const isAeoWithoutTenant = profileData.role?.includes('Agric Extension Officer');
+              setAccess({
+                ...defaultAccess,
+                canAccessAeoTools: isAeoWithoutTenant,
+              });
               setIsLoading(false);
             }
             
             setError(null);
           } else {
+            // This case handles a logged-in user who for some reason does not have a firestore doc.
+            // This can happen if registration is interrupted.
+            console.warn(`No Firestore profile found for authenticated user ${currentUser.uid}. Attempting to self-heal.`);
             await createMissingProfile(currentUser);
-            // After self-healing, state will update on next snapshot, so we just wait.
+            // The onSnapshot listener will be triggered again once the profile is created.
             setIsLoading(false); 
           }
         }, (firestoreError) => {

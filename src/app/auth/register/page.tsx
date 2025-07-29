@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -13,12 +12,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState } from 'react';
 import { Loader2, UserPlus } from 'lucide-react';
-import { auth, isFirebaseClientConfigured, db } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { auth, isFirebaseClientConfigured } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import type { AgriFAASUserProfile } from '@/types/user';
-import { add } from 'date-fns';
+import { createProfileAfterRegistration } from './actions';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -42,30 +39,26 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError(null);
 
-    if (!isFirebaseClientConfigured || !auth || !db) {
+    if (!isFirebaseClientConfigured || !auth) {
       setError("Firebase client configuration is missing or incomplete. Please contact support.");
       setIsLoading(false);
       return;
     }
 
     try {
-      // Create user in Firebase Authentication
+      // Step 1: Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       
-      const userDocRef = doc(db, 'users', userCredential.user.uid);
-      await setDoc(userDocRef, {
-        userId: userCredential.user.uid,
-        firebaseUid: userCredential.user.uid,
-        fullName: data.fullName,
-        emailAddress: data.email,
-        role: [],
-        accountStatus: 'Active',
-        registrationDate: new Date().toISOString(),
-        avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      // Step 2: Call the server action to create the Firestore profile
+      const profileResult = await createProfileAfterRegistration(userCredential.user, data.fullName);
+
+      if (!profileResult.success) {
+          // If profile creation fails, we should ideally delete the auth user to prevent orphans.
+          // For now, we'll just show the error.
+          throw new Error(profileResult.message);
+      }
       
+      // Step 3: Redirect to the setup page
       router.push(`/setup`);
 
     } catch (registrationError: any) {
