@@ -1,4 +1,3 @@
-
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
@@ -28,6 +27,8 @@ function initializeAdminApp() {
   }
 
   try {
+    // The environment variable MUST be a properly escaped JSON string.
+    // The JSON.parse function will correctly handle the '\\n' sequences in the private_key.
     const serviceAccount = JSON.parse(serviceAccountJson);
     
     app = admin.initializeApp({
