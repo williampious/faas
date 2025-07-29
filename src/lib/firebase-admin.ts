@@ -1,18 +1,17 @@
-
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
 let app: admin.app.App | undefined;
 
-function initializeAdminApp() {
+// Initialization function that will be called on demand
+function ensureAdminAppInitialized() {
+  // If app is already initialized, do nothing
   if (admin.apps.length > 0) {
     app = admin.apps[0]!;
-    // console.log('[Firebase Admin] ✅ Using existing SDK instance.'); // This can be noisy, commenting out for now.
     return;
   }
 
-  // This function now relies on the calling context (like a server action)
-  // to have already loaded environment variables using `dotenv.config()`.
+  // Proceed with initialization if no existing app
   const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
@@ -22,9 +21,10 @@ function initializeAdminApp() {
         credential: admin.credential.applicationDefault(),
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
       });
-      console.log('[Firebase Admin] ✅ SDK initialized using GOOGLE_APPLICATION_CREDENTIALS.');
+      console.log('[Firebase Admin] ✅ SDK initialized using GOOGLE_APPLICATION_CREDENTIALS (lazy init).');
     } catch (e: any) {
-      console.error(`[Firebase Admin] ❌ CRITICAL: Failed to initialize with file path: ${e.message}`);
+      console.error(`[Firebase Admin] ❌ CRITICAL: Failed to initialize with file path (lazy init): ${e.message}`);
+      throw new Error(`Firebase Admin SDK initialization failed: ${e.message}`); // Throw error if initialization fails
     }
   } else if (serviceAccountJson) {
     try {
@@ -33,40 +33,37 @@ function initializeAdminApp() {
         credential: admin.credential.cert(serviceAccount),
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
       });
-      console.log('[Firebase Admin] ✅ SDK initialized using FIREBASE_SERVICE_ACCOUNT_JSON.');
-    } catch (e: any)      {
+      console.log('[Firebase Admin] ✅ SDK initialized using FIREBASE_SERVICE_ACCOUNT_JSON (lazy init).');
+    } catch (e: any) {
       console.error(
-        "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed. This is likely due to a malformed service account JSON. ",
+        "[Firebase Admin] ❌ CRITICAL ERROR: SDK initialization failed with JSON secret (lazy init). ",
         e.message
       );
+      throw new Error(`Firebase Admin SDK initialization failed: ${e.message}`); // Throw error if initialization fails
     }
   } else {
-    // This state is now expected if no action has pre-loaded the env vars.
-    // The error will be thrown by getAdminDb() if it's called without initialization.
+    const errorMsg = "[Firebase Admin] ❌ CRITICAL: Neither GOOGLE_APPLICATION_CREDENTIALS nor FIREBASE_SERVICE_ACCOUNT_JSON is set. The Admin SDK cannot be initialized.";
+    console.error(errorMsg);
+    throw new Error(errorMsg); // Throw error if no credentials
   }
 }
 
-// Initialize on first module load
-initializeAdminApp();
-
 export function getAdminDb() {
+  ensureAdminAppInitialized(); // Ensure initialization happens before returning db
   if (!app) {
-    // Attempt re-initialization as a last resort. This might now succeed
-    // if the calling function has loaded the env vars.
-    initializeAdminApp();
-    if (!app) {
-      throw new Error("Firebase Admin SDK is not initialized. Check server logs for configuration errors.");
-    }
+       // This should ideally not happen if ensureAdminAppInitialized throws on failure,
+       // but as a safeguard:
+       throw new Error("Firebase Admin SDK for Firestore is not initialized. SDK initialization likely failed.");
   }
   return admin.firestore(app);
 }
 
 export function getAdminAuth() {
-  if (!app) {
-    initializeAdminApp();
+  ensureAdminAppInitialized(); // Ensure initialization happens before returning auth
     if (!app) {
-      throw new Error("Firebase Admin SDK is not initialized. Check server logs for configuration errors.");
+       // This should ideally not happen if ensureAdminAppInitialized throws on failure,
+       // but as a safeguard:
+       throw new Error("Firebase Admin SDK for Auth is not initialized. SDK initialization likely failed.");
     }
-  }
   return admin.auth(app);
 }
