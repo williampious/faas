@@ -19,7 +19,7 @@ function initializeAdminApp() {
     return;
   }
 
-  let serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (!serviceAccountJson) {
     throw new Error(
       "CRITICAL: 'FIREBASE_SERVICE_ACCOUNT_JSON' secret is MISSING. " +
@@ -28,16 +28,6 @@ function initializeAdminApp() {
   }
 
   try {
-    // --- DEBUG: Inspect the Raw Environment Variable Content ---
-    // This log helps visualize control characters that might break JSON.parse()
-    console.log("--- DEBUG: Raw Service Account JSON from ENV (before cleaning) ---");
-    console.log(JSON.stringify(serviceAccountJson));
-    console.log("--- END DEBUG ---");
-
-    // Replace actual newline characters with their JSON-escaped representation '\\n'.
-    // Also, handle carriage returns by removing them.
-    serviceAccountJson = serviceAccountJson.replace(/\n/g, '\\n').replace(/\r/g, '');
-
     const serviceAccount = JSON.parse(serviceAccountJson);
     
     app = admin.initializeApp({
@@ -46,6 +36,10 @@ function initializeAdminApp() {
     });
     console.log('[Firebase Admin] ✅ SDK initialized successfully.');
   } catch (error: any) {
+    console.error("--- DEBUG: FAILED TO PARSE SERVICE ACCOUNT JSON ---");
+    console.error("The string provided in the FIREBASE_SERVICE_ACCOUNT_JSON secret is not valid JSON.");
+    console.error("Parser Error:", error.message);
+    console.error("--- END DEBUG ---");
     throw new Error(
       "CRITICAL ERROR: SDK initialization failed. This is likely due to a malformed service account JSON. " +
       `Error: ${error.message}`
