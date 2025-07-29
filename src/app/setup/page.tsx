@@ -63,7 +63,7 @@ export default function SetupPage() {
         return;
       }
       
-      if (userProfile && (userProfile.farmId || userProfile.role?.includes('Agric Extension Officer'))) {
+      if (userProfile && (userProfile.tenantId || userProfile.role?.includes('Agric Extension Officer'))) {
         const dashboardPath = userProfile.role?.includes('Agric Extension Officer') ? '/aeo/dashboard' : '/dashboard';
         router.replace(dashboardPath);
       }
@@ -90,7 +90,7 @@ export default function SetupPage() {
       batch.set(tenantRef, { ...newTenant, id: tenantRef.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       
       batch.update(userRef, { 
-          farmId: tenantRef.id, 
+          tenantId: tenantRef.id, 
           role: ['Admin'] as UserRole[],
           updatedAt: serverTimestamp()
       });
@@ -140,7 +140,7 @@ export default function SetupPage() {
     );
   }
 
-  if (userProfile.farmId || userProfile.role?.includes('Agric Extension Officer')) {
+  if (userProfile.tenantId || userProfile.role?.includes('Agric Extension Officer')) {
     return (
       <div className="flex flex-col items-center justify-center p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />

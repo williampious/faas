@@ -54,7 +54,7 @@ export default function DashboardPage() {
     totalResources: '0'
   });
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
-  const tenantId = userProfile?.farmId;
+  const tenantId = userProfile?.tenantId;
   
   useEffect(() => {
     if (isProfileLoading) return;

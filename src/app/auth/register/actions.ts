@@ -6,29 +6,22 @@ import type { AgriFAASUserProfile, SubscriptionDetails } from '@/types/user';
 import { add } from 'date-fns';
 import type { User } from 'firebase/auth';
 
-interface RegistrationData {
-  fullName: string;
-  email: string;
-}
-
 interface CreateProfileResult {
   success: boolean;
   message: string;
 }
-
-const usersCollectionName = 'users';
 
 /**
  * Creates a Firestore profile document for a newly registered user.
  * This is now a self-contained server action to ensure it can be called reliably.
  * ALL new users get a 20-day trial of the Business plan.
  * @param user - The Firebase Auth User object.
- * @param data - The user's registration data (fullName, email).
+ * @param fullName - The user's full name from the registration form.
  * @returns A result object indicating success or failure.
  */
-export async function createProfileDocument(
+export async function createProfileAfterRegistration(
   user: User, 
-  data: RegistrationData,
+  fullName: string,
 ): Promise<CreateProfileResult> {
     let adminDb;
     try {
@@ -37,7 +30,7 @@ export async function createProfileDocument(
         return { success: false, message: error.message };
     }
     
-    const userDocRef = doc(adminDb, usersCollectionName, user.uid);
+    const userDocRef = doc(adminDb, 'users', user.uid);
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
         console.log(`Profile for user ${user.uid} already exists. Skipping creation.`);
@@ -57,26 +50,15 @@ export async function createProfileDocument(
     const profileForFirestore: Omit<AgriFAASUserProfile, 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any } = {
         userId: user.uid,
         firebaseUid: user.uid,
-        fullName: data.fullName,
-        emailAddress: user.email || data.email,
+        fullName: fullName,
+        emailAddress: user.email || '',
         role: [],
         accountStatus: 'Active',
         registrationDate: new Date().toISOString(),
-        avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
+        avatarUrl: `https://placehold.co/100x100.png?text=${fullName.charAt(0)}`,
         subscription: initialSubscription,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        
-        // Initialize all optional fields to ensure consistent document structure
-        phoneNumber: '',
-        gender: undefined,
-        dateOfBirth: undefined,
-        address: {},
-        farmDetails: {},
-        notificationPreferences: { email: true, push: true, sms: false, whatsApp: false },
-        alertsToggle: { dailySummary: true, weeklySummary: false, priceAlerts: true, pestAlerts: true },
-        receiveAgriculturalTips: true,
-        receiveWeatherUpdates: true,
     };
 
     try {
@@ -84,7 +66,7 @@ export async function createProfileDocument(
         console.log('User profile created in Firestore for user:', user.uid);
         return { success: true, message: "Profile created successfully." };
     } catch (error: any) {
-        console.error("Error in createProfileDocument action:", error);
+        console.error("Error in createProfileAfterRegistration action:", error);
         return { success: false, message: `Failed to create profile in database: ${error.message}` };
     }
 }

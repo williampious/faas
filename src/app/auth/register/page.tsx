@@ -12,10 +12,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useState } from 'react';
 import { Loader2, UserPlus } from 'lucide-react';
-import { auth, isFirebaseClientConfigured } from '@/lib/firebase';
+import { auth, isFirebaseClientConfigured, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { createProfileDocument } from './actions';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import type { AgriFAASUserProfile, SubscriptionDetails } from '@/types/user';
+import { add } from 'date-fns';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
@@ -39,7 +41,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError(null);
 
-    if (!isFirebaseClientConfigured || !auth) {
+    if (!isFirebaseClientConfigured || !auth || !db) {
       setError("Firebase client configuration is missing or incomplete. Please contact support.");
       setIsLoading(false);
       return;
@@ -49,16 +51,31 @@ export default function RegisterPage() {
       // Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       
-      // If auth creation is successful, create their Firestore profile via the server action
-      // The action now handles the universal trial logic internally.
-      const profileResult = await createProfileDocument(userCredential.user, data);
-
-      if (!profileResult.success) {
-        // This is a critical failure. The user has an auth account but no profile.
-        // We must inform them and log the error.
-        setError(`Your account was created, but setting up your profile failed: ${profileResult.message}. Please try logging in to recover your profile or contact support.`);
-        throw new Error(profileResult.message);
-      }
+      // If auth creation is successful, create their Firestore profile directly here.
+      // This avoids a race condition with the context provider.
+      const trialEndDate = add(new Date(), { days: 20 });
+      const initialSubscription: SubscriptionDetails = {
+          planId: 'business',
+          status: 'Trialing',
+          billingCycle: 'annually',
+          nextBillingDate: null,
+          trialEnds: trialEndDate.toISOString(),
+      };
+      
+      const userDocRef = doc(db, 'users', userCredential.user.uid);
+      await setDoc(userDocRef, {
+        userId: userCredential.user.uid,
+        firebaseUid: userCredential.user.uid,
+        fullName: data.fullName,
+        emailAddress: data.email,
+        role: [],
+        accountStatus: 'Active',
+        registrationDate: new Date().toISOString(),
+        avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
+        subscription: initialSubscription,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
       
       // On full success, proceed to setup
       router.push(`/setup`);
@@ -67,32 +84,11 @@ export default function RegisterPage() {
       let displayError = `Registration failed: ${registrationError.message || 'An unknown error occurred.'}`;
       
       if (registrationError.code === 'auth/email-already-in-use') {
-        // If the email is already in use, it might be our "zombie" user case.
-        // Let's try to sign them in and create their profile.
-        try {
-          const signInCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-          
-          // Now that they're signed in, the UserProfileProvider will take over and automatically
-          // attempt to create the profile if it's missing. We can just redirect to setup.
-          router.push(`/setup`);
-
-        } catch (signInError: any) {
-          if (signInError.code === 'auth/wrong-password' || signInError.code === 'auth/invalid-credential') {
-            displayError = 'An account with this email already exists, but the password was incorrect. Please sign in or use "Forgot Password".';
-          } else {
-            console.error('Error during sign-in attempt on registration page:', signInError);
-            displayError = `An unexpected error occurred. Please try again or sign in. (Code: ${signInError.code})`;
-          }
-          setError(displayError);
-        }
+        displayError = 'An account with this email already exists. Please sign in or use "Forgot Password".';
       } else if (registrationError.code === 'auth/weak-password') {
         displayError = 'The password is too weak. Please use a stronger password.';
-        setError(displayError);
-      } else {
-        // Handle other registration errors
-        console.error('Registration Process Error:', registrationError);
-        setError(displayError);
       }
+      setError(displayError);
     } finally {
       setIsLoading(false);
     }

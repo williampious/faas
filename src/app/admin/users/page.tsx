@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { v4 as uuidv4 } from 'uuid';
-import { sendInvitationEmail } from './actions';
+import { sendEmail } from '@/lib/email';
 
 
 const usersCollectionName = 'users';
@@ -103,8 +103,8 @@ export default function AdminUsersPage() {
       try {
         const usersQuery = query(
           collection(db, usersCollectionName), 
-          where("farmId", "==", userProfile.farmId),
-          orderBy("fullName")
+          where("tenantId", "==", userProfile.tenantId),
+          orderBy("fullName", "asc")
         );
         const querySnapshot = await getDocs(usersQuery);
         const fetchedUsers = querySnapshot.docs.map(docSnapshot => ({
@@ -116,7 +116,7 @@ export default function AdminUsersPage() {
         console.error("Error fetching users: ", err);
         let message = `Failed to fetch users: ${err.message}`;
         if (err.message?.toLowerCase().includes('requires an index')) {
-          message = "Failed to load user data because a Firestore index is missing. Please create the required index for the 'users' collection (sorted by 'farmId' and 'fullName') as detailed in the README.md file."
+          message = "Failed to load user data because a Firestore index is missing. Please create the required index for the 'users' collection (sorted by 'tenantId' and 'fullName') as detailed in the README.md file."
         }
         setError(message);
       } finally {
@@ -189,8 +189,8 @@ export default function AdminUsersPage() {
         setInviteUserError("Firebase is not configured correctly. Cannot invite user.");
         return;
     }
-    if (!userProfile?.farmId || !userProfile.fullName) {
-      setInviteUserError("Your admin profile is missing a farm ID or name. Cannot invite users to a farm.");
+    if (!userProfile?.tenantId || !userProfile.fullName) {
+      setInviteUserError("Your admin profile is missing a tenant ID or name. Cannot invite users to a farm.");
       return;
     }
     
@@ -240,7 +240,7 @@ export default function AdminUsersPage() {
         avatarUrl: `https://placehold.co/100x100.png?text=${data.fullName.charAt(0)}`,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        farmId: userProfile.farmId,
+        tenantId: userProfile.tenantId,
     };
 
 
@@ -253,7 +253,7 @@ export default function AdminUsersPage() {
         setGeneratedInviteLink(inviteLink);
         setInviteeName(data.fullName);
 
-        const emailResult = await sendInvitationEmail({
+        const emailResult = await sendEmail({
             to: data.email,
             subject: `You're invited to join ${userProfile.fullName}'s farm on AgriFAAS Connect!`,
             html: `
