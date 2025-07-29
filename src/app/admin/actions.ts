@@ -1,6 +1,10 @@
 
 'use server';
 
+// Explicitly load environment variables at the start of the server action
+import { config } from 'dotenv';
+config();
+
 import { getAdminDb } from '@/lib/firebase-admin';
 import { doc, writeBatch, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import type { Farm } from '@/types/farm';
