@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -15,7 +14,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/contexts/user-profile-context';
-import { allNavItems, type NavItem } from '@/lib/nav-data'; // Import from the new file
+import { allNavItems, type NavItem } from '@/lib/nav-data';
 
 export function MainNav() {
   const pathname = usePathname();
@@ -23,7 +22,6 @@ export function MainNav() {
   const { setOpenMobile } = useSidebar();
 
   const userRoles = userProfile?.role || [];
-  const isActualAdmin = userRoles.includes('Admin');
 
   const isActive = (href: string) => {
     if (href === '/dashboard' && pathname === '/dashboard') return true;
@@ -33,11 +31,6 @@ export function MainNav() {
 
   const canViewItem = (item: NavItem): boolean => {
     if (isUserLoading) return false;
-    // Admins see everything except AEO specific tools unless they also have the AEO role
-    if (isActualAdmin) {
-      if(item.label === 'AEO Toolkit') return userRoles.includes('Agric Extension Officer');
-      return true;
-    }
     if (!item.roles) return true; // Items with no role restrictions are visible to all (should be rare)
     return item.roles.some(role => userRoles.includes(role));
   };
@@ -53,10 +46,12 @@ export function MainNav() {
     return acc;
   }, {} as Record<string, NavItem[]>);
   
-  const groupOrder: Array<keyof typeof groupedItems> = ['Workspace', 'Operations', 'Planning & Reports', 'Specialized Tools', 'HR', 'AEO', 'System'];
+  const groupOrder: Array<keyof typeof groupedItems> = ['Workspace', 'Operations', 'Planning & Reports', 'Specialized Tools', 'System'];
 
   const handleLinkClick = () => {
-    setOpenMobile(false);
+    if (useSidebar().isMobile) {
+      setOpenMobile(false);
+    }
   };
 
   const renderNavItem = (item: NavItem) => (
@@ -82,20 +77,20 @@ export function MainNav() {
   if (isUserLoading) {
     return (
       <SidebarMenu>
-        {[...Array(5)].map((_, i) => <SidebarMenuItem key={i}><SidebarMenuSkeleton showIcon /></SidebarMenuItem>)}
+        {[...Array(8)].map((_, i) => <SidebarMenuItem key={i}><SidebarMenuSkeleton showIcon /></SidebarMenuItem>)}
       </SidebarMenu>
     );
   }
   
   return (
     <SidebarMenu>
-      {groupOrder.map(groupName => {
+      {groupOrder.map((groupName, index) => {
         const items = groupedItems[groupName];
         if (!items || items.length === 0) return null;
         
         return (
           <React.Fragment key={groupName}>
-            <SidebarSeparator className="my-2" />
+            {index > 0 && <SidebarSeparator className="my-2" />}
             <SidebarGroupLabel className="px-2 group-data-[collapsible=icon]:hidden">{groupName}</SidebarGroupLabel>
             {items.map(renderNavItem)}
           </React.Fragment>

@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import './globals.css';
@@ -9,7 +7,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
   SidebarProvider,
   Sidebar,
-  SidebarInset,
   SidebarHeader,
   SidebarFooter,
   SidebarContent,
@@ -27,7 +24,6 @@ import { signOut } from 'firebase/auth';
 import { useToast } from "@/hooks/use-toast";
 import { UserProfileProvider, useUserProfile } from '@/contexts/user-profile-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { differenceInDays, parseISO } from 'date-fns';
 
 function TrialNotificationBanner() {
@@ -92,15 +88,15 @@ function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen>
-      <Sidebar collapsible="icon" className="border-r border-sidebar-border shadow-md">
+      <Sidebar collapsible="icon" className="border-r border-border shadow-md bg-sidebar text-sidebar-foreground">
         <SidebarRail />
-        <SidebarHeader className="p-4 border-b border-sidebar-border">
+        <SidebarHeader className="p-2 border-b border-sidebar-border">
           <AppLogo />
         </SidebarHeader>
         <SidebarContent className="p-2">
           <MainNav />
         </SidebarContent>
-        <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border space-y-2">
+        <SidebarFooter className="p-2 mt-auto border-t border-sidebar-border space-y-1">
           <Link href="/profile" passHref>
              <Button variant="ghost" className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:aspect-square">
               <UserCircle className="h-5 w-5 mr-2 group-data-[collapsible=icon]:mr-0" />
@@ -113,7 +109,7 @@ function AppShell({ children }: { children: ReactNode }) {
           </Button>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
+       <main className="flex-1">
         <div className="flex flex-col h-full">
           <TrialNotificationBanner />
           <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur-sm md:px-6 md:justify-end">
@@ -121,14 +117,14 @@ function AppShell({ children }: { children: ReactNode }) {
               <SidebarTrigger />
             </div>
             <div className="hidden md:flex items-center gap-4">
-              {/* <ThemeToggle /> /> */}
+              {/* Future items like notifications can go here */}
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6">
             {children}
-          </main>
+          </div>
         </div>
-      </SidebarInset>
+      </main>
     </SidebarProvider>
   );
 }
@@ -166,7 +162,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
                 Reload
               </ToastAction>
             ),
-            duration: Infinity, // Keep the toast until user interacts
+            duration: Infinity, 
         });
       };
       
@@ -184,10 +180,10 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
     const isAuthPage = pathname.startsWith('/auth/');
     const isSetupPage = pathname.startsWith('/setup');
 
-    if (user) { // User is authenticated
-      if (userProfile) { // Profile is loaded
+    if (user) { 
+      if (userProfile) { 
         const isAEO = userProfile.role?.includes('Agric Extension Officer');
-        const isSetUp = userProfile.farmId || isAEO;
+        const isSetUp = userProfile.tenantId || isAEO;
         const userDashboardPath = isAEO ? '/aeo/dashboard' : '/dashboard';
 
         if (!isSetUp && !isSetupPage) {
@@ -202,7 +198,7 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
         }
 
       }
-    } else { // User is NOT authenticated
+    } else { 
       if (!isAuthPage && !isPublicUnauthenticatedArea) {
         router.replace('/auth/signin');
       }
@@ -249,28 +245,19 @@ function RootLayoutContent({ children }: { children: ReactNode }) {
   const isAuthPage = pathname.startsWith('/auth/');
   const isSetupPage = pathname.startsWith('/setup');
   
-  const isSetUp = userProfile?.farmId || userProfile?.role?.includes('Agric Extension Officer');
+  const isSetUp = userProfile?.tenantId || userProfile?.role?.includes('Agric Extension Officer');
   const showAppShell = user && isSetUp;
 
-  if (isAuthPage || isSetupPage) {
-      if(showAppShell) {
-          // This state is temporary while useEffect redirects.
-          return (
-             <div className="flex flex-col justify-center items-center min-h-screen p-4 text-center bg-background">
-               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-               <p className="mt-4 text-lg text-muted-foreground">Redirecting...</p>
-             </div>
-           );
-      }
-      return <>{children}</>;
+  // Determine layout based on route
+  if (showAppShell && !isAuthPage && !isPublicUnauthenticatedArea && !isSetupPage) {
+    return <AppShell>{children}</AppShell>;
+  } else {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-green-50/50 dark:from-slate-900 dark:to-green-900/20" suppressHydrationWarning>
+        {children}
+      </div>
+    );
   }
-  
-  if (showAppShell) {
-      return <AppShell>{children}</AppShell>;
-  }
-
-  // Fallback for public unauthenticated area
-  return <>{children}</>;
 }
 
 
