@@ -66,7 +66,9 @@ service cloud.firestore {
                      (isMemberOfTenant(resource.data.tenantId) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin'])) ||
                      (isUserAEO(request.auth.uid) && resource.data.managedByAEO == request.auth.uid);
                      
-      allow create: if request.auth != null; // User registration or admin invites
+      // Creation of user documents is handled by secure server-side actions (invitations, registration).
+      // No direct client-side creation is allowed.
+      allow create: if false; 
       
       allow update: if isSuperAdmin() ||
                        request.auth.uid == userId || 
@@ -98,9 +100,10 @@ service cloud.firestore {
     match /tenants/{tenantId} {
       // Allow tenant members to read their own farm/tenant document.
       // SuperAdmins can read any tenant document for platform management.
-      allow read, list: if isMemberOfTenant(tenantId) || isSuperAdmin();
+      allow list, read: if isMemberOfTenant(tenantId) || isSuperAdmin();
 
       // Only Admins of that tenant or a SuperAdmin can create/update the main tenant doc.
+      // Creation is handled by secure server actions, but this rule provides a safeguard.
       allow create, update, delete: if isSuperAdmin() || (isMemberOfTenant(tenantId) && 'Admin' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role);
 
       // --- GENERAL FARM OPERATIONS ---
@@ -124,7 +127,9 @@ service cloud.firestore {
       // --- FINANCIAL & PLANNING (Managed by specific roles) ---
       match /transactions/{transactionId} { 
           allow read: if isMemberOfTenant(tenantId);
-          allow create: if isMemberOfTenant(tenantId); // Transactions are created programmatically by other modules.
+          // Transactions are created programmatically by other modules (server-side).
+          // Client-side creation can be blocked for stricter control.
+          allow create: if isMemberOfTenant(tenantId);
           allow update, delete: if false; // Prevent direct modification of financial records.
       }
       match /budgets/{budgetId} { allow read, write: if isManagerOfTenant(tenantId); }
