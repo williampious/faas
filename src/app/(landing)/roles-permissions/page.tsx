@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, UserCog, ShieldHalf, Tractor, Briefcase, Compass, Users, DollarSign, FileText } from 'lucide-react';
+import { ArrowLeft, UserCog, ShieldHalf, Tractor, Briefcase, Compass, Users, DollarSign, FileText, Building, UserCheck } from 'lucide-react';
 import { LandingPageHeader } from '@/components/layout/landing-page-header';
 
 interface RoleCardProps {
@@ -32,9 +32,14 @@ function RoleCard({ title, description, icon: Icon }: RoleCardProps) {
 export default function RolesAndPermissionsPage() {
   const roles = [
     {
-      title: "Admin",
+      title: "Super Admin",
       icon: ShieldHalf,
-      description: "The highest level of access. Admins can manage farm settings, invite and manage all users and their roles, access all operational and financial modules, and view AEO dashboards. The user who creates a farm automatically becomes the Admin."
+      description: "The highest-level platform administrator. Can create new tenants (farms/co-ops), manage all users across the platform, and configure platform-wide settings like promotional codes."
+    },
+    {
+      title: "Admin",
+      icon: UserCog,
+      description: "The primary administrator for a specific tenant (farm/co-op). The user who creates the tenant automatically becomes the Admin. They can manage all users and settings within their own tenant."
     },
     {
       title: "Manager",
@@ -49,21 +54,21 @@ export default function RolesAndPermissionsPage() {
     {
       title: "HR Manager",
       icon: Briefcase,
-      description: "Responsible for human resources. This role has access to the HR dashboard to manage employee records and process payroll, which integrates with the farm's financial ledger."
+      description: "Responsible for human resources within a tenant. This role has access to the HR dashboard to manage employee records and process payroll, which integrates with the tenant's financial ledger."
     },
     {
       title: "Office Manager",
-      icon: Briefcase,
+      icon: Building,
       description: "Oversees administrative functions. Office Managers can manage office-specific modules like facility management, event planning, and technology assets, with all costs feeding into the financial dashboard."
     },
     {
       title: "Finance Manager",
       icon: DollarSign,
-      description: "Focused on the financial health of the farm. Finance Managers have full access to financial reports, budgeting tools, and the transaction ledger. They can oversee both farm and office financial data."
+      description: "Focused on the financial health of the tenant. Finance Managers have full access to financial reports, budgeting tools, and the transaction ledger. They can oversee both farm and office financial data."
     },
     {
       title: "Field Officer",
-      icon: Users,
+      icon: UserCheck,
       description: "A role focused on data collection and task execution in the field. Field Officers have limited access, primarily to update task statuses and input data for specific operational modules they are assigned to."
     },
     {

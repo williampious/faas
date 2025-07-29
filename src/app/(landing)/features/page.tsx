@@ -14,22 +14,23 @@ export default function FeaturesPage() {
       categoryTitle: "Platform & Collaboration",
       icon: Cloud,
       features: [
-        { name: "Cloud-Based Data Sync", description: "All your farm data is stored securely in the cloud, enabling real-time collaboration for your entire team. Access up-to-date information from any device." },
-        { name: "Role-Based Access Control", description: "Navigation and features adapt based on assigned user roles (Admin, Manager, Farmer, etc.), ensuring users only see what they need." },
-        { name: "14-Day Free Trial", description: "Get full access to all features of our paid plans for 14 days when you sign up—no credit card required.", icon: Sparkles, iconColor: 'text-yellow-500' },
-        { name: "Progressive Web App (PWA)", description: "Installable on mobile devices for an app-like experience. Includes an in-app notification when a new version is ready to be installed." },
+        { name: "Multi-Tenant Architecture", description: "Your farm or organization gets a secure, isolated workspace (tenant). All your data is stored centrally in the cloud, enabling real-time collaboration for your entire team." },
+        { name: "Role-Based Access Control", description: "Assign specific roles (Admin, Manager, Farmer, AEO, HR) to users, ensuring they only see the features and data relevant to their job." },
+        { name: "20-Day Free Trial", description: "All new accounts get a 20-day free trial of the full Business Plan, with access to every feature, no credit card required.", icon: Sparkles, iconColor: 'text-yellow-500' },
+        { name: "Progressive Web App (PWA)", description: "Installable on mobile devices for an app-like experience. Includes an in-app notification when a new version is available." },
       ]
     },
     {
-      categoryTitle: "Core Crop Management",
+      categoryTitle: "Core Crop Management (All Plans)",
       icon: Tractor,
       features: [
         { name: "Dashboard Overview", description: "At-a-glance summary of farm activities, calendar events, and key alerts." },
-        { name: "Land Preparation Tracking", description: "Log activities like clearing and ploughing in a central database, with detailed cost tracking that feeds the financial dashboard. (Limited to 5 records on Starter plan)" },
-        { name: "Planting Records", description: "Record crop types, varieties, planting dates, and all associated costs in a central database, visible to your team. (Limited to 5 records on Starter plan)" },
-        { name: "Crop Maintenance Logs", description: "Track irrigation, fertilization, pest/disease control, and other maintenance activities with integrated costing. (Limited to 5 records on Starter plan)" },
-        { name: "Harvesting & Post-Harvest", description: "Log yield data, quality, storage, sales, and costs. Sales data automatically creates income records. (Limited to 5 records on Starter plan)" },
-        { name: "Plot/Field Management", description: "Define and manage individual farm plots or fields, including size and soil type. (Limited to 1 plot on Starter plan)" },
+        { name: "Centralized Costing", description: "Log costs for labor, materials, and services for any activity. All expenses automatically flow into the central financial ledger." },
+        { name: "Land Preparation Tracking", description: "Log activities like clearing, ploughing, and harrowing with detailed cost tracking. (Limited to 5 records on Starter plan)" },
+        { name="Planting Records", description: "Record crop types, planting dates, and all associated costs in a central database. (Limited to 5 records on Starter plan)" },
+        { name: "Crop Maintenance Logs", description: "Track irrigation, fertilization, and pest control with integrated costing. (Limited to 5 records on Starter plan)" },
+        { name: "Harvesting & Post-Harvest", description: "Log yield data, quality, storage, and sales. Sales data automatically creates income records in the ledger. (Limited to 5 records on Starter plan)" },
+        { name: "Plot/Field Management", description: "Define and manage individual farm plots, including size and soil type. (Limited to 1 plot on Starter plan)" },
       ]
     },
     {
@@ -43,7 +44,7 @@ export default function FeaturesPage() {
       ]
     },
     {
-      categoryTitle: "Office & HR Management (Business Plan & Up)",
+      categoryTitle: "Office & HR Management (Business Plan)",
       icon: Building2,
       features: [
         { name: "Office Management Suite", description: "Manage office-specific costs for facilities, technology assets, safety compliance, and event planning." },
@@ -53,7 +54,7 @@ export default function FeaturesPage() {
       ]
     },
     {
-      categoryTitle: "Agric Extension Officer (AEO) Tools (Business Plan & Up)",
+      categoryTitle: "Agric Extension Officer (AEO) Tools (Business Plan)",
       icon: Users,
       features: [
         { name: "AEO Dashboard", description: "Dedicated dashboard for AEOs to manage their activities and farmer interactions." },
@@ -68,7 +69,7 @@ export default function FeaturesPage() {
       features: [
         { name: "Live Financial Dashboard", description: "Dynamic overview of total income and expenses, with charts for monthly trends and expense breakdown by category." },
         { name: "Collaborative Budgeting Tool", description: "Create and manage budgets for specific seasons or periods. Track overall budget vs. actual spending in real-time." },
-        { name: "Collaborative Farm Calendar & Task Board", description: "Schedule events and manage tasks with your team on shared, real-time boards." },
+        { name: "Shared Farm Calendar & Task Board", description: "Schedule events and manage tasks with your team on shared, real-time boards." },
         { name: "Centralized Resource Inventory", description: "Track stock levels of resources like seeds and fertilizers. Purchases are logged as expenses automatically." },
         { name: "AI Planting Advice", description: "Get AI-generated recommendations for planting schedules and fertilization. All advice is saved to a shared farm history." },
       ]

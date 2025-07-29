@@ -11,12 +11,12 @@ export default function HelpPage() {
   const helpTopics = [
     {
       title: "Getting Started Guide",
-      description: "Learn how to register for a 14-day free trial, choose your role (Farm Admin or AEO), set up your workspace, and invite team members.",
+      description: "Learn how to register for a 20-day free trial, choose your role (Farm Admin, Cooperative, or AEO), set up your workspace, and invite team members.",
       link: "#getting-started"
     },
     {
-      title: "Admin: User Management",
-      description: "A guide for Farm Admins on how to use the User Management dashboard to invite new users and manage roles within their farm.",
+      title: "Admin: User & Tenant Management",
+      description: "A guide for Admins on how to use the User Management dashboard to invite new users and manage roles within their farm or cooperative (tenant).",
       link: "#user-management"
     },
     {
@@ -43,6 +43,12 @@ export default function HelpPage() {
       title: "Using AEO Tools",
       description: "A guide for Agric Extension Officers on managing their Farmer Directory, adding new farmers, and viewing their profiles.",
       link: "#aeo-tools"
+    },
+     {
+      title: "Subscription & Billing",
+      description: "Information on how to manage your tenant's subscription plan, upgrade, and handle payments.",
+      link: "/settings/billing",
+      isExternal: true,
     },
     {
       title: "Installation & App Updates",
@@ -75,7 +81,7 @@ export default function HelpPage() {
               {topic.isExternal ? (
                   <Link href={topic.link}>
                       <Button variant="link" className="p-0 h-auto text-primary">
-                          View Installation Guide <DownloadCloud className="ml-2 h-4 w-4" />
+                          View Guide <DownloadCloud className="ml-2 h-4 w-4" />
                       </Button>
                   </Link>
               ) : (

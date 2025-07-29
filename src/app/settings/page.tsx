@@ -49,7 +49,7 @@ function SettingsItem({ title, description, icon: Icon, href, disabled = false }
 
 
 export default function SettingsPage() {
-  const appVersion = "1.1.0"; // Updated app version
+  const appVersion = "2.0.0"; // Updated app version
   const { toast } = useToast();
 
   const settingsItems = [
@@ -170,7 +170,7 @@ export default function SettingsPage() {
                 </AlertDialogContent>
                 </AlertDialog>
                 <p className="text-xs text-muted-foreground mt-4">
-                    <strong>Note on User Data:</strong> To clear user and farm profiles from the central database, you must manually delete the documents from the 'users' and 'farms' collections in your Firebase Firestore console.
+                    <strong>Note on User Data:</strong> To clear user and tenant profiles from the central database, you must use the Super Admin panel or manually delete the documents in your Firebase Firestore console.
                 </p>
             </CardContent>
         </Card>

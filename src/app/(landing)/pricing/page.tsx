@@ -57,7 +57,6 @@ const pricingTiers: PricingTier[] = [
               { text: '1 User Account', included: true },
               { text: 'Basic Dashboard & Weather', included: true },
               { text: 'Collaborative Task Board & Calendar', included: true },
-              { text: 'Resource Inventory', included: true },
               { text: '1 Farm Plot', included: true },
               { text: '5 records per core module', included: true },
             ],
@@ -68,6 +67,7 @@ const pricingTiers: PricingTier[] = [
                 { text: 'AI Planting Advice', included: true },
                 { text: 'Basic Cost Tracking', included: true },
                 { text: 'Community Support', included: true },
+                { text: 'Resource Inventory', included: false },
                 { text: 'Animal Production Module', included: false },
                 { text: 'Advanced Financial Reporting', included: false },
                 { text: 'Office & HR Management', included: false },
@@ -85,7 +85,7 @@ const pricingTiers: PricingTier[] = [
     icon: Star,
     description: "For growing farms and teams needing more capabilities.",
     price: { monthly: 209, annually: 2099 },
-    priceDescription: 'per user / month',
+    priceDescription: 'per month',
     featureGroups: [
         {
             title: 'Everything in Starter, plus:',
@@ -93,6 +93,7 @@ const pricingTiers: PricingTier[] = [
               { text: 'Up to 5 Users', included: true },
               { text: 'Full Farm Operations Suite (Unlimited Records)', included: true },
               { text: 'Unlimited Farm Plots', included: true },
+              { text: 'Resource Inventory', included: true },
               { text: 'Animal Production Module', included: true },
               { text: 'Email & Chat Support', included: true },
             ],
@@ -117,7 +118,7 @@ const pricingTiers: PricingTier[] = [
     icon: Gem,
     description: "For established agribusinesses requiring advanced tools.",
     price: { monthly: 449, annually: 4499 },
-    priceDescription: 'per user / month',
+    priceDescription: 'per month',
     badge: 'Best Value',
     featureGroups: [
         {
@@ -164,7 +165,7 @@ const pricingTiers: PricingTier[] = [
 const faqItems = [
     {
         question: "Is there a free trial?",
-        answer: "Yes! All new users automatically receive a 20-day free trial of our comprehensive Business Plan. No credit card is required to start your trial. After 20 days, you can choose a paid plan or be moved to our free Starter plan."
+        answer: "Yes! All new accounts start with a 20-day free trial of our comprehensive Business Plan. No credit card is required to start your trial. After 20 days, you can choose a paid plan or be moved to our free Starter plan."
     },
     {
         question: "Can I change my plan later?",
@@ -262,7 +263,7 @@ export default function PricingPage() {
               ))}
             </CardContent>
             <CardFooter className="mt-auto p-6">
-              <Link href={tier.href} className="w-full">
+              <Link href={`${tier.href}?plan=${tier.id}&cycle=${billingCycle}`} className="w-full">
                 <Button size="lg" variant={tier.buttonVariant} className="w-full">
                   {tier.buttonText.includes('Trial') && <Sparkles className="mr-2 h-4 w-4" />}
                   {tier.buttonText}
