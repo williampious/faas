@@ -196,8 +196,8 @@ The index will take a few minutes to build. Once it's done, the feature that cau
 
 **Required Indexes So Far:**
 
-*   **Collection ID:** `users`, Fields to index: `farmId` (Ascending), `fullName` (Ascending).
-*   **Collection ID:** `tenants`, Fields to index: `name` (Ascending / Descending), `country` (Ascending / Descending), `region` (Ascending / Descending).
+*   **Collection ID:** `users`, Fields to index: `tenantId` (Ascending), `fullName` (Ascending).
+*   **Collection ID:** `tenants`, Fields to index: `name` (Ascending / Descending), `country` (Ascending / Descending), `region` (Ascending / Descending), `createdAt` (Ascending / Descending).
 *   **Collection ID:** `transactions`, Fields to index: `farmId` (Ascending), `date` (Descending).
 *   **Collection ID:** `promotionalCodes`, Fields to index: `createdAt` (Descending).
 *   **Collection ID:** `supportLogs`, Fields to index: `aeoId` (Ascending), `interactionDate` (Descending).
@@ -218,5 +218,3 @@ The index will take a few minutes to build. Once it's done, the feature that cau
 *   **Collection ID:** `tasks`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
 *   **Collection ID:** `farmEvents`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
 *   **Collection ID:** `budgets`, Fields to index: `farmId` (Ascending).
-
-
