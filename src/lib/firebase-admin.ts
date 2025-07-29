@@ -1,12 +1,10 @@
-
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
 let app: admin.app.App | undefined;
 
-// Initialization function that will be called on demand
-function ensureAdminAppInitialized() {
-  // If app is already initialized, do nothing
+function initializeAdminApp() {
+  // If the app is already initialized, do nothing.
   if (admin.apps.length > 0) {
     app = admin.apps[0]!;
     return;
@@ -16,6 +14,7 @@ function ensureAdminAppInitialized() {
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
   if (serviceAccountPath) {
+    // Ideal for local development: use the file path.
     try {
       app = admin.initializeApp({
         credential: admin.credential.applicationDefault(),
@@ -27,6 +26,7 @@ function ensureAdminAppInitialized() {
       throw new Error(`Firebase Admin SDK initialization failed: ${e.message}`);
     }
   } else if (serviceAccountJson) {
+    // Necessary for deployed environments like App Hosting.
     try {
       const serviceAccount = JSON.parse(serviceAccountJson);
       app = admin.initializeApp({
@@ -35,31 +35,40 @@ function ensureAdminAppInitialized() {
       });
       console.log('[Firebase Admin] ✅ SDK initialized using FIREBASE_SERVICE_ACCOUNT_JSON secret.');
     } catch (e: any) {
-        console.error("--- DEBUG: FAILED TO PARSE SERVICE ACCOUNT JSON ---");
-        console.error("The string provided in the FIREBASE_SERVICE_ACCOUNT_JSON secret is not valid JSON. This can be due to formatting errors or incorrect escaping of characters like newlines.");
-        console.error("Parser Error:", e.message);
-        console.error("--- END DEBUG ---");
-        throw new Error(`Firebase Admin SDK initialization failed due to malformed JSON: ${e.message}`);
+      console.error("--- DEBUG: FAILED TO PARSE SERVICE ACCOUNT JSON ---");
+      console.error("The string provided in the FIREBASE_SERVICE_ACCOUNT_JSON secret is not valid JSON. This can be due to formatting errors or incorrect escaping of characters like newlines.");
+      console.error("Parser Error:", e.message);
+      console.error("--- END DEBUG ---");
+      throw new Error(`Firebase Admin SDK initialization failed due to malformed JSON: ${e.message}`);
     }
   } else {
+    // Critical configuration error if neither is set.
     const errorMsg = "[Firebase Admin] ❌ CRITICAL: Neither GOOGLE_APPLICATION_CREDENTIALS nor FIREBASE_SERVICE_ACCOUNT_JSON is set. The Admin SDK cannot be initialized.";
     console.error(errorMsg);
     throw new Error(errorMsg);
   }
 }
 
+/**
+ * A helper function to get the initialized Firestore instance.
+ * Ensures the Admin SDK is initialized before returning the instance.
+ */
 export function getAdminDb() {
-  ensureAdminAppInitialized();
+  initializeAdminApp();
   if (!app) {
-       throw new Error("Firebase Admin SDK for Firestore is not initialized. SDK initialization likely failed. Check server logs for details.");
+    throw new Error("Firebase Admin SDK is not initialized. Check server logs for configuration errors.");
   }
   return admin.firestore(app);
 }
 
+/**
+ * A helper function to get the initialized Auth instance.
+ * Ensures the Admin SDK is initialized before returning the instance.
+ */
 export function getAdminAuth() {
-  ensureAdminAppInitialized();
-    if (!app) {
-       throw new Error("Firebase Admin SDK for Auth is not initialized. SDK initialization likely failed. Check server logs for details.");
-    }
+  initializeAdminApp();
+  if (!app) {
+    throw new Error("Firebase Admin SDK is not initialized. Check server logs for configuration errors.");
+  }
   return admin.auth(app);
 }

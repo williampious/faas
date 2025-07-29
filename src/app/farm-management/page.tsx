@@ -7,6 +7,37 @@ import { Button } from '@/components/ui/button';
 import { Tractor, Shovel, Sprout, ShieldAlert, Wheat, LayoutGrid, Layers, CalendarClock } from 'lucide-react'; 
 import Link from 'next/link';
 
+interface FeatureCardProps {
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  href: string;
+  cta: string;
+  disabled?: boolean;
+}
+
+function FeatureCard({ title, description, icon: Icon, href, cta, disabled }: FeatureCardProps) {
+  const cardContent = (
+    <Card className={`shadow-md hover:shadow-lg transition-shadow flex flex-col h-full ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-primary'}`}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+          <Icon className="h-7 w-7 text-primary" />
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col flex-grow">
+        <p className="text-sm text-muted-foreground mb-4 flex-grow">{description}</p>
+        <Button className="w-full mt-auto" disabled={disabled}>
+          {disabled ? 'Coming Soon' : cta}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  return disabled ? cardContent : <Link href={href}>{cardContent}</Link>;
+}
+
+
 export default function FarmManagementPage() {
   return (
     <div>
@@ -86,38 +117,4 @@ export default function FarmManagementPage() {
       </Card>
     </div>
   );
-}
-
-interface FeatureCardProps {
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  href: string;
-  cta: string;
-  disabled?: boolean;
-}
-
-function FeatureCard({ title, description, icon: Icon, href, cta, disabled }: FeatureCardProps) {
-  const cardContent = (
-    <Card className={`shadow-md hover:shadow-lg transition-shadow flex flex-col ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-primary'}`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">{title}</CardTitle>
-          <Icon className="h-7 w-7 text-primary" />
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col flex-grow">
-        <p className="text-sm text-muted-foreground mb-4 flex-grow">{description}</p>
-        <Button className="w-full mt-auto" disabled={disabled}>
-          {disabled ? 'Coming Soon' : cta}
-        </Button>
-      </CardContent>
-    </Card>
-  );
-
-  if (disabled) {
-      return cardContent;
-  }
-  
-  return <Link href={href}>{cardContent}</Link>;
 }
