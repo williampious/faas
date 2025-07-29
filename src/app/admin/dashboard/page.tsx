@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldHalf, UsersRound, Settings, TicketPercent, ExternalLink, Info, Building } from 'lucide-react';
+import { ShieldHalf, UsersRound, Settings, TicketPercent, ExternalLink, Info, Building, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { CreateTenantDialog } from '../create-tenant-dialog';
@@ -23,19 +23,35 @@ export default function AdminDashboardPage() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         {isSuperAdmin && (
-           <CreateTenantDialog>
-            <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary border-primary/50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium text-primary">Create New Tenant</CardTitle>
-                <Building className="h-6 w-6 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Onboard a new farm, co-operative, or business onto the platform.
-                </p>
-              </CardContent>
-            </Card>
-           </CreateTenantDialog>
+           <>
+            <CreateTenantDialog>
+              <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary border-primary/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-lg font-medium text-primary">Create New Tenant</CardTitle>
+                  <Building className="h-6 w-6 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Onboard a new farm, co-operative, or business onto the platform.
+                  </p>
+                </CardContent>
+              </Card>
+            </CreateTenantDialog>
+
+            <Link href="/admin/tenants" passHref>
+              <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary border-primary/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-lg font-medium text-primary">Tenant Management</CardTitle>
+                  <Building2 className="h-6 w-6 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    View and manage all tenants (farms) across the entire platform.
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+           </>
         )}
 
         <Link href="/admin/users" passHref>
