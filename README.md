@@ -26,9 +26,9 @@ Your application needs to know its public URL and how to connect to Firebase in 
 
 Backend features like user invitations and payment processing require secure credentials. This section has been updated to reflect the best practice for both local development and production deployment.
 
-#### **Step 2A: Local Development (Using a File Path)**
+#### **Step 2A: Local Development (Using a File Path - Recommended)**
 
-This is the **recommended** way to run the app on your local machine. It avoids formatting issues with JSON strings.
+This is the **recommended** way to run the app on your local machine. It avoids formatting issues with JSON strings and is required for tools like the Firebase Emulator Suite.
 
 1.  **Download your Service Account Key**: Go to your **[Firebase Console](https://console.firebase.google.com/) -> Project settings -> Service accounts**. Click **Generate new private key** and save the downloaded JSON file in the root of your project as `serviceAccountKey.json`.
     *   **Important**: This file is automatically ignored by Git (via `.gitignore`) to prevent you from accidentally committing your private keys.
