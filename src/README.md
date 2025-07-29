@@ -26,7 +26,7 @@ service cloud.firestore {
     function isSuperAdmin() {
       return request.auth != null &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Super Admin']);
+             'Super Admin' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
     function isUserAEO(userId) {
