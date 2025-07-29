@@ -55,16 +55,22 @@ service cloud.firestore {
 
     // --- GLOBAL COLLECTIONS ---
     
-    // Users can be read/written by themselves, or by Admins/SuperAdmins of their tenant.
+    // Users collection can be listed by Super Admins.
+    // Individual user documents can be read/written by themselves, or by Admins of their tenant.
     match /users/{userId} {
-      allow read: if request.auth.uid == userId ||
-                     (isMemberOfTenant(resource.data.tenantId) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Super Admin'])) ||
+      // Rule to allow reading the whole collection (list)
+      allow list: if isSuperAdmin();
+    
+      allow read: if isSuperAdmin() ||
+                     request.auth.uid == userId ||
+                     (isMemberOfTenant(resource.data.tenantId) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin'])) ||
                      (isUserAEO(request.auth.uid) && resource.data.managedByAEO == request.auth.uid);
                      
       allow create: if request.auth != null; // User registration or admin invites
       
-      allow update: if request.auth.uid == userId || 
-                       (isMemberOfTenant(resource.data.tenantId) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin', 'Super Admin'])) ||
+      allow update: if isSuperAdmin() ||
+                       request.auth.uid == userId || 
+                       (isMemberOfTenant(resource.data.tenantId) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin'])) ||
                        (isUserAEO(request.auth.uid) && resource.data.managedByAEO == request.auth.uid);
 
       allow delete: if isSuperAdmin() || (isMemberOfTenant(resource.data.tenantId) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['Admin']));
@@ -92,7 +98,7 @@ service cloud.firestore {
     match /tenants/{tenantId} {
       // Allow tenant members to read their own farm/tenant document.
       // SuperAdmins can read any tenant document for platform management.
-      allow read: if isMemberOfTenant(tenantId) || isSuperAdmin();
+      allow read, list: if isMemberOfTenant(tenantId) || isSuperAdmin();
 
       // Only Admins of that tenant or a SuperAdmin can create/update the main tenant doc.
       allow create, update, delete: if isSuperAdmin() || (isMemberOfTenant(tenantId) && 'Admin' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role);
@@ -151,3 +157,66 @@ service cloud.firestore {
     }
   }
 }
+
+```
+### Firebase Storage Security Rules
+
+If you see a `storage/unauthorized` error in the browser console when trying to **upload a profile photo**, you must update your Firebase Storage Security Rules.
+
+Copy and paste the entire ruleset below into your **Firebase Console -> Storage -> Rules**.
+
+```
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow users to read and write to their own profile photo directory.
+    // The path must match the structure 'profile-photos/{userId}/{fileName}'.
+    match /profile-photos/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+```
+
+### Firestore Indexes (Important)
+
+As the app's features grow, Firestore will require specific indexes for complex queries (like sorting or filtering by multiple fields) to work efficiently. If you see long loading times or errors in the browser console about missing indexes, you must create them.
+
+**Method 1: Automatic (Recommended)**
+
+The best way to create indexes is to **let Firebase tell you which ones you need**.
+
+1.  **Run the App:** Use the application and navigate to pages that load lists of data (e.g., Financial Dashboard, Transaction Ledger, AEO Farmer Directory, Promo Codes page).
+2.  **Check for Errors:** If a query requires an index that doesn't exist, **an error will appear in your browser's developer console**.
+3.  **Click the Link:** This error message will contain a direct link to the Firebase Console. Click this link.
+4.  **Create the Index:** The link will pre-fill all the necessary information to create the index. Simply review the details and click the "Create Index" button.
+
+The index will take a few minutes to build. Once it's done, the feature that caused the error will work correctly.
+
+**Required Indexes So Far:**
+
+*   **Collection ID:** `users`, Fields to index: `farmId` (Ascending), `fullName` (Ascending).
+*   **Collection ID:** `tenants`, Fields to index: `name` (Ascending / Descending), `country` (Ascending / Descending), `region` (Ascending / Descending).
+*   **Collection ID:** `transactions`, Fields to index: `farmId` (Ascending), `date` (Descending).
+*   **Collection ID:** `promotionalCodes`, Fields to index: `createdAt` (Descending).
+*   **Collection ID:** `supportLogs`, Fields to index: `aeoId` (Ascending), `interactionDate` (Descending).
+*   **Collection ID:** `knowledgeArticles`, Fields to index: `authorId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `plantingAdviceRecords`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `payrollRecords`, Fields to index: `farmId` (Ascending), `paymentDate` (Descending).
+*   **Collection ID:** `facilityManagementRecords`, Fields to index: `farmId` (Ascending), `paymentDate` (Descending).
+*   **Collection ID:** `safetySecurityRecords`, Fields to index: `farmId` (Ascending), `paymentDate` (Descending).
+*   **Collection ID:** `recordsManagementRecords`, Fields to index: `farmId` (Ascending), `paymentDate` (Descending).
+*   **Collection ID:** `technologyAssets`, Fields to index: `farmId` (Ascending), `purchaseDate` (Descending).
+*   **Collection ID:** `officeEvents`, Fields to index: `farmId` (Ascending), `eventDate` (Descending).
+*   **Collection ID:** `soilTestRecords`, Fields to index: `farmId` (Ascending), `testDate` (Descending).
+*   **Collection ID:** `animalHealthRecords`, Fields to index: `farmId` (Ascending), `date` (Descending).
+*   **Collection ID:** `feedingRecords`, Fields to index: `farmId` (Ascending), `date` (Descending).
+*   **Collection ID:** `harvestingRecords`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `plantingRecords`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `landPreparationActivities`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `tasks`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `farmEvents`, Fields to index: `farmId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `budgets`, Fields to index: `farmId` (Ascending).
+
+
