@@ -19,7 +19,7 @@ import { UsersRound, PlusCircle, Edit2, Loader2, AlertTriangle, UserCog, UserPlu
 import { Badge } from '@/components/ui/badge';
 import type { AgriFAASUserProfile, UserRole, AccountStatus } from '@/types/user';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, doc, updateDoc, serverTimestamp, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, doc, updateDoc, serverTimestamp, setDoc, deleteDoc, writeBatch, type Query } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription as ShadcnAlertDescription } from '@/components/ui/alert';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { useToast } from '@/hooks/use-toast';
@@ -63,6 +63,7 @@ export default function AdminUsersPage() {
   const [userToDelete, setUserToDelete] = useState<AgriFAASUserProfile | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
+  const isSuperAdmin = userProfile?.role.includes('Super Admin') || false;
 
   const availableRoles: UserRole[] = ['Super Admin', 'Admin', 'Manager', 'FieldOfficer', 'HRManager', 'OfficeManager', 'FinanceManager', 'Farmer', 'Investor', 'Farm Staff', 'Agric Extension Officer'];
 
@@ -77,12 +78,20 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      if (isAuthLoading || !userProfile?.tenantId) {
+      if (isAuthLoading || !userProfile) {
         if (!isAuthLoading) { 
-            setError("You do not have permission to view this page or your user profile is missing farm information.");
+            setUsers([]);
             setIsLoading(false);
         }
         return;
+      }
+      
+      const hasPermission = isSuperAdmin || (currentUserIsAdmin && userProfile.tenantId);
+
+      if (!hasPermission) {
+         setError("You do not have permission to view this page or your user profile is missing farm information.");
+         setIsLoading(false);
+         return;
       }
 
       setIsLoading(true);
@@ -95,11 +104,22 @@ export default function AdminUsersPage() {
       }
 
       try {
-        const usersQuery = query(
-          collection(db, usersCollectionName), 
-          where("tenantId", "==", userProfile.tenantId),
-          orderBy("fullName", "asc")
-        );
+        let usersQuery: Query;
+        if (isSuperAdmin) {
+          // Super Admins can see all users
+          usersQuery = query(
+            collection(db, usersCollectionName),
+            orderBy("fullName")
+          );
+        } else {
+          // Regular Admins can only see users in their tenant
+          usersQuery = query(
+            collection(db, usersCollectionName), 
+            where("tenantId", "==", userProfile.tenantId),
+            orderBy("fullName")
+          );
+        }
+
         const querySnapshot = await getDocs(usersQuery);
         const fetchedUsers = querySnapshot.docs.map(docSnapshot => ({
           ...docSnapshot.data(),
@@ -110,7 +130,7 @@ export default function AdminUsersPage() {
         console.error("Error fetching users: ", err);
         let message = `Failed to fetch users: ${err.message}`;
         if (err.message?.toLowerCase().includes('requires an index')) {
-          message = "Failed to load user data because a Firestore index is missing. Please create the required index for the 'users' collection (sorted by 'tenantId' and 'fullName') as detailed in the README.md file."
+          message = "Failed to load user data because a Firestore index is missing. Please create the required index for the 'users' collection as detailed in the README.md file."
         }
         setError(message);
       } finally {
@@ -119,7 +139,7 @@ export default function AdminUsersPage() {
     };
 
     fetchUsers();
-  }, [isAuthLoading, userProfile]);
+  }, [currentUserIsAdmin, isAuthLoading, userProfile, isSuperAdmin]);
 
   const handleOpenEditModal = (userToEdit: AgriFAASUserProfile) => {
     setEditingUser(userToEdit);
@@ -366,16 +386,16 @@ export default function AdminUsersPage() {
   return (
     <div>
       <PageHeader
-        title="Farm User Management"
+        title={isSuperAdmin ? "Platform User Management" : "Farm User Management"}
         icon={UsersRound}
-        description="View, manage roles, and invite new users to your farm."
+        description={isSuperAdmin ? "View and manage all users across the platform." : "View, manage roles, and invite new users to your farm."}
         action={
           <Button onClick={() => { 
             inviteUserForm.reset({ fullName: '', email: '', roles: ['Farmer'] }); 
             setInviteUserError(null); 
             setGeneratedInviteLink(null); 
             setIsInviteUserModalOpen(true); 
-          }}>
+          }} disabled={isSuperAdmin}>
             <UserPlus className="mr-2 h-4 w-4" /> Invite New User
           </Button>
         }
@@ -591,7 +611,7 @@ export default function AdminUsersPage() {
       <Card className="shadow-lg">
         <CardContent className="pt-6">
           <Table>
-            <TableCaption>{users.length === 0 ? "No other users found on your farm." : "A list of all users on your farm."}</TableCaption>
+            <TableCaption>{users.length === 0 ? "No users found." : `A list of all ${users.length} users.`}</TableCaption>
             <TableHeader>
               <TableRow>
                 <TableHead>Full Name</TableHead>
@@ -662,3 +682,4 @@ export default function AdminUsersPage() {
     </div>
   );
 }
+
