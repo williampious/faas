@@ -91,8 +91,10 @@ service cloud.firestore {
     // All farm-specific data is nested under a tenant document.
     match /tenants/{tenantId} {
       // Allow tenant members to read their own farm/tenant document.
+      // SuperAdmins can read any tenant document for platform management.
+      allow read: if isMemberOfTenant(tenantId) || isSuperAdmin();
+
       // Only Admins of that tenant or a SuperAdmin can create/update the main tenant doc.
-      allow read: if isMemberOfTenant(tenantId);
       allow create, update, delete: if isSuperAdmin() || (isMemberOfTenant(tenantId) && 'Admin' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role);
 
       // --- GENERAL FARM OPERATIONS ---
@@ -188,6 +190,9 @@ As the app's features grow, Firestore will require specific indexes for complex 
 
 Below are the composite indexes required by the application. Go to **Firebase Console -> Firestore Database -> Indexes** to create them.
 
+*   **For Tenant Management (Super Admin):**
+    *   Collection: `tenants`
+    *   Fields: `name` (Ascending), `country` (Ascending), `region` (Ascending), `createdAt` (Descending) - You will need to create a separate composite index for each sort order you want to support.
 *   **For Admin User Management:**
     *   Collection: `users`
     *   Fields: `tenantId` (Ascending), `fullName` (Ascending)

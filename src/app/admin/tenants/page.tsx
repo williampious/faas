@@ -43,7 +43,11 @@ export default function TenantManagementPage() {
         setTenants(fetchedTenants);
       } catch (err: any) {
         console.error("Error fetching tenants:", err);
-        setError(`Failed to fetch tenants. An index might be required for sorting by '${sortConfig.key}'.`);
+        let message = `Failed to fetch tenants. This may be due to missing permissions.`;
+        if (err.message?.toLowerCase().includes('requires an index')) {
+          message = `Failed to sort tenants by '${sortConfig.key}'. This is because a required Firestore index is missing. Please check the README.md file for instructions on how to create it.`
+        }
+        setError(message);
       } finally {
         setIsLoading(false);
       }
