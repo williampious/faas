@@ -16,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2, Tractor, Handshake } from 'lucide-react';
+import { Loader2, Tractor, Handshake, Building } from 'lucide-react';
 import type { Farm } from '@/types/farm';
 import type { UserRole, SubscriptionDetails } from '@/types/user';
 import { cn } from '@/lib/utils';
@@ -37,7 +37,17 @@ const aeoSetupSchema = z.object({
 });
 type AeoSetupFormValues = z.infer<typeof aeoSetupSchema>;
 
-type SetupType = 'farmer' | 'aeo';
+const cooperativeSetupSchema = z.object({
+  name: z.string().min(3, { message: "Cooperative name must be at least 3 characters." }),
+  country: z.string().min(2, { message: "Country is required." }),
+  region: z.string().min(2, { message: "Region is required." }),
+  description: z.string().max(500, "Description cannot exceed 500 characters.").optional(),
+  assignedDistrict: z.string().min(2, { message: "District is required for AEO functions." }),
+});
+type CooperativeSetupFormValues = z.infer<typeof cooperativeSetupSchema>;
+
+
+type SetupType = 'farmer' | 'aeo' | 'cooperative';
 
 export default function SetupPage() {
   const router = useRouter();
@@ -55,6 +65,12 @@ export default function SetupPage() {
       resolver: zodResolver(aeoSetupSchema),
       defaultValues: { organization: '', assignedRegion: '', assignedDistrict: '' },
   });
+
+  const cooperativeForm = useForm<CooperativeSetupFormValues>({
+    resolver: zodResolver(cooperativeSetupSchema),
+    defaultValues: { name: '', country: 'Ghana', region: '', description: '', assignedDistrict: '' },
+  });
+
 
   useEffect(() => {
     if (!isProfileLoading) {
@@ -140,6 +156,57 @@ export default function SetupPage() {
           setIsSubmitting(false);
       }
   };
+  
+  const handleCooperativeSubmit: SubmitHandler<CooperativeSetupFormValues> = async (data) => {
+    if (!user || !userProfile) { 
+        toast({ title: "Error", description: "User profile not available. Please try again.", variant: "destructive"});
+        return;
+    }
+    setIsSubmitting(true);
+    
+    const tenantRef = doc(collection(db, 'tenants'));
+    const userRef = doc(db, 'users', user.uid);
+
+    const trialEndDate = add(new Date(), { days: 20 });
+    const initialSubscription: SubscriptionDetails = {
+        planId: 'business',
+        status: 'Trialing',
+        billingCycle: 'annually',
+        nextBillingDate: null,
+        trialEnds: trialEndDate.toISOString(),
+    };
+
+    const newTenant: Omit<Farm, 'id' | 'createdAt'|'updatedAt'> = {
+      name: data.name, country: data.country, region: data.region,
+      description: data.description || '', ownerId: user.uid, currency: 'GHS',
+      subscription: initialSubscription,
+    };
+
+    try {
+      const batch = writeBatch(db);
+      batch.set(tenantRef, { ...newTenant, id: tenantRef.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      
+      batch.update(userRef, { 
+          tenantId: tenantRef.id, 
+          role: ['Admin', 'Agric Extension Officer'] as UserRole[],
+          assignedRegion: data.region,
+          assignedDistrict: data.assignedDistrict,
+          organization: data.name,
+          updatedAt: serverTimestamp()
+      });
+      
+      await batch.commit();
+      
+      toast({ title: "Cooperative Created!", description: `Welcome to ${data.name}. You have both Admin and AEO roles.` });
+      router.push('/dashboard'); // Go to main dashboard first
+
+    } catch (error: any) {
+      console.error("Error creating cooperative:", error);
+      toast({ title: "Error", description: `Failed to create cooperative: ${error.message}`, variant: "destructive" });
+      setIsSubmitting(false);
+    }
+  };
+
 
   if (isProfileLoading || !userProfile) { 
     return (
@@ -167,7 +234,7 @@ export default function SetupPage() {
                   <CardTitle className="text-2xl font-bold">How will you be using AgriFAAS Connect?</CardTitle>
                   <CardDescription>Select the option that best describes you to tailor your workspace.</CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="grid grid-cols-1 gap-4">
                   <button onClick={() => setSetupType('farmer')} className={cn("p-6 border rounded-lg text-left hover:border-primary hover:shadow-lg transition-all flex items-start gap-4")}>
                       <Tractor className="h-8 w-8 text-primary mt-1 shrink-0" />
                       <div>
@@ -175,10 +242,17 @@ export default function SetupPage() {
                           <p className="text-sm text-muted-foreground mt-1">Set up your own private farm, manage operations, and invite your team.</p>
                       </div>
                   </button>
+                  <button onClick={() => setSetupType('cooperative')} className={cn("p-6 border rounded-lg text-left hover:border-primary hover:shadow-lg transition-all flex items-start gap-4")}>
+                      <Building className="h-8 w-8 text-primary mt-1 shrink-0" />
+                      <div>
+                          <h3 className="font-semibold text-lg">I'm managing a Cooperative or Farmer Group</h3>
+                          <p className="text-sm text-muted-foreground mt-1">Manage your own operations and provide extension services to members.</p>
+                      </div>
+                  </button>
                   <button onClick={() => setSetupType('aeo')} className={cn("p-6 border rounded-lg text-left hover:border-primary hover:shadow-lg transition-all flex items-start gap-4")}>
                       <Handshake className="h-8 w-8 text-primary mt-1 shrink-0" />
                       <div>
-                          <h3 className="font-semibold text-lg">I'm an Extension Officer or Cooperative Rep</h3>
+                          <h3 className="font-semibold text-lg">I'm a standalone Extension Officer</h3>
                           <p className="text-sm text-muted-foreground mt-1">Set up an AEO account to add and manage farmers in your designated area.</p>
                       </div>
                   </button>
@@ -221,13 +295,13 @@ export default function SetupPage() {
       return (
           <Card className="w-full animate-in fade-in-20">
               <CardHeader>
-                  <CardTitle className="text-2xl font-bold">Set Up Your Extension Officer / Cooperative Profile</CardTitle>
-                  <CardDescription>This information will help set up your AEO workspace for managing farmers.</CardDescription>
+                  <CardTitle className="text-2xl font-bold">Set Up Your Extension Officer Profile</CardTitle>
+                  <CardDescription>This information will help set up your AEO workspace for managing farmers. You won't have your own farm dashboard.</CardDescription>
               </CardHeader>
                <Form {...aeoForm}>
                   <form onSubmit={aeoForm.handleSubmit(handleAeoSubmit)}>
                       <CardContent className="space-y-6">
-                          <FormField control={aeoForm.control} name="organization" render={({ field }) => (<FormItem><FormLabel>Organization Name (Optional)</FormLabel><FormControl><Input placeholder="e.g., Ministry of Food and Agriculture, Farmers Co-op Ltd." {...field} /></FormControl><FormDescription>The name of your organization or cooperative.</FormDescription><FormMessage /></FormItem>)} />
+                          <FormField control={aeoForm.control} name="organization" render={({ field }) => (<FormItem><FormLabel>Organization Name (Optional)</FormLabel><FormControl><Input placeholder="e.g., Ministry of Food and Agriculture, Farmers Co-op Ltd." {...field} /></FormControl><FormDescription>The name of your organization.</FormDescription><FormMessage /></FormItem>)} />
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <FormField control={aeoForm.control} name="assignedRegion" render={({ field }) => (<FormItem><FormLabel>Assigned Region*</FormLabel><FormControl><Input placeholder="e.g., Volta Region" {...field} /></FormControl><FormMessage /></FormItem>)} />
                               <FormField control={aeoForm.control} name="assignedDistrict" render={({ field }) => (<FormItem><FormLabel>Assigned District*</FormLabel><FormControl><Input placeholder="e.g., South Tongu" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -245,6 +319,37 @@ export default function SetupPage() {
           </Card>
       );
   }
+
+  if (setupType === 'cooperative') {
+    return (
+        <Card className="w-full animate-in fade-in-20">
+            <CardHeader>
+                <CardTitle className="text-2xl font-bold">Set Up Your Cooperative Profile</CardTitle>
+                <CardDescription>You will be set up as an Administrator for the cooperative's operations and also as an Extension Officer to manage members.</CardDescription>
+            </CardHeader>
+            <Form {...cooperativeForm}>
+                <form onSubmit={cooperativeForm.handleSubmit(handleCooperativeSubmit)}>
+                    <CardContent className="space-y-6">
+                         <FormField control={cooperativeForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Cooperative Name*</FormLabel><FormControl><Input placeholder="e.g., Green Valley Cooperative" {...field} /></FormControl><FormDescription>The official name of your cooperative or group.</FormDescription><FormMessage /></FormItem>)} />
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormField control={cooperativeForm.control} name="country" render={({ field }) => (<FormItem><FormLabel>Country*</FormLabel><FormControl><Input placeholder="e.g., Ghana" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={cooperativeForm.control} name="region" render={({ field }) => (<FormItem><FormLabel>Region*</FormLabel><FormControl><Input placeholder="e.g., Volta Region" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                         </div>
+                         <FormField control={cooperativeForm.control} name="assignedDistrict" render={({ field }) => (<FormItem><FormLabel>Primary District of Operation*</FormLabel><FormControl><Input placeholder="e.g., South Tongu" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                         <FormField control={cooperativeForm.control} name="description" render={({ field }) => (<FormItem><FormLabel>Cooperative Description (Optional)</FormLabel><FormControl><Textarea placeholder="A brief description of your cooperative's goals..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    </CardContent>
+                    <CardFooter className="flex justify-between">
+                        <Button variant="ghost" onClick={() => setSetupType(null)}>Back</Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isSubmitting ? 'Creating Cooperative...' : 'Finish Setup'}
+                        </Button>
+                    </CardFooter>
+                </form>
+            </Form>
+        </Card>
+    );
+}
 
   return null;
 }
