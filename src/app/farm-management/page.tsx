@@ -33,8 +33,11 @@ function FeatureCard({ title, description, icon: Icon, href, cta, disabled }: Fe
       </CardContent>
     </Card>
   );
+  
+  // Use a wrapper component that is either a Link or a div
+  const Wrapper = disabled ? 'div' : Link;
 
-  return disabled ? cardContent : <Link href={href}>{cardContent}</Link>;
+  return <Wrapper href={!disabled ? href : ''}>{cardContent}</Wrapper>;
 }
 
 

@@ -44,7 +44,7 @@ export default function FarmSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const tenantId = userProfile?.farmId;
+  const tenantId = userProfile?.tenantId;
   
   const form = useForm<FarmSettingsFormValues>({
     resolver: zodResolver(farmSettingsSchema),

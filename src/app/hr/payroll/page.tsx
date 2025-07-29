@@ -67,6 +67,8 @@ export default function PayrollPage() {
   const router = useRouter();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
 
+  const tenantId = userProfile?.tenantId;
+
   const form = useForm<PayrollFormValues>({
     resolver: zodResolver(payrollFormSchema),
     defaultValues: { userId: '', payPeriod: '', grossAmount: undefined, deductions: undefined, paymentMethod: undefined, notes: '' },
@@ -77,7 +79,7 @@ export default function PayrollPage() {
 
   useEffect(() => {
     if (isProfileLoading) return;
-    if (!userProfile?.farmId) {
+    if (!tenantId) {
       setError("Farm information is not available. Cannot load data.");
       setIsLoading(false);
       return;
@@ -87,16 +89,15 @@ export default function PayrollPage() {
       setIsLoading(true);
       setError(null);
       try {
-        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
         
         // Fetch Payroll Records
-        const payrollQuery = query(collection(db, PAYROLL_RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("paymentDate", "desc"));
+        const payrollQuery = query(collection(db, `tenants/${tenantId}/${PAYROLL_RECORDS_COLLECTION}`), orderBy("paymentDate", "desc"));
         const payrollSnapshot = await getDocs(payrollQuery);
         const fetchedRecords = payrollSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PayrollRecord[];
         setPayrollRecords(fetchedRecords);
 
         // Fetch Employees
-        const usersQuery = query(collection(db, USERS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("fullName", "asc"));
+        const usersQuery = query(collection(db, USERS_COLLECTION), where("tenantId", "==", tenantId), orderBy("fullName", "asc"));
         const usersSnapshot = await getDocs(usersQuery);
         const fetchedUsers = usersSnapshot.docs.map(doc => doc.data() as AgriFAASUserProfile);
         setEmployees(fetchedUsers);
@@ -110,7 +111,7 @@ export default function PayrollPage() {
     };
     
     fetchData();
-  }, [userProfile, isProfileLoading]);
+  }, [tenantId, isProfileLoading]);
 
   const handleOpenModal = (recordToEdit?: PayrollRecord) => {
     if (recordToEdit) {
@@ -131,7 +132,7 @@ export default function PayrollPage() {
   };
   
   const onSubmit: SubmitHandler<PayrollFormValues> = async (data) => {
-    if (!userProfile?.farmId || !db) {
+    if (!tenantId) {
       toast({ title: "Error", description: "Cannot save. Farm/database information is missing.", variant: "destructive" });
       return;
     }
@@ -147,7 +148,7 @@ export default function PayrollPage() {
     const netAmount = grossAmount - deductions;
 
     const recordData = {
-      farmId: userProfile.farmId,
+      tenantId: tenantId,
       ...data,
       paymentDate: format(data.paymentDate, 'yyyy-MM-dd'),
       grossAmount,
@@ -161,25 +162,28 @@ export default function PayrollPage() {
 
     try {
       let recordId: string;
+      const recordsPath = `tenants/${tenantId}/${PAYROLL_RECORDS_COLLECTION}`;
+      const transactionsPath = `tenants/${tenantId}/${TRANSACTIONS_COLLECTION}`;
+
       if (editingRecord) {
         recordId = editingRecord.id;
-        const recordRef = doc(db, PAYROLL_RECORDS_COLLECTION, recordId);
+        const recordRef = doc(db, recordsPath, recordId);
         batch.update(recordRef, recordData);
         
-        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", recordId));
+        const transQuery = query(collection(db, transactionsPath), where("linkedActivityId", "==", recordId));
         const oldTransSnap = await getDocs(transQuery);
         oldTransSnap.forEach(doc => batch.delete(doc.ref));
 
       } else {
-        const recordRef = doc(collection(db, PAYROLL_RECORDS_COLLECTION));
+        const recordRef = doc(collection(db, recordsPath));
         recordId = recordRef.id;
         batch.set(recordRef, { ...recordData, createdAt: serverTimestamp() });
       }
 
       // Add financial transaction for the gross amount
-      const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
+      const transRef = doc(collection(db, transactionsPath));
       const newTransaction: Omit<OperationalTransaction, 'id'> = {
-        farmId: userProfile.farmId,
+        tenantId: tenantId,
         date: recordData.paymentDate,
         description: `Payroll for ${employee.fullName} - ${data.payPeriod}`,
         amount: grossAmount,
@@ -211,13 +215,16 @@ export default function PayrollPage() {
 
   const handleDeleteRecord = async (id: string) => {
     const recordToDelete = payrollRecords.find(r => r.id === id);
-    if (!recordToDelete || !db) return;
+    if (!recordToDelete || !tenantId) return;
 
     const batch = writeBatch(db);
     try {
-        batch.delete(doc(db, PAYROLL_RECORDS_COLLECTION, id));
+        const recordsPath = `tenants/${tenantId}/${PAYROLL_RECORDS_COLLECTION}`;
+        const transactionsPath = `tenants/${tenantId}/${TRANSACTIONS_COLLECTION}`;
+
+        batch.delete(doc(db, recordsPath, id));
         
-        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", id));
+        const transQuery = query(collection(db, transactionsPath), where("linkedActivityId", "==", id));
         const transSnap = await getDocs(transQuery);
         transSnap.forEach(doc => batch.delete(doc.ref));
 

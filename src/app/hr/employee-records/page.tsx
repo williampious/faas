@@ -24,9 +24,11 @@ export default function HREmployeeRecordsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const tenantId = userProfile?.tenantId;
+
   useEffect(() => {
     if (isProfileLoading) return;
-    if (!userProfile?.farmId) {
+    if (!tenantId) {
       setError("Farm information is not available. Cannot load employee data.");
       setIsLoading(false);
       return;
@@ -36,8 +38,7 @@ export default function HREmployeeRecordsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        if (!userProfile.farmId) throw new Error("User is not associated with a farm.");
-        const q = query(collection(db, USERS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("fullName"));
+        const q = query(collection(db, USERS_COLLECTION), where("tenantId", "==", tenantId), orderBy("fullName"));
         const querySnapshot = await getDocs(q);
         const fetchedEmployees = querySnapshot.docs.map(doc => ({ userId: doc.id, ...doc.data() })) as AgriFAASUserProfile[];
         setEmployees(fetchedEmployees);
@@ -50,7 +51,7 @@ export default function HREmployeeRecordsPage() {
     };
 
     fetchEmployees();
-  }, [userProfile, isProfileLoading]);
+  }, [tenantId, isProfileLoading]);
 
   if (isProfileLoading || isLoading) {
     return (

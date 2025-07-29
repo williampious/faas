@@ -11,6 +11,7 @@ import { CreateTenantDialog } from '../create-tenant-dialog';
 export default function AdminDashboardPage() {
   const { userProfile } = useUserProfile();
   const isSuperAdmin = userProfile?.role.includes('Super Admin');
+  const isAdmin = userProfile?.role.includes('Admin');
 
   return (
     <div>
@@ -54,33 +55,37 @@ export default function AdminDashboardPage() {
            </>
         )}
 
-        <Link href="/admin/users" passHref>
-          <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium">User Management</CardTitle>
-              <UsersRound className="h-6 w-6 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                View, add, and manage users within your farm.
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+        {isAdmin && (
+          <>
+            <Link href="/admin/users" passHref>
+              <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-lg font-medium">User Management</CardTitle>
+                  <UsersRound className="h-6 w-6 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    View, add, and manage users within your farm.
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
 
-        <Link href="/admin/farm-settings" passHref>
-          <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium">Farm Settings</CardTitle>
-              <Settings className="h-6 w-6 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Update your farm's name, contact details, and other settings.
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+            <Link href="/admin/farm-settings" passHref>
+              <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer hover:border-primary">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-lg font-medium">Farm Settings</CardTitle>
+                  <Settings className="h-6 w-6 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Update your farm's name, contact details, and other settings.
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          </>
+        )}
         
         {isSuperAdmin && (
           <Link href="/admin/promo-codes" passHref>

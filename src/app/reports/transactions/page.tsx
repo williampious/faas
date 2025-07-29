@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -28,10 +27,11 @@ export default function TransactionsLedgerPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortableKeys, direction: OrderByDirection }>({ key: 'date', direction: 'desc' });
+  const tenantId = userProfile?.tenantId;
 
   useEffect(() => {
     if (isProfileLoading) return;
-    if (!userProfile?.farmId) {
+    if (!tenantId) {
       setError("Farm information is not available. Cannot load transactions.");
       setIsLoading(false);
       return;
@@ -42,8 +42,7 @@ export default function TransactionsLedgerPage() {
       setError(null);
       try {
         const transQuery = query(
-          collection(db, TRANSACTIONS_COLLECTION),
-          where("farmId", "==", userProfile.farmId),
+          collection(db, `tenants/${tenantId}/${TRANSACTIONS_COLLECTION}`),
           orderBy(sortConfig.key, sortConfig.direction)
         );
         const querySnapshot = await getDocs(transQuery);
@@ -64,7 +63,7 @@ export default function TransactionsLedgerPage() {
       }
     };
     fetchTransactions();
-  }, [userProfile, isProfileLoading, sortConfig]);
+  }, [tenantId, isProfileLoading, sortConfig]);
   
   const handleSort = (key: SortableKeys) => {
     let direction: OrderByDirection = 'asc';

@@ -62,25 +62,19 @@ export default function FinancialDashboardPage() {
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const { toast } = useToast();
   
-  const [farmProfile, setFarmProfile] = useState<Farm | null>(null);
-
+  const tenantId = userProfile?.tenantId;
+  
   const [farmingYears, setFarmingYears] = useState<FarmingYear[]>([]);
   const [selectedYearId, setSelectedYearId] = useState<string>('last12months');
   const [selectedSeasonId, setSelectedSeasonId] = useState<string>('all');
   const [budgetFilter, setBudgetFilter] = useState<BudgetFilterType>('all');
 
   useEffect(() => {
-    if (!userProfile?.farmId) return;
+    if (!tenantId) return;
 
     const fetchFarmAndYearData = async () => {
         try {
-            const farmDocRef = doc(db, 'farms', userProfile.farmId);
-            const farmDocSnap = await getDoc(farmDocRef);
-            if(farmDocSnap.exists()) {
-                setFarmProfile(farmDocSnap.data() as Farm);
-            }
-
-            const yearsQuery = query(collection(db, FARMING_YEARS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("startDate", "desc"));
+            const yearsQuery = query(collection(db, `tenants/${tenantId}/${FARMING_YEARS_COLLECTION}`), orderBy("startDate", "desc"));
             const yearsSnapshot = await getDocs(yearsQuery);
             const fetchedYears = yearsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FarmingYear));
             setFarmingYears(fetchedYears);
@@ -90,11 +84,11 @@ export default function FinancialDashboardPage() {
         }
     };
     fetchFarmAndYearData();
-  }, [userProfile, toast]);
+  }, [tenantId, toast]);
 
   useEffect(() => {
     if (isProfileLoading) return;
-    if (!userProfile?.farmId) {
+    if (!tenantId) {
       setError("Farm information not available. Cannot load financial data.");
       setIsLoading(false);
       return;
@@ -127,7 +121,6 @@ export default function FinancialDashboardPage() {
         }
         
         const queryConstraints: QueryConstraint[] = [
-            where("farmId", "==", userProfile.farmId),
             where("date", ">=", format(startDate, 'yyyy-MM-dd')),
             where("date", "<=", format(endDate, 'yyyy-MM-dd'))
         ];
@@ -137,8 +130,9 @@ export default function FinancialDashboardPage() {
         } else if (budgetFilter === 'officeOps') {
             queryConstraints.push(where("linkedModule", "in", OFFICE_OPS_MODULES));
         }
-
-        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), ...queryConstraints);
+        
+        const transPath = `tenants/${tenantId}/${TRANSACTIONS_COLLECTION}`;
+        const transQuery = query(collection(db, transPath), ...queryConstraints);
         const querySnapshot = await getDocs(transQuery);
         const transactions = querySnapshot.docs.map(doc => doc.data() as OperationalTransaction);
         
@@ -193,7 +187,7 @@ export default function FinancialDashboardPage() {
     };
 
     fetchAndProcessTransactions();
-  }, [userProfile, isProfileLoading, farmingYears, selectedYearId, selectedSeasonId, budgetFilter]);
+  }, [tenantId, isProfileLoading, farmingYears, selectedYearId, selectedSeasonId, budgetFilter]);
 
   const handleYearChange = (yearId: string) => {
     setSelectedYearId(yearId);
@@ -202,8 +196,7 @@ export default function FinancialDashboardPage() {
 
   const selectedYearData = farmingYears.find(y => y.id === selectedYearId);
   const formatCurrency = (amount: number) => {
-    const currencyCode = farmProfile?.currency || 'GHS';
-    // A simple mapping for locale. For a real app, this would be more robust.
+    const currencyCode = userProfile?.farmProfile?.currency || 'GHS';
     const locale = currencyCode === 'USD' ? 'en-US' : 'en-GH';
     return new Intl.NumberFormat(locale, { style: 'currency', currency: currencyCode }).format(amount);
   };
@@ -340,8 +333,8 @@ export default function FinancialDashboardPage() {
         <Card className="mt-6 bg-muted/30 p-4">
           <CardHeader className="p-0 pb-2"><CardTitle className="text-base font-semibold text-muted-foreground">About This Dashboard</CardTitle></CardHeader>
           <CardContent className="p-0 text-xs text-muted-foreground space-y-1">
-              <p>&bull; This dashboard provides a financial summary based on data stored centrally in Firestore.</p>
-              <p>&bull; Income and expense data is aggregated from all the operational modules (Land Prep, Planting, Harvesting, etc.).</p>
+              <p>&bull; This dashboard provides a financial summary based on data stored centrally in your farm's tenant record.</p>
+              <p>&bull; Income and expense data is aggregated from all the operational modules (Land Prep, Planting, Harvesting, Office, etc.).</p>
               <p>&bull; As you log costs and sales across the app, this dashboard will update automatically to reflect the changes.</p>
           </CardContent>
         </Card>
