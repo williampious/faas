@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -19,7 +20,7 @@ import { allNavItems, type NavItem } from '@/lib/nav-data';
 export function MainNav() {
   const pathname = usePathname();
   const { userProfile, isLoading: isUserLoading } = useUserProfile();
-  const { setOpenMobile } = useSidebar();
+  const sidebar = useSidebar();
 
   const userRoles = userProfile?.role || [];
 
@@ -49,8 +50,8 @@ export function MainNav() {
   const groupOrder: Array<keyof typeof groupedItems> = ['Workspace', 'Operations', 'Planning & Reports', 'Specialized Tools', 'System'];
 
   const handleLinkClick = () => {
-    if (useSidebar().isMobile) {
-      setOpenMobile(false);
+    if (sidebar.isMobile) {
+      sidebar.setOpenMobile(false);
     }
   };
 
