@@ -14,8 +14,8 @@ const firebaseConfigValuesFromEnv = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// This check is now internal to the module to prevent exporting uninitialized services.
-const isFirebaseClientConfigured = !Object.values(firebaseConfigValuesFromEnv).some(
+// This check is now exported to be used in other files.
+export const isFirebaseClientConfigured = !Object.values(firebaseConfigValuesFromEnv).some(
   value => !value || typeof value !== 'string' || value.includes('YOUR_')
 );
 
