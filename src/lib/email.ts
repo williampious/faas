@@ -25,9 +25,9 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
 
   const fromAddress = EMAIL_SENDER || '"AgriFAAS Connect" <noreply@agrifaasconnect.com>';
 
-  // If SMTP variables are not set, use sendmail as a fallback
+  // If SMTP variables are not set, use sendmail as a fallback for local dev
   if (!EMAIL_HOST || !EMAIL_PORT || !EMAIL_USER || !EMAIL_PASS) {
-      console.warn("SMTP environment variables not set. Falling back to sendmail.");
+      console.warn("SMTP environment variables not set. Falling back to sendmail for local development.");
       try {
         await sendmailPromise({
             from: fromAddress,
@@ -43,7 +43,7 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       }
   }
 
-  // Original nodemailer logic
+  // Original nodemailer logic for production SMTP
   const transporter = nodemailer.createTransport({
     host: EMAIL_HOST,
     port: Number(EMAIL_PORT),

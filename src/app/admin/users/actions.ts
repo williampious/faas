@@ -1,4 +1,3 @@
-// This file was created to properly separate server-side logic from client components.
 'use server';
 
 import { sendEmail as send } from '@/lib/email';
