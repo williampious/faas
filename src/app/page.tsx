@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -153,7 +154,7 @@ export default function LandingPage() {
                         </div>
                     </div>
                      <div className="relative aspect-video w-full">
-                        <Image src="https://placehold.co/600x400.png" alt="Farm management dashboard" layout="fill" objectFit="cover" className="rounded-lg shadow-xl" data-ai-hint="farming agriculture"/>
+                        <Image src="/farming_agriculture.png" alt="Farm management dashboard" layout="fill" objectFit="cover" className="rounded-lg shadow-xl"/>
                     </div>
                 </div>
             </section>
