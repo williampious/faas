@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -27,7 +26,7 @@ export default function FeaturesPage() {
         { name: "Dashboard Overview", description: "At-a-glance summary of farm activities, calendar events, and key alerts." },
         { name: "Centralized Costing", description: "Log costs for labor, materials, and services for any activity. All expenses automatically flow into the central financial ledger." },
         { name: "Land Preparation Tracking", description: "Log activities like clearing, ploughing, and harrowing with detailed cost tracking. (Limited to 5 records on Starter plan)" },
-        { name="Planting Records", description: "Record crop types, planting dates, and all associated costs in a central database. (Limited to 5 records on Starter plan)" },
+        { name: "Planting Records", description: "Record crop types, planting dates, and all associated costs in a central database. (Limited to 5 records on Starter plan)" },
         { name: "Crop Maintenance Logs", description: "Track irrigation, fertilization, and pest control with integrated costing. (Limited to 5 records on Starter plan)" },
         { name: "Harvesting & Post-Harvest", description: "Log yield data, quality, storage, and sales. Sales data automatically creates income records in the ledger. (Limited to 5 records on Starter plan)" },
         { name: "Plot/Field Management", description: "Define and manage individual farm plots, including size and soil type. (Limited to 1 plot on Starter plan)" },
@@ -106,10 +105,12 @@ export default function FeaturesPage() {
                   </h3>
                   <p className="text-muted-foreground text-sm ml-7">{feature.description}</p>
                 </div>
-              ))}
+              ))
+              }
             </CardContent>
           </Card>
-        ))}
+        ))
+        }
       </div>
       
       <div className="text-center mt-12">

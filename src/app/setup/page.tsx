@@ -8,7 +8,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useUserProfile } from '@/contexts/user-profile-context';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { doc, writeBatch, serverTimestamp, collection, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -16,11 +16,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2, Tractor, Handshake, Building } from 'lucide-react';
+import { Loader2, Tractor, Handshake, Building, LogOut } from 'lucide-react';
 import type { Farm } from '@/types/farm';
 import type { UserRole, SubscriptionDetails } from '@/types/user';
 import { cn } from '@/lib/utils';
 import { add } from 'date-fns';
+import { signOut } from 'firebase/auth';
 
 const farmSetupSchema = z.object({
   name: z.string().min(3, { message: "Farm name must be at least 3 characters." }),
@@ -85,6 +86,16 @@ export default function SetupPage() {
       }
     }
   }, [user, userProfile, isProfileLoading, router]);
+  
+  const handleSignOut = async () => {
+    if (!auth) {
+      toast({ title: "Error", description: "Authentication service not available.", variant: "destructive" });
+      return;
+    }
+    await signOut(auth);
+    toast({ title: "Signed Out", description: "You have been successfully signed out." });
+    router.push('/auth/signin');
+  };
 
   const handleFarmerSubmit: SubmitHandler<FarmSetupFormValues> = async (data) => {
     if (!user || !userProfile) { 
@@ -257,6 +268,11 @@ export default function SetupPage() {
                       </div>
                   </button>
               </CardContent>
+              <CardFooter>
+                 <Button variant="outline" onClick={handleSignOut} className="ml-auto">
+                    <LogOut className="mr-2 h-4 w-4" /> Sign Out & Start Over
+                 </Button>
+              </CardFooter>
           </Card>
       );
   }
