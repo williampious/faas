@@ -19,7 +19,7 @@ import { useRouter } from 'next/navigation';
 import type { FinancialYear } from '@/types/financial-year';
 import { useUserProfile } from '@/contexts/user-profile-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 
 const yearFormSchema = z.object({
   name: z.string().min(3, { message: "Year name must be at least 3 characters." }).max(50),
@@ -50,10 +50,12 @@ export default function FinancialYearPage() {
     resolver: zodResolver(yearFormSchema),
     defaultValues: { name: '', startDate: '', endDate: '', status: 'Active' },
   });
+  
+  const tenantId = userProfile?.tenantId;
 
   useEffect(() => {
     if (isProfileLoading) return;
-    if (!userProfile?.farmId) {
+    if (!tenantId) {
       setError("Farm information not available.");
       setIsLoading(false);
       return;
@@ -62,7 +64,8 @@ export default function FinancialYearPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const q = query(collection(db, FINANCIAL_YEARS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("startDate", "desc"));
+        const recordsPath = `tenants/${tenantId}/${FINANCIAL_YEARS_COLLECTION}`;
+        const q = query(collection(db, recordsPath), orderBy("startDate", "desc"));
         const querySnapshot = await getDocs(q);
         setYears(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FinancialYear)));
       } catch (e: any) {
@@ -73,7 +76,7 @@ export default function FinancialYearPage() {
       }
     };
     fetchYears();
-  }, [userProfile, isProfileLoading]);
+  }, [userProfile, isProfileLoading, tenantId]);
 
   const handleOpenModal = (year?: FinancialYear) => {
     setEditingYear(year || null);
@@ -82,16 +85,19 @@ export default function FinancialYearPage() {
   };
 
   const handleYearSubmit: SubmitHandler<YearFormValues> = async (data) => {
-    if (!userProfile?.farmId) return;
+    if (!tenantId) return;
+    
+    const recordsPath = `tenants/${tenantId}/${FINANCIAL_YEARS_COLLECTION}`;
+    
     try {
       if (editingYear) {
-        const yearRef = doc(db, FINANCIAL_YEARS_COLLECTION, editingYear.id);
+        const yearRef = doc(db, recordsPath, editingYear.id);
         await updateDoc(yearRef, { ...data, updatedAt: serverTimestamp() });
-        setYears(years.map(y => y.id === editingYear.id ? { ...y, ...data } : y));
+        setYears(years.map(y => y.id === editingYear.id ? { ...y, ...data, tenantId } : y));
         toast({ title: "Financial Year Updated" });
       } else {
-        const newYear = { farmId: userProfile.farmId, ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-        const docRef = await addDoc(collection(db, FINANCIAL_YEARS_COLLECTION), newYear);
+        const newYear = { tenantId: tenantId, ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+        const docRef = await addDoc(collection(db, recordsPath), newYear);
         setYears([{ ...newYear, id: docRef.id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as FinancialYear, ...years]);
         toast({ title: "Financial Year Created" });
       }
@@ -102,7 +108,9 @@ export default function FinancialYearPage() {
   };
 
   const handleDeleteYear = async (yearId: string) => {
-    await deleteDoc(doc(db, FINANCIAL_YEARS_COLLECTION, yearId));
+    if (!tenantId) return;
+    const recordsPath = `tenants/${tenantId}/${FINANCIAL_YEARS_COLLECTION}`;
+    await deleteDoc(doc(db, recordsPath, yearId));
     setYears(years.filter(y => y.id !== yearId));
     toast({ title: "Financial Year Deleted", variant: "destructive" });
   };
