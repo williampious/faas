@@ -8,8 +8,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useUserProfile } from '@/contexts/user-profile-context';
-import { db, auth } from '@/lib/firebase';
-import { doc, writeBatch, serverTimestamp, collection, updateDoc } from 'firebase/firestore';
+import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
@@ -17,11 +16,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Loader2, Tractor, Handshake, Building, LogOut } from 'lucide-react';
-import type { Farm } from '@/types/farm';
-import type { UserRole, SubscriptionDetails } from '@/types/user';
 import { cn } from '@/lib/utils';
-import { add } from 'date-fns';
 import { signOut } from 'firebase/auth';
+import { createTenantAndAssignAdmin, setupAeoProfile, createCooperativeAndAssignRoles } from './actions';
+
 
 const farmSetupSchema = z.object({
   name: z.string().min(3, { message: "Farm name must be at least 3 characters." }),
@@ -98,49 +96,20 @@ export default function SetupPage() {
   };
 
   const handleFarmerSubmit: SubmitHandler<FarmSetupFormValues> = async (data) => {
-    if (!user || !userProfile) { 
-        toast({ title: "Error", description: "User profile not available. Please try again.", variant: "destructive"});
+    if (!user) {
+        toast({ title: "Error", description: "You must be logged in.", variant: "destructive"});
         return;
     }
     setIsSubmitting(true);
     
-    const tenantRef = doc(collection(db, 'tenants'));
-    const userRef = doc(db, 'users', user.uid);
+    const result = await createTenantAndAssignAdmin({ userId: user.uid, ...data });
 
-    const trialEndDate = add(new Date(), { days: 20 });
-    const initialSubscription: SubscriptionDetails = {
-        planId: 'business',
-        status: 'Trialing',
-        billingCycle: 'annually',
-        nextBillingDate: null,
-        trialEnds: trialEndDate.toISOString(),
-    };
-
-    const newTenant: Omit<Farm, 'id' | 'createdAt'|'updatedAt'> = {
-      name: data.name, country: data.country, region: data.region,
-      description: data.description || '', ownerId: user.uid, currency: 'GHS',
-      subscription: initialSubscription,
-    };
-
-    try {
-      const batch = writeBatch(db);
-      batch.set(tenantRef, { ...newTenant, id: tenantRef.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-      
-      batch.update(userRef, { 
-          tenantId: tenantRef.id, 
-          role: ['Admin'] as UserRole[],
-          updatedAt: serverTimestamp()
-      });
-      
-      await batch.commit();
-      
-      toast({ title: "Farm Created!", description: `Welcome to ${data.name}.` });
-      router.push('/dashboard');
-
-    } catch (error: any) {
-      console.error("Error creating farm:", error);
-      toast({ title: "Error", description: `Failed to create farm: ${error.message}`, variant: "destructive" });
-      setIsSubmitting(false);
+    if (result.success && result.redirectTo) {
+        toast({ title: "Farm Created!", description: result.message });
+        router.push(result.redirectTo);
+    } else {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        setIsSubmitting(false);
     }
   };
 
@@ -148,73 +117,32 @@ export default function SetupPage() {
       if (!user) return;
       setIsSubmitting(true);
       
-      const userRef = doc(db, 'users', user.uid);
+      const result = await setupAeoProfile({ userId: user.uid, ...data });
 
-      try {
-          await updateDoc(userRef, {
-              role: ['Agric Extension Officer'] as UserRole[],
-              assignedRegion: data.assignedRegion,
-              assignedDistrict: data.assignedDistrict,
-              organization: data.organization || null,
-              updatedAt: serverTimestamp(),
-          });
-          toast({ title: "Profile Set Up!", description: "Your AEO profile is complete. Redirecting to your dashboard." });
-          router.push('/aeo/dashboard');
-
-      } catch (error: any) {
-          console.error("Error setting up AEO profile:", error);
-          toast({ title: "Error", description: `Failed to set up profile: ${error.message}`, variant: "destructive" });
+      if (result.success && result.redirectTo) {
+          toast({ title: "Profile Set Up!", description: result.message });
+          router.push(result.redirectTo);
+      } else {
+          toast({ title: "Error", description: result.message, variant: "destructive" });
           setIsSubmitting(false);
       }
   };
   
   const handleCooperativeSubmit: SubmitHandler<CooperativeSetupFormValues> = async (data) => {
-    if (!user || !userProfile) { 
-        toast({ title: "Error", description: "User profile not available. Please try again.", variant: "destructive"});
+    if (!user) {
+        toast({ title: "Error", description: "You must be logged in.", variant: "destructive"});
         return;
     }
     setIsSubmitting(true);
     
-    const tenantRef = doc(collection(db, 'tenants'));
-    const userRef = doc(db, 'users', user.uid);
+    const result = await createCooperativeAndAssignRoles({ userId: user.uid, ...data });
 
-    const trialEndDate = add(new Date(), { days: 20 });
-    const initialSubscription: SubscriptionDetails = {
-        planId: 'business',
-        status: 'Trialing',
-        billingCycle: 'annually',
-        nextBillingDate: null,
-        trialEnds: trialEndDate.toISOString(),
-    };
-
-    const newTenant: Omit<Farm, 'id' | 'createdAt'|'updatedAt'> = {
-      name: data.name, country: data.country, region: data.region,
-      description: data.description || '', ownerId: user.uid, currency: 'GHS',
-      subscription: initialSubscription,
-    };
-
-    try {
-      const batch = writeBatch(db);
-      batch.set(tenantRef, { ...newTenant, id: tenantRef.id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-      
-      batch.update(userRef, { 
-          tenantId: tenantRef.id, 
-          role: ['Admin', 'Agric Extension Officer'] as UserRole[],
-          assignedRegion: data.region,
-          assignedDistrict: data.assignedDistrict,
-          organization: data.name,
-          updatedAt: serverTimestamp()
-      });
-      
-      await batch.commit();
-      
-      toast({ title: "Cooperative Created!", description: `Welcome to ${data.name}. You have both Admin and AEO roles.` });
-      router.push('/dashboard'); // Go to main dashboard first
-
-    } catch (error: any) {
-      console.error("Error creating cooperative:", error);
-      toast({ title: "Error", description: `Failed to create cooperative: ${error.message}`, variant: "destructive" });
-      setIsSubmitting(false);
+    if (result.success && result.redirectTo) {
+        toast({ title: "Cooperative Created!", description: result.message });
+        router.push(result.redirectTo);
+    } else {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+        setIsSubmitting(false);
     }
   };
 
