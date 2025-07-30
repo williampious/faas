@@ -109,8 +109,8 @@ export default function FarmerDirectoryPage() {
         setFarmers(fetchedFarmers);
       } catch (err: any) {
         console.error("Error fetching farmers:", err);
-        let message = `Failed to fetch farmers: ${err.message}`;
-        if (err.code === 'failed-precondition' || err.message?.toLowerCase().includes('requires an index')) {
+        let message = `Failed to fetch farmers. Please check your internet connection.`;
+        if (err.message?.toLowerCase().includes('requires an index') || err.message?.toLowerCase().includes('permission-denied')) {
           message = "Failed to load the farmer directory. A required Firestore index is missing. Please check your browser's developer console for a link to create it automatically, or refer to the README file for instructions.";
         }
         setError(message);

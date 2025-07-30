@@ -64,7 +64,51 @@ These are only needed if you want to send invitation emails to new users. Store 
 
 ### **Part 3: Firebase Console Configuration (Also Critical)**
 
-You must update the security rules in your Firebase project to allow the app to function. Refer to `src/README.md` for the full security rules and Firestore index requirements.
+You must update the security rules and create the necessary database indexes in your Firebase project for the app to function correctly.
+
+#### **Step 3A: Firestore Security Rules**
+
+Copy the entire ruleset from the `src/README.md` file and paste it into your **Firebase Console -> Firestore Database -> Rules** tab.
+
+#### **Step 3B: Firestore Indexes (Very Important!)**
+
+If the application is slow to load data or you see timeout errors in the browser console, it is almost certainly because you are missing a Firestore index.
+
+**How to Create Indexes (Recommended Method):**
+
+1.  **Run the App:** Use the application and navigate to pages that sort or filter lists of data (e.g., the Financial Dashboard, AEO Farmer Directory, User Management, etc.).
+2.  **Check for Errors:** If a query needs an index, an error will appear in your browser's developer console.
+3.  **Click the Link:** This error message will contain a **direct link to the Firebase Console**. Click this link.
+4.  **Create the Index:** The link will pre-fill all the necessary information. Review the details and click the "Create Index" button. The index will take a few minutes to build.
+
+**Required Indexes List:**
+
+If you prefer to create them manually, here is a list of indexes the application currently requires. You can create these in the **Firebase Console -> Firestore Database -> Indexes** tab.
+
+*   **Collection ID:** `users`, Fields to index: `tenantId` (Ascending), `fullName` (Ascending).
+*   **Collection ID:** `tenants`, Fields to index: `name` (Ascending / Descending), `country` (Ascending / Descending), `region` (Ascending / Descending), `createdAt` (Ascending / Descending).
+*   **Collection ID:** `transactions` (under `tenants`), Fields to index: `date` (Descending).
+*   **Collection ID:** `promotionalCodes`, Fields to index: `createdAt` (Descending).
+*   **Collection ID:** `supportLogs`, Fields to index: `aeoId` (Ascending), `interactionDate` (Descending).
+*   **Collection ID:** `knowledgeArticles`, Fields to index: `authorId` (Ascending), `createdAt` (Descending).
+*   **Collection ID:** `plantingAdviceRecords` (under `tenants`), Fields to index: `createdAt` (Descending).
+*   **Collection ID:** `payrollRecords` (under `tenants`), Fields to index: `paymentDate` (Descending).
+*   **Collection ID:** `facilityManagementRecords` (under `tenants`), Fields to index: `paymentDate` (Descending).
+*   **Collection ID:** `safetySecurityRecords` (under `tenants`), Fields to index: `paymentDate` (Descending).
+*   **Collection ID:** `recordsManagementRecords` (under `tenants`), Fields to index: `paymentDate` (Descending).
+*   **Collection ID:** `technologyAssets` (under `tenants`), Fields to index: `purchaseDate` (Descending).
+*   **Collection ID:** `officeEvents` (under `tenants`), Fields to index: `eventDate` (Descending).
+*   **Collection ID:** `soilTestRecords` (under `tenants`), Fields to index: `testDate` (Descending).
+*   **Collection ID:** `animalHealthRecords` (under `tenants`), Fields to index: `date` (Descending).
+*   **Collection ID:** `feedingRecords` (under `tenants`), Fields to index: `date` (Descending).
+*   **Collection ID:** `harvestingRecords` (under `tenants`), Fields to index: `createdAt` (Descending).
+*   **Collection ID:** `plantingRecords` (under `tenants`), Fields to index: `createdAt` (Descending).
+*   **Collection ID:** `landPreparationActivities` (under `tenants`), Fields to index: `createdAt` (Descending).
+*   **Collection ID:** `tasks` (under `tenants`), Fields to index: `createdAt` (Descending).
+*   **Collection ID:** `farmEvents` (under `tenants`), Fields to index: `createdAt` (Descending).
+*   **Collection ID:** `budgets` (under `tenants`), Fields to index: `tenantId` (Ascending).
+*   **Collection ID:** `financialYears` (under `tenants`), Fields to index: `startDate` (Descending).
+
 
 ---
 
