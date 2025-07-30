@@ -40,8 +40,8 @@ const facilityRecordFormSchema = z.object({
 });
 type FacilityFormValues = z.infer<typeof facilityRecordFormSchema>;
 
-const RECORDS_COLLECTION = 'facilityManagementRecords';
-const TRANSACTIONS_COLLECTION = 'transactions';
+const RECORDS_COLLECTION_BASE = 'facilityManagementRecords';
+const TRANSACTIONS_COLLECTION_BASE = 'transactions';
 const FACILITY_FORM_ID = 'facility-form';
 
 export default function FacilityManagementPage() {
@@ -53,6 +53,7 @@ export default function FacilityManagementPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { userProfile, isLoading: isProfileLoading } = useUserProfile();
+  const tenantId = userProfile?.tenantId;
 
   const form = useForm<FacilityFormValues>({
     resolver: zodResolver(facilityRecordFormSchema),
@@ -61,7 +62,7 @@ export default function FacilityManagementPage() {
 
   useEffect(() => {
     if (isProfileLoading) return;
-    if (!userProfile?.farmId) {
+    if (!tenantId) {
       setError("Farm information is not available.");
       setIsLoading(false);
       return;
@@ -70,7 +71,8 @@ export default function FacilityManagementPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const q = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("paymentDate", "desc"));
+        const recordsPath = `tenants/${tenantId}/${RECORDS_COLLECTION_BASE}`;
+        const q = query(collection(db, recordsPath), orderBy("paymentDate", "desc"));
         const querySnapshot = await getDocs(q);
         setRecords(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FacilityRecord)));
       } catch (e: any) {
@@ -80,7 +82,7 @@ export default function FacilityManagementPage() {
       }
     };
     fetchRecords();
-  }, [userProfile, isProfileLoading]);
+  }, [tenantId, isProfileLoading]);
   
   const handleOpenModal = (recordToEdit?: FacilityRecord) => {
     setEditingRecord(recordToEdit || null);
@@ -101,10 +103,10 @@ export default function FacilityManagementPage() {
   };
   
   const onSubmit: SubmitHandler<FacilityFormValues> = async (data) => {
-    if (!userProfile?.farmId) return;
+    if (!tenantId) return;
 
     const recordData = {
-      farmId: userProfile.farmId,
+      tenantId: tenantId,
       ...data,
       cost: data.cost || 0,
     };
@@ -113,23 +115,26 @@ export default function FacilityManagementPage() {
 
     try {
       let recordId: string;
+      const recordsPath = `tenants/${tenantId}/${RECORDS_COLLECTION_BASE}`;
+      const transactionsPath = `tenants/${tenantId}/${TRANSACTIONS_COLLECTION_BASE}`;
+
       if (editingRecord) {
         recordId = editingRecord.id;
-        batch.update(doc(db, RECORDS_COLLECTION, recordId), { ...recordData, updatedAt: serverTimestamp() });
+        batch.update(doc(db, recordsPath, recordId), { ...recordData, updatedAt: serverTimestamp() });
         
-        const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", recordId));
+        const transQuery = query(collection(db, transactionsPath), where("linkedActivityId", "==", recordId));
         const oldTransSnap = await getDocs(transQuery);
         oldTransSnap.forEach(d => batch.delete(d.ref));
       } else {
-        const recordRef = doc(collection(db, RECORDS_COLLECTION));
+        const recordRef = doc(collection(db, recordsPath));
         recordId = recordRef.id;
         batch.set(recordRef, { ...recordData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       }
 
       if (recordData.cost > 0) {
-        const transRef = doc(collection(db, TRANSACTIONS_COLLECTION));
+        const transRef = doc(collection(db, transactionsPath));
         const transaction: Omit<OperationalTransaction, 'id'> = {
-          farmId: userProfile.farmId,
+          tenantId: tenantId,
           date: recordData.paymentDate,
           description: `Facility: ${recordData.name}`,
           amount: recordData.cost,
@@ -147,7 +152,7 @@ export default function FacilityManagementPage() {
 
       toast({ title: editingRecord ? "Record Updated" : "Record Created", description: `"${data.name}" has been saved.` });
       
-      const q = query(collection(db, RECORDS_COLLECTION), where("farmId", "==", userProfile.farmId), orderBy("paymentDate", "desc"));
+      const q = query(collection(db, recordsPath), orderBy("paymentDate", "desc"));
       const querySnapshot = await getDocs(q);
       setRecords(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FacilityRecord)));
       
@@ -158,10 +163,14 @@ export default function FacilityManagementPage() {
   };
 
   const handleDelete = async (recordId: string) => {
+    if (!tenantId) return;
     const batch = writeBatch(db);
-    batch.delete(doc(db, RECORDS_COLLECTION, recordId));
+    const recordsPath = `tenants/${tenantId}/${RECORDS_COLLECTION_BASE}`;
+    const transactionsPath = `tenants/${tenantId}/${TRANSACTIONS_COLLECTION_BASE}`;
     
-    const transQuery = query(collection(db, TRANSACTIONS_COLLECTION), where("linkedActivityId", "==", recordId));
+    batch.delete(doc(db, recordsPath, recordId));
+    
+    const transQuery = query(collection(db, transactionsPath), where("linkedActivityId", "==", recordId));
     const oldTransSnap = await getDocs(transQuery);
     oldTransSnap.forEach(d => batch.delete(d.ref));
 
@@ -202,7 +211,7 @@ export default function FacilityManagementPage() {
               </form>
             </Form>
           </div>
-          <DialogFooter className="border-t pt-4"><DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose><Button type="submit" form={FACILITY_FORM_ID}>{editingRecord ? 'Save Changes' : 'Add Record'}</Button></DialogFooter>
+          <DialogFooter className="border-t pt-4"><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose><Button type="submit" form={FACILITY_FORM_ID}>{editingRecord ? 'Save Changes' : 'Add Record'}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 

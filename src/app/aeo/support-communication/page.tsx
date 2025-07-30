@@ -120,7 +120,7 @@ export default function SupportCommunicationPage() {
     const logData = {
       ...data,
       aeoId: aeoProfile.userId,
-      farmId: selectedFarmer.farmId || '', // Include farmId if available
+      tenantId: selectedFarmer.tenantId || '', // Use tenantId for consistency
       farmerName: selectedFarmer.fullName,
       updatedAt: serverTimestamp(),
     };

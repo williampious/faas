@@ -111,7 +111,6 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             const isSuperAdmin = profileData.role?.includes('Super Admin') || false;
             setIsAdmin(profileData.role?.includes('Admin') || isSuperAdmin);
 
-            // Now listen to the farm/tenant document if tenantId exists
             if (profileData.tenantId) {
               const farmDocRef = doc(db, 'tenants', profileData.tenantId);
               unsubscribeFarm = onSnapshot(farmDocRef, (farmDoc) => {
@@ -145,9 +144,8 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
                  setError("Could not load farm-specific data.");
                  setIsLoading(false);
               });
-            } else { // User exists but has no tenantId (e.g., AEO during setup)
+            } else { 
               setFarmProfile(null);
-              // AEO access is determined by role, not plan, if they are not part of a tenant.
               const isAeoWithoutTenant = profileData.role?.includes('Agric Extension Officer');
               setAccess({
                 ...defaultAccess,
@@ -158,11 +156,8 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
             
             setError(null);
           } else {
-            // This case handles a logged-in user who for some reason does not have a firestore doc.
-            // This can happen if registration is interrupted.
             console.warn(`No Firestore profile found for authenticated user ${currentUser.uid}. Attempting to self-heal.`);
             await createMissingProfile(currentUser);
-            // The onSnapshot listener will be triggered again once the profile is created.
             setIsLoading(false); 
           }
         }, (firestoreError) => {
@@ -173,7 +168,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
           setAccess(defaultAccess);
           setIsLoading(false);
         });
-      } else { // No current user
+      } else { 
         setUserProfile(null);
         setFarmProfile(null);
         setIsAdmin(false);
